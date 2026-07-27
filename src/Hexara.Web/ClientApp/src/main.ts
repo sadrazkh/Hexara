@@ -1,6 +1,7 @@
 import './styles/app.css';
 import { createApp, type Component } from 'vue';
 import { initTheme } from './theme';
+import { initPwa } from './pwa';
 
 /**
  * الگوی «جزیره‌های Vue»: سرور HTML کامل می‌فرستد و فقط عناصری که شناسه‌ی
@@ -57,6 +58,7 @@ async function mountIslands(): Promise<void> {
 
 function start(): void {
   initTheme();
+  initPwa();
   void mountIslands();
 }
 

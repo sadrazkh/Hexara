@@ -304,5 +304,12 @@
   },
   "leaderboard": {
     "empty": "No games have finished yet."
+  },
+  "pwa": {
+    "install": "Install Hexara on this device"
+  },
+  "offline": {
+    "title": "No connection",
+    "body": "You're offline. Your game is safe on the server and picks up exactly where you left it once the network is back."
   }
 }

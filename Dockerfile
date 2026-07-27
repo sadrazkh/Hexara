@@ -21,6 +21,8 @@ RUN dotnet restore src/Hexara.Web/Hexara.Web.csproj
 
 COPY . .
 COPY --from=client /wwwroot/dist src/Hexara.Web/wwwroot/dist
+# سرویس‌ورکر عمداً بیرون از dist ساخته می‌شود تا دامنه‌اش کل سایت باشد، پس جدا کپی می‌شود.
+COPY --from=client /wwwroot/sw.js src/Hexara.Web/wwwroot/sw.js
 RUN dotnet publish src/Hexara.Web/Hexara.Web.csproj -c Release -o /app --no-restore
 
 # ── مرحله ۳: اجرا ────────────────────────────────────────────────────────

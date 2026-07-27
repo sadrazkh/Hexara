@@ -10,6 +10,8 @@ artifacts/
 node_modules/
 dist/
 src/Hexara.Web/wwwroot/dist/
+# ساخته‌ی build است (vite-plugin-service-worker)؛ آیکون‌های wwwroot/icons دستی‌اند و می‌مانند.
+src/Hexara.Web/wwwroot/sw.js
 .vite/
 
 ## Logs & local state

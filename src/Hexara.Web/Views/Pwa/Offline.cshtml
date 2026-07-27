@@ -1,0 +1,19 @@
+@{
+    ViewData["Title"] = T["offline.title"];
+}
+
+<section class="hx-container hx-narrow hx-offline">
+    <svg class="hx-offline__mark" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M16 4.5 26.5 10.6v12.2L16 28.9 5.5 22.8V10.6z" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linejoin="round" opacity=".5" />
+        <path d="M6 6 26 26" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+    </svg>
+
+    <h1 class="hx-section-title">@T["offline.title"]</h1>
+    <p class="hx-muted">@T["offline.body"]</p>
+
+    @* بارگذاری دوباره‌ی همان آدرس؛ وقتی شبکه برگشت، همان‌جایی که بود ادامه می‌دهد. *@
+    <button type="button" class="hx-btn hx-btn--primary" onclick="location.reload()">
+        @T["common.retry"]
+    </button>
+</section>

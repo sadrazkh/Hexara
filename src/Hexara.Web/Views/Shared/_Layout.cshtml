@@ -18,6 +18,14 @@
     <meta name="theme-color" content="#0f0c08" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#efe2c8" media="(prefers-color-scheme: light)" />
     <meta name="description" content="@T["app.description"]" />
+
+    @* PWA. iOS هنوز manifest را کامل نمی‌فهمد و به متاتگ‌های خودش نیاز دارد. *@
+    <link rel="manifest" href="~/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="~/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="@T["app.name"]" />
+    <meta name="mobile-web-app-capable" content="yes" />
     @* پیش از اولین رنگ‌آمیزی اجرا می‌شود تا صفحه با تم غلط پلک نزند. تا وقتی
        کاربر انتخاب نکرده باشد data-theme گذاشته نمی‌شود و CSS خودش سراغ
        prefers-color-scheme می‌رود. *@
@@ -68,6 +76,20 @@
             </nav>
 
             <div class="hx-header__actions">
+                @* تا وقتی مرورگر نصب را پیشنهاد نکند پنهان می‌ماند؛ pwa.ts نشانش می‌دهد.
+                   با hidden شروع می‌شود تا در مرورگرهایی که اصلاً نصب ندارند دیده نشود. *@
+                <button type="button"
+                        class="hx-btn hx-btn--ghost hx-btn--sm"
+                        data-hx-install
+                        hidden
+                        aria-label="@T["pwa.install"]"
+                        title="@T["pwa.install"]">
+                    <svg class="hx-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 3v12M7 11l5 5 5-5M5 20h14" />
+                    </svg>
+                </button>
+
                 @* برچسب دقیق («تم روشن» / «تم تیره») را theme.ts می‌گذارد، چون فقط
                    او می‌داند تم فعلی از سیستم آمده یا انتخاب کاربر بوده. این
                    aria-label عمومی برای حالت بی‌جاوااسکریپت است. *@

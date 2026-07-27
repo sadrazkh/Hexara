@@ -1,11 +1,17 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { resolve } from 'node:path';
+import { serviceWorker } from './vite-plugin-service-worker';
+
+const outDir = resolve(__dirname, '../wwwroot/dist');
 
 // خروجی build مستقیم داخل wwwroot/dist می‌رود تا ASP.NET بتواند نام فایل‌های
 // هش‌دار را از manifest.json بخواند (ViteManifest.cs).
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [
+    vue(),
+    serviceWorker({ outDir, template: resolve(__dirname, 'sw-template.js') }),
+  ],
   base: '/dist/',
   resolve: {
     alias: {
@@ -16,7 +22,7 @@ export default defineConfig({
   },
   build: {
     manifest: true,
-    outDir: resolve(__dirname, '../wwwroot/dist'),
+    outDir,
     emptyOutDir: true,
     target: 'es2022',
     rollupOptions: {

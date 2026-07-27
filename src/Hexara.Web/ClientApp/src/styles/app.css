@@ -30,6 +30,9 @@ html {
   font-size: 16px;
   line-height: 1.7;
   overflow-x: hidden;
+
+  /* در برنامه‌ی نصب‌شده، «کشیدن برای تازه‌سازی» وسط بازی اتفاق ناخوشایندی است. */
+  overscroll-behavior-y: contain;
   position: relative;
 }
 
@@ -81,11 +84,17 @@ code {
 
 /* ── چیدمان ────────────────────────────────────────────────────────────── */
 
+/*
+ * ناحیه‌ی امن. صفحه با ‎viewport-fit=cover‎ تا لبه‌ها کشیده می‌شود، پس وقتی
+ * برنامه نصب‌شده و بدون نوار مرورگر اجرا می‌شود، بدون این‌ها محتوا زیر بریدگی
+ * صفحه و نوار خانه می‌رود. در مرورگر معمولی این مقادیر صفرند و چیزی عوض نمی‌شود.
+ */
 .hx-container {
   width: 100%;
   max-width: var(--hx-container);
   margin-inline: auto;
-  padding-inline: var(--hx-sp-5);
+  padding-inline: calc(var(--hx-sp-5) + env(safe-area-inset-left))
+    calc(var(--hx-sp-5) + env(safe-area-inset-right));
 }
 
 .hx-narrow {
@@ -177,6 +186,7 @@ code {
   align-items: center;
   gap: var(--hx-sp-4);
   min-height: 64px;
+  padding-top: env(safe-area-inset-top);
 }
 
 .hx-brand {
@@ -992,6 +1002,23 @@ code {
   background: color-mix(in srgb, var(--hx-ok) 10%, transparent);
 }
 
+/* ── صفحه‌ی آفلاین ────────────────────────────────────────────────────── */
+
+.hx-offline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--hx-sp-4);
+  padding-block: var(--hx-sp-7);
+  text-align: center;
+}
+
+.hx-offline__mark {
+  width: 5rem;
+  height: 5rem;
+  color: var(--hx-text-faint);
+}
+
 /* ── کمکی ─────────────────────────────────────────────────────────────── */
 
 /* روی جمله‌ی کامل می‌نشیند و بیرون از ظرف هم استفاده می‌شود، یعنی مستقیم
@@ -1019,7 +1046,7 @@ code {
   flex-wrap: wrap;
   justify-content: space-between;
   gap: var(--hx-sp-3);
-  padding-block: var(--hx-sp-5);
+  padding-block: var(--hx-sp-5) calc(var(--hx-sp-5) + env(safe-area-inset-bottom));
   color: var(--hx-text-faint);
   font-size: 0.82rem;
 }

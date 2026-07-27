@@ -122,7 +122,18 @@ else
 
 app.UseSerilogRequestLogging();
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = context =>
+    {
+        // سرویس‌ورکر هرگز نباید کش شود، وگرنه نسخه‌ی تازه هیچ‌وقت جایگزین قبلی
+        // نمی‌شود و کاربر برای همیشه با دارایی‌های کهنه می‌ماند.
+        if (context.File.Name.Equals("sw.js", StringComparison.OrdinalIgnoreCase))
+        {
+            context.Context.Response.Headers.CacheControl = "no-cache, no-store, must-revalidate";
+        }
+    }
+});
 
 app.UseRequestLocalization();
 
