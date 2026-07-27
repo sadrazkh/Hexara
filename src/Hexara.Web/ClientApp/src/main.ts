@@ -10,6 +10,7 @@ type IslandLoader = () => Promise<{ default: Component }>;
 
 const islands: Record<string, IslandLoader> = {
   'island-hero-board': () => import('./islands/HeroBoard.vue'),
+  'island-game-live': () => import('./islands/GameLive.vue'),
 };
 
 /** تمام ‎data-*‎ عنصر میزبان به عنوان prop به کامپوننت داده می‌شود. */

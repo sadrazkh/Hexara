@@ -27,6 +27,7 @@ public static class DependencyInjection
 
         services.AddScoped<IGameRepository, GameRepository>();
         services.AddScoped<IRoomRepository, RoomRepository>();
+        services.AddScoped<IPlayerDirectory, PlayerDirectory>();
 
         return services
             .AddIdentityCore<AppUser>(options =>

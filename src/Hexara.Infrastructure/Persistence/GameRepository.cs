@@ -108,6 +108,7 @@ public sealed class GameRepository : IGameRepository
         {
             GameId = game.Id,
             Sequence = record.MoveCount,
+            Version = game.State.Version,
             PlayerIndex = action.PlayerIndex,
             Action = GameJson.Serialize(action),
             Events = GameJson.Serialize(events),
@@ -149,18 +150,25 @@ public sealed class GameRepository : IGameRepository
             Utc(r.UpdatedAt)))];
     }
 
-    public async Task<IReadOnlyList<GameMoveLogEntry>> HistoryAsync(
+    public Task<IReadOnlyList<GameMoveLogEntry>> HistoryAsync(
         Guid gameId,
+        CancellationToken cancellationToken = default) =>
+        HistorySinceAsync(gameId, long.MinValue, cancellationToken);
+
+    public async Task<IReadOnlyList<GameMoveLogEntry>> HistorySinceAsync(
+        Guid gameId,
+        long sinceVersion,
         CancellationToken cancellationToken = default)
     {
         var rows = await _db.GameMoves
             .AsNoTracking()
-            .Where(m => m.GameId == gameId)
+            .Where(m => m.GameId == gameId && m.Version > sinceVersion)
             .OrderBy(m => m.Sequence)
             .ToListAsync(cancellationToken);
 
         return [.. rows.Select(m => new GameMoveLogEntry(
             m.Sequence,
+            m.Version,
             m.PlayerIndex,
             GameJson.Deserialize<GameAction>(m.Action),
             GameJson.Deserialize<IReadOnlyList<GameEvent>>(m.Events),

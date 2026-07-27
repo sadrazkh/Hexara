@@ -69,6 +69,51 @@ public class GameJsonTests
         Assert.Equal(declared.Order(), covered.Order());
     }
 
+    /// <summary>
+    /// قالب روی سیم و روی دیسک قرارداد است، نه جزئیات پیاده‌سازی: کلاینت روی نام
+    /// enumها حساب می‌کند و ستون jsonb باید با چشم خواندنی بماند.
+    /// </summary>
+    [Fact]
+    public void Enums_are_written_as_names()
+    {
+        var json = GameJson.Serialize<GameAction>(new PlayMonopoly(0, Resource.Wool));
+
+        Assert.Contains("\"Wool\"", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"resource\":3", json, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Enum_dictionary_keys_are_written_as_names()
+    {
+        var json = GameJson.Serialize<GameAction>(
+            new DiscardCards(0, new Dictionary<Resource, int> { [Resource.Ore] = 2 }));
+
+        Assert.Contains("\"Ore\":2", json, StringComparison.Ordinal);
+
+        var back = Assert.IsType<DiscardCards>(GameJson.Deserialize<GameAction>(json));
+        Assert.Equal(2, back.Cards[Resource.Ore]);
+    }
+
+    /// <summary>داده‌های قدیمی که با عدد نوشته شده‌اند باید هنوز خوانده شوند.</summary>
+    [Fact]
+    public void Numeric_enums_from_older_rows_still_load()
+    {
+        const string legacy = """{"$kind":"PlayMonopoly","PlayerIndex":0,"Resource":3}""";
+
+        var action = Assert.IsType<PlayMonopoly>(GameJson.Deserialize<GameAction>(legacy));
+
+        Assert.Equal(Resource.Wool, action.Resource);
+    }
+
+    [Fact]
+    public void Geometry_is_written_as_a_compact_string()
+    {
+        var json = GameJson.Serialize<GameAction>(new BuildSettlement(1, VertexId.Of(new Axial(2, -1), 3)));
+        var vertex = VertexId.Of(new Axial(2, -1), 3);
+
+        Assert.Contains($"\"{vertex.Hex.Q},{vertex.Hex.R},{vertex.Corner}\"", json, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void The_type_discriminator_is_the_type_name()
     {

@@ -66,9 +66,13 @@ public sealed record GameSummary(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
-/// <summary>یک سطر از تاریخچه‌ی بازی.</summary>
+/// <summary>
+/// یک سطر از تاریخچه‌ی بازی. <paramref name="Version"/> نسخه‌ی وضعیت بعد از این
+/// حرکت است — مبنای رساندن اتفاق‌های ازدست‌رفته به بازیکنی که دوباره وصل می‌شود.
+/// </summary>
 public sealed record GameMoveLogEntry(
     int Sequence,
+    long Version,
     int PlayerIndex,
     GameAction Action,
     IReadOnlyList<GameEvent> Events,

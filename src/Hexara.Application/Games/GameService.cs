@@ -67,6 +67,20 @@ public sealed class GameService
         _games.HistoryAsync(gameId, cancellationToken);
 
     /// <summary>
+    /// اتفاق‌هایی که یک بازیکنِ قطع‌شده از دست داده، سانسورشده برای صندلی خودش.
+    /// </summary>
+    public async Task<IReadOnlyList<GameEvent>> EventsSinceAsync(
+        Guid gameId,
+        long sinceVersion,
+        int? viewerSeat,
+        CancellationToken cancellationToken = default)
+    {
+        var moves = await _games.HistorySinceAsync(gameId, sinceVersion, cancellationToken);
+
+        return [.. moves.SelectMany(m => GameEventRedactor.ForSeat(m.Events, viewerSeat))];
+    }
+
+    /// <summary>
     /// یک حرکت را از طرف یک کاربر اجرا می‌کند.
     ///
     /// صندلی از روی کاربر تعیین می‌شود و با آنچه در حرکت آمده مقایسه می‌شود؛ کلاینت

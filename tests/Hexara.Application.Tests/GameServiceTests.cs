@@ -219,6 +219,7 @@ public class GameServiceTests
 
             Moves.Add(new GameMoveLogEntry(
                 Moves.Count + 1,
+                game.State.Version,
                 action.PlayerIndex,
                 action,
                 events,
@@ -252,5 +253,11 @@ public class GameServiceTests
             Guid gameId,
             CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<GameMoveLogEntry>>([.. Moves]);
+
+        public Task<IReadOnlyList<GameMoveLogEntry>> HistorySinceAsync(
+            Guid gameId,
+            long sinceVersion,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<GameMoveLogEntry>>([.. Moves.Where(m => m.Version > sinceVersion)]);
     }
 }

@@ -75,6 +75,9 @@ public class GameMoveRecord
 
     public int Sequence { get; set; }
 
+    /// <summary>نسخه‌ی وضعیت بازی بعد از این حرکت.</summary>
+    public long Version { get; set; }
+
     public int PlayerIndex { get; set; }
 
     /// <summary>خودِ حرکت به صورت JSON چندریختی.</summary>

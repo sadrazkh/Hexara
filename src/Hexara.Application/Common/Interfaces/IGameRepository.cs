@@ -34,4 +34,10 @@ public interface IGameRepository
     Task<IReadOnlyList<GameMoveLogEntry>> HistoryAsync(
         Guid gameId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>حرکت‌هایی که وضعیت را از نسخه‌ی داده‌شده جلوتر برده‌اند.</summary>
+    Task<IReadOnlyList<GameMoveLogEntry>> HistorySinceAsync(
+        Guid gameId,
+        long sinceVersion,
+        CancellationToken cancellationToken = default);
 }

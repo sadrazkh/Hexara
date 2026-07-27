@@ -39,6 +39,12 @@ public sealed record RobberMoved(int PlayerIndex, Axial From, Axial To) : GameEv
 /// <summary>کارت دزدیده‌شده — فقط دزد و قربانی حق دیدن <see cref="Resource"/> را دارند.</summary>
 public sealed record ResourceStolen(int PlayerIndex, int VictimIndex, Resource Resource) : GameEvent;
 
+/// <summary>
+/// همان دزدی، از دید بقیه: می‌بینند کارتی جابه‌جا شد ولی نمی‌دانند چه بود.
+/// موتور این را تولید نمی‌کند؛ لایه‌ی پخش هنگام سانسور جایگزینش می‌کند.
+/// </summary>
+public sealed record ResourceStolenSecretly(int PlayerIndex, int VictimIndex) : GameEvent;
+
 public sealed record RoadBuilt(int PlayerIndex, EdgeId Edge) : GameEvent;
 
 public sealed record SettlementBuilt(int PlayerIndex, VertexId Vertex) : GameEvent;
@@ -51,6 +57,9 @@ public sealed record GameWon(int PlayerIndex, int VictoryPoints) : GameEvent;
 
 /// <summary>کارت خریداری‌شده — نوعش فقط برای خودِ خریدار فرستاده می‌شود.</summary>
 public sealed record DevelopmentCardBought(int PlayerIndex, DevelopmentCard Card) : GameEvent;
+
+/// <summary>همان خرید، از دید بقیه: کارتی خریده شد ولی معلوم نیست کدام.</summary>
+public sealed record DevelopmentCardBoughtSecretly(int PlayerIndex) : GameEvent;
 
 public sealed record KnightPlayed(int PlayerIndex, int KnightsPlayed) : GameEvent;
 

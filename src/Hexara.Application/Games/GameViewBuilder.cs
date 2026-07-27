@@ -1,0 +1,152 @@
+using Hexara.Application.Common.Interfaces;
+using Hexara.Domain.Board;
+using Hexara.Domain.Game;
+
+namespace Hexara.Application.Games;
+
+/// <summary>ساخت نمای بازی برای یک صندلی مشخص.</summary>
+public sealed class GameViewBuilder
+{
+    private readonly IPlayerDirectory _directory;
+
+    public GameViewBuilder(IPlayerDirectory directory) => _directory = directory;
+
+    public async Task<GameView> BuildAsync(
+        StoredGame game,
+        int? viewerSeat,
+        IReadOnlySet<Guid>? onlineUserIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        var profiles = (await _directory.GetAsync(game.PlayerIds, cancellationToken))
+            .ToDictionary(p => p.Id);
+
+        var state = game.State;
+
+        return new GameView
+        {
+            GameId = game.Id,
+            Version = state.Version,
+            Phase = state.Phase,
+            CurrentPlayer = state.CurrentPlayer,
+            TurnNumber = state.TurnNumber,
+            Winner = state.Winner,
+            Die1 = state.Die1,
+            Die2 = state.Die2,
+            Robber = new HexSnapshot(state.Robber.Q, state.Robber.R),
+            Tiles = [.. state.Board.Tiles.Select(t =>
+                new TileSnapshot(t.Position.Q, t.Position.R, t.Terrain, t.Number))],
+            Ports = [.. state.Board.Ports.Select(p =>
+                new PortSnapshot(p.Edge.Hex.Q, p.Edge.Hex.R, p.Edge.Side, p.Resource))],
+            Buildings = [.. state.Buildings.Select(b =>
+                new BuildingSnapshot(b.Key.Hex.Q, b.Key.Hex.R, b.Key.Corner, b.Value.PlayerIndex, b.Value.Kind))],
+            Roads = [.. state.Roads.Select(r =>
+                new RoadSnapshot(r.Key.Hex.Q, r.Key.Hex.R, r.Key.Side, r.Value))],
+            Bank = new Dictionary<Resource, int>(state.Bank),
+            DevelopmentDeckCount = state.DevelopmentDeckCount,
+            Players = [.. state.Players.Select(p => ToView(p, game.PlayerIds[p.Index], profiles, onlineUserIds))],
+            Seat = viewerSeat,
+            Hand = viewerSeat is { } seat ? ToHand(state, state.Player(seat)) : null,
+            PendingDiscards = new Dictionary<int, int>(state.PendingDiscards),
+            PendingTrade = state.PendingTrade is { } trade
+                ? new TradeOfferView(
+                    trade.Proposer,
+                    new Dictionary<Resource, int>(trade.Give),
+                    new Dictionary<Resource, int>(trade.Take),
+                    new Dictionary<int, TradeResponse>(trade.Responses))
+                : null,
+            Legal = LegalFor(state, viewerSeat)
+        };
+    }
+
+    private static PlayerView ToView(
+        PlayerState player,
+        Guid userId,
+        IReadOnlyDictionary<Guid, PlayerProfile> profiles,
+        IReadOnlySet<Guid>? online)
+    {
+        var profile = profiles.GetValueOrDefault(userId);
+
+        return new PlayerView
+        {
+            Index = player.Index,
+            UserId = userId,
+            DisplayName = profile?.DisplayName ?? string.Empty,
+            AvatarColor = profile?.AvatarColor ?? "#4f9cf9",
+            PublicVictoryPoints = player.PublicVictoryPoints,
+            CardCount = player.TotalCards,
+            DevelopmentCardCount = player.TotalDevelopmentCards,
+            KnightsPlayed = player.KnightsPlayed,
+            HasLongestRoad = player.HasLongestRoad,
+            HasLargestArmy = player.HasLargestArmy,
+            LongestRoadLength = player.LongestRoadLength,
+            SettlementsLeft = player.SettlementsLeft,
+            CitiesLeft = player.CitiesLeft,
+            RoadsLeft = player.RoadsLeft,
+            IsOnline = online?.Contains(userId) ?? false
+        };
+    }
+
+    private static HandView ToHand(GameState state, PlayerState player) => new()
+    {
+        Resources = new Dictionary<Resource, int>(player.Resources),
+        DevelopmentCards = new Dictionary<DevelopmentCard, int>(player.DevelopmentCards),
+        NewDevelopmentCards = new Dictionary<DevelopmentCard, int>(player.NewDevelopmentCards),
+        VictoryPoints = player.VictoryPoints,
+        PlayedDevelopmentCardThisTurn = player.PlayedDevelopmentCardThisTurn,
+        MustDiscard = state.PendingDiscards.GetValueOrDefault(player.Index)
+    };
+
+    /// <summary>
+    /// حرکت‌های قانونی فقط وقتی محاسبه می‌شوند که واقعاً نوبت این صندلی باشد —
+    /// هم برای صرفه‌جویی و هم چون در غیر این صورت هیچ‌کدامشان معنا ندارند.
+    /// </summary>
+    private static LegalMovesView LegalFor(GameState state, int? viewerSeat)
+    {
+        if (viewerSeat is not { } seat || state.Phase == TurnPhase.GameOver)
+        {
+            return LegalMovesView.None;
+        }
+
+        // در مرحله‌ی دور ریختن، نوبتِ کسی نیست ولی بدهکارها باید کاری بکنند.
+        var isMyTurn = state.CurrentPlayer == seat
+            || (state.Phase == TurnPhase.Discard && state.PendingDiscards.ContainsKey(seat));
+
+        if (!isMyTurn)
+        {
+            return LegalMovesView.None;
+        }
+
+        var settlements = state.Phase is TurnPhase.SetupSettlement or TurnPhase.Main
+            ? GameEngine.LegalSettlementVertices(state, seat).ToList()
+            : [];
+
+        var roads = state.Phase switch
+        {
+            TurnPhase.SetupRoad => state.LastSetupSettlement is { } v
+                ? v.TouchingEdges().Where(e => state.Board.ContainsEdge(e) && state.RoadAt(e) is null).ToList()
+                : [],
+            TurnPhase.Main => GameEngine.LegalRoadEdges(state, seat).ToList(),
+            _ => []
+        };
+
+        var cities = state.Phase == TurnPhase.Main
+            ? state.BuildingsOf(seat)
+                .Where(b => b.Value.Kind == BuildingKind.Settlement)
+                .Select(b => b.Key)
+                .ToList()
+            : [];
+
+        var robberTargets = state.Phase == TurnPhase.MoveRobber
+            ? state.Board.Tiles.Where(t => t.Position != state.Robber).Select(t => t.Position).ToList()
+            : [];
+
+        return new LegalMovesView
+        {
+            IsMyTurn = true,
+            Settlements = [.. settlements.Select(v => new VertexSnapshot(v.Hex.Q, v.Hex.R, v.Corner))],
+            Roads = [.. roads.Select(e => new RoadSnapshot(e.Hex.Q, e.Hex.R, e.Side, seat))],
+            Cities = [.. cities.Select(v => new VertexSnapshot(v.Hex.Q, v.Hex.R, v.Corner))],
+            RobberTargets = [.. robberTargets.Select(h => new HexSnapshot(h.Q, h.R))]
+        };
+    }
+}

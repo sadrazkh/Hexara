@@ -35,6 +35,9 @@ public static class GameJson
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             Converters =
             {
+                // enumها با نام نوشته می‌شوند نه عدد: هم ستون jsonb با چشم خواندنی
+                // می‌ماند، هم اضافه شدن یک عضو وسط enum داده‌های قدیمی را خراب نمی‌کند.
+                new JsonStringEnumConverter(),
                 new AxialConverter(),
                 new VertexIdConverter(),
                 new EdgeIdConverter()

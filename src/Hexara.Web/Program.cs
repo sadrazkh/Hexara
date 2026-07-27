@@ -1,6 +1,9 @@
 using System.Globalization;
+using System.Text.Json;
 using Hexara.Application;
 using Hexara.Application.Common.Interfaces;
+using Hexara.Application.Games;
+using Hexara.Web.Realtime;
 using Hexara.Infrastructure;
 using Hexara.Infrastructure.Identity;
 using Hexara.Infrastructure.Persistence;
@@ -62,6 +65,26 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
 
 builder.Services.AddControllersWithViews();
 
+builder.Services.AddSingleton<GamePresence>();
+builder.Services.AddSingleton<GameLocks>();
+builder.Services.AddScoped<GameViewBuilder>();
+
+// هاب همان قالب JSON بازی را می‌گیرد: بدون آن، چندریختی حرکت‌ها و شناسه‌های
+// کانونی گوشه و ضلع روی سیم قابل خواندن نیستند.
+builder.Services.AddSignalR().AddJsonProtocol(options =>
+{
+    options.PayloadSerializerOptions.TypeInfoResolver = GameJson.Options.TypeInfoResolver;
+
+    foreach (var converter in GameJson.Options.Converters)
+    {
+        options.PayloadSerializerOptions.Converters.Add(converter);
+    }
+
+    // قرارداد سیم عمداً با قالب ذخیره‌سازی فرق دارد: کلاینت JavaScript است.
+    options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    options.PayloadSerializerOptions.PropertyNameCaseInsensitive = true;
+});
+
 builder.Services.AddHealthChecks()
     .AddNpgSql(builder.Configuration.GetConnectionString("Default")!, name: "postgres");
 
@@ -88,6 +111,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
+app.MapHub<GameHub>("/hubs/game");
 app.MapHealthChecks("/health");
 
 await MigrateAsync(app);

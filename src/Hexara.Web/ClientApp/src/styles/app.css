@@ -750,6 +750,100 @@ code {
   color: var(--hx-text-dim);
 }
 
+/* ── بازی زنده (موقت تا فاز ۶) ────────────────────────────────────────── */
+
+.hx-live {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-4);
+}
+
+.hx-live__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--hx-sp-3);
+  padding: var(--hx-sp-2) var(--hx-sp-3);
+  border: 1px solid var(--hx-border);
+  border-radius: var(--hx-r-md);
+  background: var(--hx-surface);
+  color: var(--hx-text-dim);
+  font-size: 0.88rem;
+}
+
+.hx-live__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.hx-live__link::before {
+  content: '';
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: var(--hx-r-pill);
+  background: var(--hx-text-faint);
+}
+
+.hx-live__link[data-link='live']::before {
+  background: var(--hx-ok);
+}
+
+.hx-live__link[data-link='reconnecting']::before {
+  background: var(--hx-warn);
+}
+
+.hx-live__link[data-link='offline']::before {
+  background: var(--hx-danger);
+}
+
+.hx-live__grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: var(--hx-sp-4);
+  align-items: start;
+}
+
+.hx-live__controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-3);
+}
+
+/* فهرست مختصات‌ها موقتی است و می‌تواند بلند شود؛ پس خودش اسکرول می‌گیرد. */
+.hx-live__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hx-sp-2);
+  max-height: 11rem;
+  overflow-y: auto;
+}
+
+.hx-live__counters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hx-sp-3);
+}
+
+.hx-live__counter {
+  display: flex;
+  align-items: center;
+  gap: var(--hx-sp-2);
+}
+
+.hx-live__log {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 14rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--hx-text-dim);
+  font-size: 0.85rem;
+}
+
 /* ── کمکی ─────────────────────────────────────────────────────────────── */
 
 .hx-muted {
@@ -807,5 +901,9 @@ code {
 
   .hx-room__meta {
     margin-inline-start: 0;
+  }
+
+  .hx-live__grid {
+    grid-template-columns: 1fr;
   }
 }
