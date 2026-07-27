@@ -149,7 +149,7 @@ public class BuildTests
         var state = Games.New(players: 2);
         state.PlaceBuilding(SharedVertex, new Building(0, BuildingKind.Settlement));
         state.Player(0).SettlementsLeft--;
-        state.Player(0).VictoryPoints++;
+        state.Player(0).BuildingPoints++;
         Games.StartMainPhase(state, 0);
         Games.GiveCityCost(state, 0);
 
@@ -194,7 +194,7 @@ public class BuildTests
     {
         var state = Games.New(players: 2, tweak: o => o with { VictoryPoints = 3 });
         state.PlaceRoad(FirstEdge, 0);
-        state.Player(0).VictoryPoints = 2;
+        state.Player(0).BuildingPoints = 2;
         Games.StartMainPhase(state, 0);
         Games.GiveSettlementCost(state, 0);
 

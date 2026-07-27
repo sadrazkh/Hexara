@@ -35,6 +35,16 @@ public static class GameEngine
             BuildRoad a => Build(state, a),
             BuildSettlement a => Build(state, a),
             BuildCity a => Build(state, a),
+            BuyDevelopmentCard a => BuyCard(state, a),
+            PlayKnight a => UseKnight(state, a),
+            PlayRoadBuilding a => UseRoadBuilding(state, a),
+            PlayYearOfPlenty a => UseYearOfPlenty(state, a),
+            PlayMonopoly a => UseMonopoly(state, a),
+            MaritimeTrade a => TradeWithBank(state, a),
+            ProposeTrade a => OfferTrade(state, a),
+            RespondToTrade a => AnswerTrade(state, a),
+            ConfirmTrade a => SettleTrade(state, a),
+            CancelTrade a => WithdrawTrade(state, a),
             EndTurn a => FinishTurn(state, a),
             _ => MoveResult.Fail(GameError.WrongPhase)
         };
@@ -70,7 +80,7 @@ public static class GameEngine
         var player = state.Player(action.PlayerIndex);
         state.PlaceBuilding(action.Vertex, new Building(action.PlayerIndex, BuildingKind.Settlement));
         player.SettlementsLeft--;
-        player.VictoryPoints++;
+        player.BuildingPoints++;
 
         var events = new List<GameEvent> { new SetupSettlementPlaced(action.PlayerIndex, action.Vertex) };
 
@@ -139,6 +149,7 @@ public static class GameEngine
             state.Phase = TurnPhase.SetupSettlement;
         }
 
+        RecomputeLongestRoad(state, events);
         return MoveResult.Ok(events);
     }
 
@@ -348,43 +359,63 @@ public static class GameEngine
             return MoveResult.Fail(GameError.NotYourTurn);
         }
 
-        if (!state.Board.HasTile(action.Hex))
+        var events = new List<GameEvent>();
+        var error = ExecuteRobber(state, action.PlayerIndex, action.Hex, action.Victim, events);
+        if (error != GameError.None)
         {
-            return MoveResult.Fail(GameError.HexNotOnBoard);
-        }
-
-        if (action.Hex == state.Robber)
-        {
-            return MoveResult.Fail(GameError.RobberMustChangeHex);
-        }
-
-        var victims = RobberVictims(state, action.Hex, action.PlayerIndex).ToList();
-
-        if (action.Victim is { } victim)
-        {
-            if (!victims.Contains(victim))
-            {
-                return MoveResult.Fail(GameError.InvalidVictim);
-            }
-        }
-        else if (victims.Count > 0)
-        {
-            return MoveResult.Fail(GameError.VictimRequired);
-        }
-
-        var from = state.Robber;
-        state.Robber = action.Hex;
-
-        var events = new List<GameEvent> { new RobberMoved(action.PlayerIndex, from, action.Hex) };
-
-        if (action.Victim is { } target)
-        {
-            var stolen = StealRandomCard(state, action.PlayerIndex, target);
-            events.Add(new ResourceStolen(action.PlayerIndex, target, stolen));
+            return MoveResult.Fail(error);
         }
 
         state.Phase = TurnPhase.Main;
         return MoveResult.Ok(events);
+    }
+
+    /// <summary>
+    /// جابه‌جایی دزد و دزدی — هم از تاس ۷ و هم از کارت شوالیه به اینجا می‌رسیم، پس
+    /// مرحله‌ی بازی را عمداً دست نمی‌زند و تصمیمش با فراخوان است.
+    /// </summary>
+    private static GameError ExecuteRobber(
+        GameState state,
+        int playerIndex,
+        Axial hex,
+        int? victim,
+        List<GameEvent> events)
+    {
+        if (!state.Board.HasTile(hex))
+        {
+            return GameError.HexNotOnBoard;
+        }
+
+        if (hex == state.Robber)
+        {
+            return GameError.RobberMustChangeHex;
+        }
+
+        var candidates = RobberVictims(state, hex, playerIndex).ToList();
+
+        if (victim is { } chosen)
+        {
+            if (!candidates.Contains(chosen))
+            {
+                return GameError.InvalidVictim;
+            }
+        }
+        else if (candidates.Count > 0)
+        {
+            return GameError.VictimRequired;
+        }
+
+        var from = state.Robber;
+        state.Robber = hex;
+        events.Add(new RobberMoved(playerIndex, from, hex));
+
+        if (victim is { } target)
+        {
+            var stolen = StealRandomCard(state, playerIndex, target);
+            events.Add(new ResourceStolen(playerIndex, target, stolen));
+        }
+
+        return GameError.None;
     }
 
     /// <summary>بازیکنانی که ساختمانی کنار این خانه دارند، کارت دارند و مصون نیستند.</summary>
@@ -405,9 +436,10 @@ public static class GameEngine
                 && !IsProtectedByFriendlyRobber(state, index));
     }
 
+    // امتیاز عمومی مبناست، نه امتیاز واقعی: مصونیت نباید کارت‌های پنهان را لو بدهد.
     private static bool IsProtectedByFriendlyRobber(GameState state, int playerIndex) =>
         state.Options.FriendlyRobber
-        && state.Player(playerIndex).VictoryPoints <= state.Options.FriendlyRobberThreshold;
+        && state.Player(playerIndex).PublicVictoryPoints <= state.Options.FriendlyRobberThreshold;
 
     private static Resource StealRandomCard(GameState state, int thiefIndex, int victimIndex)
     {
@@ -456,24 +488,10 @@ public static class GameEngine
     {
         var player = state.Player(action.PlayerIndex);
 
-        if (!state.Board.ContainsEdge(action.Edge))
+        var error = ValidateRoadSpot(state, action.PlayerIndex, action.Edge);
+        if (error != GameError.None)
         {
-            return MoveResult.Fail(GameError.EdgeNotOnBoard);
-        }
-
-        if (state.RoadAt(action.Edge) is not null)
-        {
-            return MoveResult.Fail(GameError.EdgeOccupied);
-        }
-
-        if (player.RoadsLeft <= 0)
-        {
-            return MoveResult.Fail(GameError.NoPiecesLeft);
-        }
-
-        if (!IsRoadConnected(state, action.PlayerIndex, action.Edge))
-        {
-            return MoveResult.Fail(GameError.RoadNotConnected);
+            return MoveResult.Fail(error);
         }
 
         if (!player.CanAfford(BuildCosts.Road))
@@ -485,7 +503,10 @@ public static class GameEngine
         state.PlaceRoad(action.Edge, action.PlayerIndex);
         player.RoadsLeft--;
 
-        return MoveResult.Ok(new RoadBuilt(action.PlayerIndex, action.Edge));
+        var events = new List<GameEvent> { new RoadBuilt(action.PlayerIndex, action.Edge) };
+        RecomputeLongestRoad(state, events);
+        CheckVictory(state, action.PlayerIndex, events);
+        return MoveResult.Ok(events);
     }
 
     private static MoveResult BuildSettlementAt(GameState state, BuildSettlement action)
@@ -517,10 +538,13 @@ public static class GameEngine
         PayToBank(state, player, BuildCosts.Settlement);
         state.PlaceBuilding(action.Vertex, new Building(action.PlayerIndex, BuildingKind.Settlement));
         player.SettlementsLeft--;
-        player.VictoryPoints++;
+        player.BuildingPoints++;
 
         var events = new List<GameEvent> { new SettlementBuilt(action.PlayerIndex, action.Vertex) };
-        AddVictoryIfWon(state, action.PlayerIndex, events);
+
+        // آبادی تازه ممکن است جاده‌ی حریف را از وسط قطع کند.
+        RecomputeLongestRoad(state, events);
+        CheckVictory(state, action.PlayerIndex, events);
         return MoveResult.Ok(events);
     }
 
@@ -562,10 +586,10 @@ public static class GameEngine
         state.PlaceBuilding(action.Vertex, new Building(action.PlayerIndex, BuildingKind.City));
         player.CitiesLeft--;
         player.SettlementsLeft++; // آبادی به بازیکن برمی‌گردد.
-        player.VictoryPoints++;
+        player.BuildingPoints++;
 
         var events = new List<GameEvent> { new CityBuilt(action.PlayerIndex, action.Vertex) };
-        AddVictoryIfWon(state, action.PlayerIndex, events);
+        CheckVictory(state, action.PlayerIndex, events);
         return MoveResult.Ok(events);
     }
 
@@ -581,6 +605,11 @@ public static class GameEngine
             return MoveResult.Fail(GameError.NotYourTurn);
         }
 
+        var player = state.Player(action.PlayerIndex);
+        player.ReleaseNewDevelopmentCards();
+        player.PlayedDevelopmentCardThisTurn = false;
+
+        state.PendingTrade = null;
         state.Die1 = null;
         state.Die2 = null;
         state.CurrentPlayer = (state.CurrentPlayer + 1) % state.Players.Count;
@@ -588,6 +617,488 @@ public static class GameEngine
         state.Phase = TurnPhase.Roll;
 
         return MoveResult.Ok(new TurnStarted(state.CurrentPlayer, state.TurnNumber));
+    }
+
+    // ── کارت توسعه ───────────────────────────────────────────────────────
+
+    private static MoveResult BuyCard(GameState state, BuyDevelopmentCard action)
+    {
+        if (state.Phase != TurnPhase.Main)
+        {
+            return MoveResult.Fail(GameError.WrongPhase);
+        }
+
+        if (action.PlayerIndex != state.CurrentPlayer)
+        {
+            return MoveResult.Fail(GameError.NotYourTurn);
+        }
+
+        if (state.DevelopmentDeckCount == 0)
+        {
+            return MoveResult.Fail(GameError.DevelopmentDeckEmpty);
+        }
+
+        var player = state.Player(action.PlayerIndex);
+        if (!player.CanAfford(BuildCosts.DevelopmentCard))
+        {
+            return MoveResult.Fail(GameError.NotEnoughResources);
+        }
+
+        PayToBank(state, player, BuildCosts.DevelopmentCard);
+        var card = state.DrawDevelopmentCard();
+        player.AddNewDevelopmentCard(card);
+
+        var events = new List<GameEvent> { new DevelopmentCardBought(action.PlayerIndex, card) };
+
+        // کارت امتیاز بازی نمی‌شود؛ از همان لحظه‌ی خرید امتیاز می‌دهد و می‌تواند بازی را تمام کند.
+        if (card == DevelopmentCard.VictoryPoint)
+        {
+            player.VictoryPointCards++;
+            CheckVictory(state, action.PlayerIndex, events);
+        }
+
+        return MoveResult.Ok(events);
+    }
+
+    private static MoveResult UseKnight(GameState state, PlayKnight action)
+    {
+        var error = ValidateDevelopmentPlay(state, action.PlayerIndex, DevelopmentCard.Knight);
+        if (error != GameError.None)
+        {
+            return MoveResult.Fail(error);
+        }
+
+        var events = new List<GameEvent>();
+        error = ExecuteRobber(state, action.PlayerIndex, action.Hex, action.Victim, events);
+        if (error != GameError.None)
+        {
+            return MoveResult.Fail(error);
+        }
+
+        var player = state.Player(action.PlayerIndex);
+        player.RemoveDevelopmentCard(DevelopmentCard.Knight);
+        player.PlayedDevelopmentCardThisTurn = true;
+        player.KnightsPlayed++;
+
+        events.Insert(0, new KnightPlayed(action.PlayerIndex, player.KnightsPlayed));
+        RecomputeLargestArmy(state, events);
+        CheckVictory(state, action.PlayerIndex, events);
+        return MoveResult.Ok(events);
+    }
+
+    private static MoveResult UseRoadBuilding(GameState state, PlayRoadBuilding action)
+    {
+        var error = ValidateDevelopmentPlay(state, action.PlayerIndex, DevelopmentCard.RoadBuilding);
+        if (error != GameError.None)
+        {
+            return MoveResult.Fail(error);
+        }
+
+        var player = state.Player(action.PlayerIndex);
+
+        error = ValidateRoadSpot(state, action.PlayerIndex, action.First);
+        if (error != GameError.None)
+        {
+            return MoveResult.Fail(error);
+        }
+
+        // جاده‌ی دوم ممکن است فقط به لطف جاده‌ی اول قانونی باشد، پس ترتیبی گذاشته می‌شوند.
+        state.PlaceRoad(action.First, action.PlayerIndex);
+        player.RoadsLeft--;
+
+        var placed = new List<EdgeId> { action.First };
+
+        if (action.Second is { } second)
+        {
+            error = ValidateRoadSpot(state, action.PlayerIndex, second);
+            if (error != GameError.None)
+            {
+                // برگرداندن جاده‌ی اول تا حرکتِ ردشده هیچ اثری نگذارد.
+                state.RemoveRoad(action.First);
+                player.RoadsLeft++;
+                return MoveResult.Fail(error);
+            }
+
+            state.PlaceRoad(second, action.PlayerIndex);
+            player.RoadsLeft--;
+            placed.Add(second);
+        }
+
+        player.RemoveDevelopmentCard(DevelopmentCard.RoadBuilding);
+        player.PlayedDevelopmentCardThisTurn = true;
+
+        var events = new List<GameEvent> { new RoadBuildingPlayed(action.PlayerIndex, placed) };
+        RecomputeLongestRoad(state, events);
+        CheckVictory(state, action.PlayerIndex, events);
+        return MoveResult.Ok(events);
+    }
+
+    private static MoveResult UseYearOfPlenty(GameState state, PlayYearOfPlenty action)
+    {
+        var error = ValidateDevelopmentPlay(state, action.PlayerIndex, DevelopmentCard.YearOfPlenty);
+        if (error != GameError.None)
+        {
+            return MoveResult.Fail(error);
+        }
+
+        var wanted = new Dictionary<Resource, int> { [action.First] = 1 };
+        wanted[action.Second] = wanted.GetValueOrDefault(action.Second) + 1;
+
+        if (wanted.Any(w => state.BankOf(w.Key) < w.Value))
+        {
+            return MoveResult.Fail(GameError.BankCannotPay);
+        }
+
+        var player = state.Player(action.PlayerIndex);
+        foreach (var (resource, amount) in wanted)
+        {
+            state.BankTake(resource, amount);
+            player.Add(resource, amount);
+        }
+
+        player.RemoveDevelopmentCard(DevelopmentCard.YearOfPlenty);
+        player.PlayedDevelopmentCardThisTurn = true;
+
+        return MoveResult.Ok(new YearOfPlentyPlayed(action.PlayerIndex, action.First, action.Second));
+    }
+
+    private static MoveResult UseMonopoly(GameState state, PlayMonopoly action)
+    {
+        var error = ValidateDevelopmentPlay(state, action.PlayerIndex, DevelopmentCard.Monopoly);
+        if (error != GameError.None)
+        {
+            return MoveResult.Fail(error);
+        }
+
+        var player = state.Player(action.PlayerIndex);
+        var collected = 0;
+
+        foreach (var other in state.Players.Where(p => p.Index != action.PlayerIndex))
+        {
+            var amount = other[action.Resource];
+            if (amount == 0)
+            {
+                continue;
+            }
+
+            other.Remove(action.Resource, amount);
+            player.Add(action.Resource, amount);
+            collected += amount;
+        }
+
+        player.RemoveDevelopmentCard(DevelopmentCard.Monopoly);
+        player.PlayedDevelopmentCardThisTurn = true;
+
+        return MoveResult.Ok(new MonopolyPlayed(action.PlayerIndex, action.Resource, collected));
+    }
+
+    private static GameError ValidateDevelopmentPlay(GameState state, int playerIndex, DevelopmentCard card)
+    {
+        // کارت توسعه را می‌توان قبل یا بعد از تاس بازی کرد، ولی نه وسط ماجرای دزد.
+        if (state.Phase is not (TurnPhase.Roll or TurnPhase.Main))
+        {
+            return GameError.WrongPhase;
+        }
+
+        if (playerIndex != state.CurrentPlayer)
+        {
+            return GameError.NotYourTurn;
+        }
+
+        if (card == DevelopmentCard.VictoryPoint)
+        {
+            return GameError.VictoryPointCardIsNotPlayable;
+        }
+
+        var player = state.Player(playerIndex);
+        if (player.PlayedDevelopmentCardThisTurn)
+        {
+            return GameError.AlreadyPlayedADevelopmentCard;
+        }
+
+        if (player[card] <= 0)
+        {
+            return player.NewDevelopmentCards.GetValueOrDefault(card) > 0
+                ? GameError.CardBoughtThisTurn
+                : GameError.NoSuchDevelopmentCard;
+        }
+
+        return GameError.None;
+    }
+
+    // ── معامله ───────────────────────────────────────────────────────────
+
+    private static MoveResult TradeWithBank(GameState state, MaritimeTrade action)
+    {
+        if (state.Phase != TurnPhase.Main)
+        {
+            return MoveResult.Fail(GameError.WrongPhase);
+        }
+
+        if (action.PlayerIndex != state.CurrentPlayer)
+        {
+            return MoveResult.Fail(GameError.NotYourTurn);
+        }
+
+        if (action.Give == action.Take)
+        {
+            return MoveResult.Fail(GameError.CannotTradeTheSameResource);
+        }
+
+        var rate = MaritimeRate(state, action.PlayerIndex, action.Give);
+        var player = state.Player(action.PlayerIndex);
+
+        if (player[action.Give] < rate)
+        {
+            return MoveResult.Fail(GameError.NotEnoughResources);
+        }
+
+        if (state.BankOf(action.Take) < 1)
+        {
+            return MoveResult.Fail(GameError.BankCannotPay);
+        }
+
+        player.Remove(action.Give, rate);
+        state.BankReturn(action.Give, rate);
+        state.BankTake(action.Take, 1);
+        player.Add(action.Take, 1);
+
+        return MoveResult.Ok(new MaritimeTraded(action.PlayerIndex, action.Give, rate, action.Take));
+    }
+
+    /// <summary>بهترین نرخی که این بازیکن برای دادن این منبع دارد: ۲ با بندر اختصاصی، ۳ با بندر عمومی، وگرنه ۴.</summary>
+    public static int MaritimeRate(GameState state, int playerIndex, Resource give)
+    {
+        var rate = state.Options.BankTradeRate;
+
+        foreach (var port in state.Board.Ports)
+        {
+            if (!port.Vertices().Any(v => state.BuildingAt(v)?.PlayerIndex == playerIndex))
+            {
+                continue;
+            }
+
+            if (port.Resource is null || port.Resource == give)
+            {
+                rate = Math.Min(rate, port.Rate);
+            }
+        }
+
+        return rate;
+    }
+
+    private static MoveResult OfferTrade(GameState state, ProposeTrade action)
+    {
+        if (state.Phase != TurnPhase.Main)
+        {
+            return MoveResult.Fail(GameError.WrongPhase);
+        }
+
+        if (action.PlayerIndex != state.CurrentPlayer)
+        {
+            return MoveResult.Fail(GameError.NotYourTurn);
+        }
+
+        if (state.PendingTrade is not null)
+        {
+            return MoveResult.Fail(GameError.TradeAlreadyOnTheTable);
+        }
+
+        var give = Clean(action.Give);
+        var take = Clean(action.Take);
+
+        if (give.Count == 0 || take.Count == 0)
+        {
+            return MoveResult.Fail(GameError.EmptyTrade);
+        }
+
+        if (!state.Player(action.PlayerIndex).CanAfford(give))
+        {
+            return MoveResult.Fail(GameError.NotEnoughResources);
+        }
+
+        var recipients = action.Recipients.Count > 0
+            ? action.Recipients.Distinct().Where(i => i != action.PlayerIndex).ToList()
+            : state.Players.Select(p => p.Index).Where(i => i != action.PlayerIndex).ToList();
+
+        if (recipients.Count == 0 || recipients.Any(i => i < 0 || i >= state.Players.Count))
+        {
+            return MoveResult.Fail(GameError.InvalidVictim);
+        }
+
+        state.PendingTrade = new TradeOffer(action.PlayerIndex, give, take, recipients);
+        return MoveResult.Ok(new TradeProposed(action.PlayerIndex, give, take, recipients));
+    }
+
+    private static MoveResult AnswerTrade(GameState state, RespondToTrade action)
+    {
+        if (state.PendingTrade is not { } offer)
+        {
+            return MoveResult.Fail(GameError.NoTradeOnTheTable);
+        }
+
+        if (!offer.CanRespond(action.PlayerIndex))
+        {
+            return MoveResult.Fail(GameError.NotInvitedToTrade);
+        }
+
+        // پذیرش بدون داشتن کالا یعنی پیشنهاددهنده روی چیزی حساب کند که وجود ندارد.
+        if (action.Accept && !state.Player(action.PlayerIndex).CanAfford(offer.Take))
+        {
+            return MoveResult.Fail(GameError.NotEnoughResources);
+        }
+
+        offer.Respond(action.PlayerIndex, action.Accept ? TradeResponse.Accepted : TradeResponse.Rejected);
+        return MoveResult.Ok(new TradeResponded(action.PlayerIndex, action.Accept));
+    }
+
+    private static MoveResult SettleTrade(GameState state, ConfirmTrade action)
+    {
+        if (state.PendingTrade is not { } offer)
+        {
+            return MoveResult.Fail(GameError.NoTradeOnTheTable);
+        }
+
+        if (offer.Proposer != action.PlayerIndex)
+        {
+            return MoveResult.Fail(GameError.NotYourTrade);
+        }
+
+        if (!offer.AcceptedBy.Contains(action.Partner))
+        {
+            return MoveResult.Fail(GameError.PartnerDidNotAccept);
+        }
+
+        var proposer = state.Player(action.PlayerIndex);
+        var partner = state.Player(action.Partner);
+
+        // دست‌ها ممکن است از زمان پذیرش عوض شده باشند؛ دوباره بررسی می‌شود.
+        if (!proposer.CanAfford(offer.Give) || !partner.CanAfford(offer.Take))
+        {
+            return MoveResult.Fail(GameError.NotEnoughResources);
+        }
+
+        foreach (var (resource, amount) in offer.Give)
+        {
+            proposer.Remove(resource, amount);
+            partner.Add(resource, amount);
+        }
+
+        foreach (var (resource, amount) in offer.Take)
+        {
+            partner.Remove(resource, amount);
+            proposer.Add(resource, amount);
+        }
+
+        var events = new List<GameEvent>
+        {
+            new TradeCompleted(action.PlayerIndex, action.Partner, offer.Give, offer.Take)
+        };
+
+        state.PendingTrade = null;
+        return MoveResult.Ok(events);
+    }
+
+    private static MoveResult WithdrawTrade(GameState state, CancelTrade action)
+    {
+        if (state.PendingTrade is not { } offer)
+        {
+            return MoveResult.Fail(GameError.NoTradeOnTheTable);
+        }
+
+        if (offer.Proposer != action.PlayerIndex)
+        {
+            return MoveResult.Fail(GameError.NotYourTrade);
+        }
+
+        state.PendingTrade = null;
+        return MoveResult.Ok(new TradeCancelled(action.PlayerIndex));
+    }
+
+    private static Dictionary<Resource, int> Clean(IReadOnlyDictionary<Resource, int> bundle) =>
+        bundle.Where(b => b.Value > 0).ToDictionary(b => b.Key, b => b.Value);
+
+    // ── کارت‌های افتخاری ─────────────────────────────────────────────────
+
+    /// <summary>
+    /// طول جاده‌ی همه را بازمحاسبه می‌کند و در صورت لزوم کارت را جابه‌جا می‌کند.
+    /// در تساوی، دارنده‌ی فعلی کارت را نگه می‌دارد؛ اگر دارنده عقب بیفتد و چند نفر
+    /// مساوی جلو باشند، کارت بی‌صاحب می‌ماند تا یک نفر تنها جلو بزند.
+    /// </summary>
+    private static void RecomputeLongestRoad(GameState state, List<GameEvent> events)
+    {
+        foreach (var player in state.Players)
+        {
+            player.LongestRoadLength = RoadNetwork.LongestRoad(state, player.Index);
+        }
+
+        var minimum = state.Options.LongestRoadMinimum;
+        var holder = state.LongestRoadHolder;
+        var best = state.Players.Max(p => p.LongestRoadLength);
+
+        if (best < minimum)
+        {
+            if (holder is not null)
+            {
+                state.Player(holder.Value).HasLongestRoad = false;
+                events.Add(new LongestRoadChanged(null, best));
+            }
+
+            return;
+        }
+
+        if (holder is { } current && state.Player(current).LongestRoadLength == best)
+        {
+            return;
+        }
+
+        var leaders = state.Players.Where(p => p.LongestRoadLength == best).ToList();
+
+        if (holder is not null)
+        {
+            state.Player(holder.Value).HasLongestRoad = false;
+        }
+
+        if (leaders.Count == 1)
+        {
+            leaders[0].HasLongestRoad = true;
+            events.Add(new LongestRoadChanged(leaders[0].Index, best));
+        }
+        else
+        {
+            events.Add(new LongestRoadChanged(null, best));
+        }
+    }
+
+    private static void RecomputeLargestArmy(GameState state, List<GameEvent> events)
+    {
+        var minimum = state.Options.LargestArmyMinimum;
+        var best = state.Players.Max(p => p.KnightsPlayed);
+
+        if (best < minimum)
+        {
+            return;
+        }
+
+        var holder = state.LargestArmyHolder;
+        if (holder is { } current && state.Player(current).KnightsPlayed >= best)
+        {
+            return;
+        }
+
+        var leaders = state.Players.Where(p => p.KnightsPlayed == best).ToList();
+        if (leaders.Count != 1)
+        {
+            return;
+        }
+
+        if (holder is not null)
+        {
+            state.Player(holder.Value).HasLargestArmy = false;
+        }
+
+        leaders[0].HasLargestArmy = true;
+        events.Add(new LargestArmyChanged(leaders[0].Index, best));
     }
 
     // ── قواعد مشترک ──────────────────────────────────────────────────────
@@ -611,6 +1122,28 @@ public static class GameEngine
         }
 
         return GameError.None;
+    }
+
+    private static GameError ValidateRoadSpot(GameState state, int playerIndex, EdgeId edge)
+    {
+        if (!state.Board.ContainsEdge(edge))
+        {
+            return GameError.EdgeNotOnBoard;
+        }
+
+        if (state.RoadAt(edge) is not null)
+        {
+            return GameError.EdgeOccupied;
+        }
+
+        if (state.Player(playerIndex).RoadsLeft <= 0)
+        {
+            return GameError.NoPiecesLeft;
+        }
+
+        return IsRoadConnected(state, playerIndex, edge)
+            ? GameError.None
+            : GameError.RoadNotConnected;
     }
 
     /// <summary>
@@ -650,7 +1183,7 @@ public static class GameEngine
         }
     }
 
-    private static void AddVictoryIfWon(GameState state, int playerIndex, List<GameEvent> events)
+    private static void CheckVictory(GameState state, int playerIndex, List<GameEvent> events)
     {
         var player = state.Player(playerIndex);
         if (player.VictoryPoints < state.Options.VictoryPoints)
@@ -678,4 +1211,8 @@ public static class GameEngine
     /// <summary>ضلع‌هایی که این بازیکن الان می‌تواند روی آن‌ها جاده بسازد.</summary>
     public static IEnumerable<EdgeId> LegalRoadEdges(GameState state, int playerIndex) =>
         state.Board.Edges.Where(e => state.RoadAt(e) is null && IsRoadConnected(state, playerIndex, e));
+
+    /// <summary>بندرهایی که این بازیکن با ساختمان‌هایش در اختیار دارد.</summary>
+    public static IEnumerable<Port> PortsOf(GameState state, int playerIndex) =>
+        state.Board.Ports.Where(p => p.Vertices().Any(v => state.BuildingAt(v)?.PlayerIndex == playerIndex));
 }

@@ -34,5 +34,22 @@ public enum GameError
 
     NothingToDiscard,
     WrongDiscardAmount,
-    NotEnoughCardsToDiscard
+    NotEnoughCardsToDiscard,
+
+    DevelopmentDeckEmpty,
+    NoSuchDevelopmentCard,
+    CardBoughtThisTurn,
+    AlreadyPlayedADevelopmentCard,
+    VictoryPointCardIsNotPlayable,
+
+    BankCannotPay,
+    NoPortForThisRate,
+    CannotTradeTheSameResource,
+    EmptyTrade,
+
+    TradeAlreadyOnTheTable,
+    NoTradeOnTheTable,
+    NotYourTrade,
+    NotInvitedToTrade,
+    PartnerDidNotAccept
 }

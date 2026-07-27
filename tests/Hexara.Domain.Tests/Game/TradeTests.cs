@@ -1,0 +1,347 @@
+using Hexara.Domain.Board;
+using Hexara.Domain.Game;
+
+namespace Hexara.Domain.Tests.Game;
+
+public class TradeTests
+{
+    // ── معامله با بانک و بندر ────────────────────────────────────────────
+
+    [Fact]
+    public void Without_a_port_the_rate_is_four_to_one()
+    {
+        var state = Games.New(players: 2);
+        Games.StartMainPhase(state, 0);
+        Games.Give(state, 0, (Resource.Lumber, 4));
+
+        var result = GameEngine.Apply(state, new MaritimeTrade(0, Resource.Lumber, Resource.Ore));
+
+        Assert.True(result.Success);
+        Assert.Equal(0, state.Player(0)[Resource.Lumber]);
+        Assert.Equal(1, state.Player(0)[Resource.Ore]);
+        Assert.Equal(4, result.Events.OfType<MaritimeTraded>().Single().Rate);
+    }
+
+    [Fact]
+    public void Three_cards_are_not_enough_without_a_port()
+    {
+        var state = Games.New(players: 2);
+        Games.StartMainPhase(state, 0);
+        Games.Give(state, 0, (Resource.Lumber, 3));
+
+        var result = GameEngine.Apply(state, new MaritimeTrade(0, Resource.Lumber, Resource.Ore));
+
+        Assert.False(result.Success);
+        Assert.Equal(GameError.NotEnoughResources, result.Error);
+    }
+
+    [Fact]
+    public void A_generic_port_gives_three_to_one()
+    {
+        var state = Games.New(players: 2);
+        var port = state.Board.Ports.First(p => p.IsGeneric);
+        state.PlaceBuilding(port.Vertices().First(), new Building(0, BuildingKind.Settlement));
+
+        Games.StartMainPhase(state, 0);
+        Games.Give(state, 0, (Resource.Lumber, 3));
+
+        var result = GameEngine.Apply(state, new MaritimeTrade(0, Resource.Lumber, Resource.Ore));
+
+        Assert.True(result.Success);
+        Assert.Equal(3, GameEngine.MaritimeRate(state, 0, Resource.Lumber));
+        Assert.Equal(0, state.Player(0)[Resource.Lumber]);
+    }
+
+    [Fact]
+    public void A_matching_port_gives_two_to_one()
+    {
+        var state = Games.New(players: 2);
+        var port = state.Board.Ports.First(p => !p.IsGeneric);
+        var traded = port.Resource!.Value;
+        state.PlaceBuilding(port.Vertices().First(), new Building(0, BuildingKind.Settlement));
+
+        Games.StartMainPhase(state, 0);
+        Games.Give(state, 0, (traded, 2));
+
+        var take = TerrainExtensions.AllResources.First(r => r != traded);
+        var result = GameEngine.Apply(state, new MaritimeTrade(0, traded, take));
+
+        Assert.True(result.Success);
+        Assert.Equal(2, GameEngine.MaritimeRate(state, 0, traded));
+        Assert.Equal(0, state.Player(0)[traded]);
+        Assert.Equal(1, state.Player(0)[take]);
+    }
+
+    /// <summary>بندر اختصاصی فقط برای منبع خودش تخفیف می‌دهد.</summary>
+    [Fact]
+    public void A_matching_port_does_not_help_other_resources()
+    {
+        var state = Games.New(players: 2);
+        var port = state.Board.Ports.First(p => !p.IsGeneric);
+        state.PlaceBuilding(port.Vertices().First(), new Building(0, BuildingKind.Settlement));
+
+        var other = TerrainExtensions.AllResources.First(r => r != port.Resource);
+
+        Assert.Equal(4, GameEngine.MaritimeRate(state, 0, other));
+    }
+
+    [Fact]
+    public void A_port_only_counts_for_its_owner()
+    {
+        var state = Games.New(players: 2);
+        var port = state.Board.Ports.First(p => p.IsGeneric);
+        state.PlaceBuilding(port.Vertices().First(), new Building(0, BuildingKind.Settlement));
+
+        Assert.Equal(3, GameEngine.MaritimeRate(state, 0, Resource.Lumber));
+        Assert.Equal(4, GameEngine.MaritimeRate(state, 1, Resource.Lumber));
+    }
+
+    [Fact]
+    public void Trading_a_resource_for_itself_is_rejected()
+    {
+        var state = Games.New(players: 2);
+        Games.StartMainPhase(state, 0);
+        Games.Give(state, 0, (Resource.Lumber, 4));
+
+        var result = GameEngine.Apply(state, new MaritimeTrade(0, Resource.Lumber, Resource.Lumber));
+
+        Assert.False(result.Success);
+        Assert.Equal(GameError.CannotTradeTheSameResource, result.Error);
+    }
+
+    [Fact]
+    public void The_bank_must_have_the_card_you_want()
+    {
+        var state = Games.New(players: 2);
+        Games.StartMainPhase(state, 0);
+        Games.Give(state, 0, (Resource.Lumber, 4));
+        state.BankTake(Resource.Ore, state.Bank[Resource.Ore]);
+
+        var result = GameEngine.Apply(state, new MaritimeTrade(0, Resource.Lumber, Resource.Ore));
+
+        Assert.False(result.Success);
+        Assert.Equal(GameError.BankCannotPay, result.Error);
+    }
+
+    // ── معامله بین بازیکنان ──────────────────────────────────────────────
+
+    private static GameState WithOffer(int players = 3)
+    {
+        var state = Games.New(players);
+        Games.StartMainPhase(state, 0);
+        Games.Give(state, 0, (Resource.Lumber, 2));
+        Games.Give(state, 1, (Resource.Ore, 1));
+
+        var offer = GameEngine.Apply(state, new ProposeTrade(
+            0,
+            new Dictionary<Resource, int> { [Resource.Lumber] = 2 },
+            new Dictionary<Resource, int> { [Resource.Ore] = 1 },
+            []));
+
+        Assert.True(offer.Success);
+        return state;
+    }
+
+    [Fact]
+    public void An_offer_goes_to_everyone_by_default()
+    {
+        var state = WithOffer();
+
+        Assert.NotNull(state.PendingTrade);
+        Assert.Equal([1, 2], state.PendingTrade!.Responses.Keys.Order());
+    }
+
+    [Fact]
+    public void You_cannot_offer_what_you_do_not_have()
+    {
+        var state = Games.New(players: 3);
+        Games.StartMainPhase(state, 0);
+
+        var result = GameEngine.Apply(state, new ProposeTrade(
+            0,
+            new Dictionary<Resource, int> { [Resource.Lumber] = 2 },
+            new Dictionary<Resource, int> { [Resource.Ore] = 1 },
+            []));
+
+        Assert.False(result.Success);
+        Assert.Equal(GameError.NotEnoughResources, result.Error);
+    }
+
+    [Fact]
+    public void An_empty_offer_is_rejected()
+    {
+        var state = Games.New(players: 3);
+        Games.StartMainPhase(state, 0);
+        Games.Give(state, 0, (Resource.Lumber, 2));
+
+        var result = GameEngine.Apply(state, new ProposeTrade(
+            0,
+            new Dictionary<Resource, int> { [Resource.Lumber] = 2 },
+            new Dictionary<Resource, int>(),
+            []));
+
+        Assert.False(result.Success);
+        Assert.Equal(GameError.EmptyTrade, result.Error);
+    }
+
+    [Fact]
+    public void Only_the_player_on_turn_may_offer()
+    {
+        var state = Games.New(players: 3);
+        Games.StartMainPhase(state, 0);
+        Games.Give(state, 1, (Resource.Lumber, 2));
+
+        var result = GameEngine.Apply(state, new ProposeTrade(
+            1,
+            new Dictionary<Resource, int> { [Resource.Lumber] = 2 },
+            new Dictionary<Resource, int> { [Resource.Ore] = 1 },
+            []));
+
+        Assert.False(result.Success);
+        Assert.Equal(GameError.NotYourTurn, result.Error);
+    }
+
+    [Fact]
+    public void Two_offers_cannot_be_on_the_table_at_once()
+    {
+        var state = WithOffer();
+
+        var result = GameEngine.Apply(state, new ProposeTrade(
+            0,
+            new Dictionary<Resource, int> { [Resource.Lumber] = 1 },
+            new Dictionary<Resource, int> { [Resource.Ore] = 1 },
+            []));
+
+        Assert.False(result.Success);
+        Assert.Equal(GameError.TradeAlreadyOnTheTable, result.Error);
+    }
+
+    [Fact]
+    public void Accepting_without_the_goods_is_rejected()
+    {
+        var state = WithOffer();
+
+        var result = GameEngine.Apply(state, new RespondToTrade(2, true));
+
+        Assert.False(result.Success);
+        Assert.Equal(GameError.NotEnoughResources, result.Error);
+    }
+
+    [Fact]
+    public void A_player_outside_the_offer_cannot_answer()
+    {
+        var state = Games.New(players: 3);
+        Games.StartMainPhase(state, 0);
+        Games.Give(state, 0, (Resource.Lumber, 2));
+        Games.Give(state, 1, (Resource.Ore, 1));
+
+        GameEngine.Apply(state, new ProposeTrade(
+            0,
+            new Dictionary<Resource, int> { [Resource.Lumber] = 2 },
+            new Dictionary<Resource, int> { [Resource.Ore] = 1 },
+            [1]));
+
+        var result = GameEngine.Apply(state, new RespondToTrade(2, true));
+
+        Assert.False(result.Success);
+        Assert.Equal(GameError.NotInvitedToTrade, result.Error);
+    }
+
+    [Fact]
+    public void Confirming_before_anyone_accepts_is_rejected()
+    {
+        var state = WithOffer();
+
+        var result = GameEngine.Apply(state, new ConfirmTrade(0, 1));
+
+        Assert.False(result.Success);
+        Assert.Equal(GameError.PartnerDidNotAccept, result.Error);
+    }
+
+    [Fact]
+    public void An_accepted_offer_swaps_the_cards()
+    {
+        var state = WithOffer();
+
+        Assert.True(GameEngine.Apply(state, new RespondToTrade(1, true)).Success);
+        var result = GameEngine.Apply(state, new ConfirmTrade(0, 1));
+
+        Assert.True(result.Success);
+        Assert.Equal(0, state.Player(0)[Resource.Lumber]);
+        Assert.Equal(1, state.Player(0)[Resource.Ore]);
+        Assert.Equal(2, state.Player(1)[Resource.Lumber]);
+        Assert.Equal(0, state.Player(1)[Resource.Ore]);
+        Assert.Null(state.PendingTrade);
+        Assert.Contains(result.Events, e => e is TradeCompleted);
+    }
+
+    [Fact]
+    public void A_rejected_offer_cannot_be_confirmed()
+    {
+        var state = WithOffer();
+
+        GameEngine.Apply(state, new RespondToTrade(1, false));
+        var result = GameEngine.Apply(state, new ConfirmTrade(0, 1));
+
+        Assert.False(result.Success);
+        Assert.Equal(GameError.PartnerDidNotAccept, result.Error);
+    }
+
+    [Fact]
+    public void Only_the_proposer_may_confirm_or_cancel()
+    {
+        var state = WithOffer();
+        GameEngine.Apply(state, new RespondToTrade(1, true));
+
+        Assert.Equal(GameError.NotYourTrade, GameEngine.Apply(state, new ConfirmTrade(1, 1)).Error);
+        Assert.Equal(GameError.NotYourTrade, GameEngine.Apply(state, new CancelTrade(1)).Error);
+    }
+
+    [Fact]
+    public void The_proposer_can_take_the_offer_back()
+    {
+        var state = WithOffer();
+
+        var result = GameEngine.Apply(state, new CancelTrade(0));
+
+        Assert.True(result.Success);
+        Assert.Null(state.PendingTrade);
+    }
+
+    [Fact]
+    public void Answering_when_there_is_no_offer_is_rejected()
+    {
+        var state = Games.New(players: 3);
+        Games.StartMainPhase(state, 0);
+
+        var result = GameEngine.Apply(state, new RespondToTrade(1, true));
+
+        Assert.False(result.Success);
+        Assert.Equal(GameError.NoTradeOnTheTable, result.Error);
+    }
+
+    [Fact]
+    public void The_offer_leaves_the_table_when_the_turn_ends()
+    {
+        var state = WithOffer();
+
+        GameEngine.Apply(state, new EndTurn(0));
+
+        Assert.Null(state.PendingTrade);
+    }
+
+    /// <summary>اگر دست طرف بین پذیرش و قطعی‌شدن خالی شود، معامله انجام نمی‌شود.</summary>
+    [Fact]
+    public void A_partner_who_lost_the_goods_cannot_be_confirmed()
+    {
+        var state = WithOffer();
+        GameEngine.Apply(state, new RespondToTrade(1, true));
+
+        state.Player(1).Remove(Resource.Ore, 1);
+
+        var result = GameEngine.Apply(state, new ConfirmTrade(0, 1));
+
+        Assert.False(result.Success);
+        Assert.Equal(GameError.NotEnoughResources, result.Error);
+    }
+}

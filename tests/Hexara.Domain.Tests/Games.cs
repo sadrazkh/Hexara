@@ -163,6 +163,23 @@ internal static class Games
         }
     }
 
+    /// <summary>دادن کارت توسعه‌ی آماده‌ی بازی (انگار نوبت قبل خریده شده).</summary>
+    public static void GiveDevelopmentCard(GameState state, int player, DevelopmentCard card, int count = 1)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            state.Player(player).AddNewDevelopmentCard(card);
+        }
+
+        state.Player(player).ReleaseNewDevelopmentCards();
+    }
+
+    /// <summary>خانه‌ای که هیچ ساختمانی کنارش نیست — جای امن برای بردن دزد بدون قربانی.</summary>
+    public static Axial EmptyHex(GameState state) =>
+        state.Board.Tiles
+            .First(t => t.Position != state.Robber && t.Vertices().All(v => state.BuildingAt(v) is null))
+            .Position;
+
     public static void GiveSettlementCost(GameState state, int player) =>
         Give(state, player, (Resource.Lumber, 1), (Resource.Brick, 1), (Resource.Wool, 1), (Resource.Grain, 1));
 

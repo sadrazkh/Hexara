@@ -49,6 +49,40 @@ public sealed record TurnStarted(int PlayerIndex, int TurnNumber) : GameEvent;
 
 public sealed record GameWon(int PlayerIndex, int VictoryPoints) : GameEvent;
 
+/// <summary>کارت خریداری‌شده — نوعش فقط برای خودِ خریدار فرستاده می‌شود.</summary>
+public sealed record DevelopmentCardBought(int PlayerIndex, DevelopmentCard Card) : GameEvent;
+
+public sealed record KnightPlayed(int PlayerIndex, int KnightsPlayed) : GameEvent;
+
+public sealed record RoadBuildingPlayed(int PlayerIndex, IReadOnlyList<EdgeId> Edges) : GameEvent;
+
+public sealed record YearOfPlentyPlayed(int PlayerIndex, Resource First, Resource Second) : GameEvent;
+
+public sealed record MonopolyPlayed(int PlayerIndex, Resource Resource, int Collected) : GameEvent;
+
+/// <summary>جابه‌جایی کارت «طولانی‌ترین جاده»؛ <paramref name="PlayerIndex"/> تهی یعنی بی‌صاحب شد.</summary>
+public sealed record LongestRoadChanged(int? PlayerIndex, int Length) : GameEvent;
+
+public sealed record LargestArmyChanged(int? PlayerIndex, int Knights) : GameEvent;
+
+public sealed record MaritimeTraded(int PlayerIndex, Resource Give, int Rate, Resource Take) : GameEvent;
+
+public sealed record TradeProposed(
+    int PlayerIndex,
+    IReadOnlyDictionary<Resource, int> Give,
+    IReadOnlyDictionary<Resource, int> Take,
+    IReadOnlyList<int> Recipients) : GameEvent;
+
+public sealed record TradeResponded(int PlayerIndex, bool Accepted) : GameEvent;
+
+public sealed record TradeCompleted(
+    int PlayerIndex,
+    int Partner,
+    IReadOnlyDictionary<Resource, int> Give,
+    IReadOnlyDictionary<Resource, int> Take) : GameEvent;
+
+public sealed record TradeCancelled(int PlayerIndex) : GameEvent;
+
 /// <summary>نتیجه‌ی اجرای یک حرکت.</summary>
 public sealed record MoveResult(bool Success, GameError Error, IReadOnlyList<GameEvent> Events)
 {

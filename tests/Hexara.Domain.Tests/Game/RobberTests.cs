@@ -202,12 +202,12 @@ public class RobberTests
         var state = Games.New(players: 3, tweak: o => o with { FriendlyRobber = true });
         var tile = state.Board.Tiles.First(t => t.Terrain != Terrain.Desert);
         state.PlaceBuilding(tile.Vertices().First(), new Building(1, BuildingKind.Settlement));
-        state.Player(1).VictoryPoints = 2;
+        state.Player(1).BuildingPoints = 2;
         Games.Give(state, 1, (Resource.Ore, 1));
 
         Assert.Empty(GameEngine.RobberVictims(state, tile.Position, 0));
 
-        state.Player(1).VictoryPoints = 3;
+        state.Player(1).BuildingPoints = 3;
         Assert.Equal([1], GameEngine.RobberVictims(state, tile.Position, 0));
     }
 

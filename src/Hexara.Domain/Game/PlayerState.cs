@@ -9,6 +9,8 @@ namespace Hexara.Domain.Game;
 public sealed class PlayerState
 {
     private readonly Dictionary<Resource, int> _resources;
+    private readonly Dictionary<DevelopmentCard, int> _development = [];
+    private readonly Dictionary<DevelopmentCard, int> _newDevelopment = [];
 
     public PlayerState(int index, Guid id, GameOptions options)
     {
@@ -26,6 +28,12 @@ public sealed class PlayerState
 
     public IReadOnlyDictionary<Resource, int> Resources => _resources;
 
+    /// <summary>کارت‌های توسعه‌ی قابل بازی.</summary>
+    public IReadOnlyDictionary<DevelopmentCard, int> DevelopmentCards => _development;
+
+    /// <summary>کارت‌هایی که همین نوبت خریده شده‌اند و هنوز قابل بازی نیستند.</summary>
+    public IReadOnlyDictionary<DevelopmentCard, int> NewDevelopmentCards => _newDevelopment;
+
     public int SettlementsLeft { get; internal set; }
 
     public int CitiesLeft { get; internal set; }
@@ -33,11 +41,37 @@ public sealed class PlayerState
     public int RoadsLeft { get; internal set; }
 
     /// <summary>امتیاز حاصل از ساخت‌وساز: هر آبادی ۱ و هر شهر ۲.</summary>
-    public int VictoryPoints { get; internal set; }
+    public int BuildingPoints { get; internal set; }
+
+    /// <summary>کارت‌های امتیاز پیروزی — پنهان از بقیه ولی از همان لحظه‌ی خرید حساب می‌شوند.</summary>
+    public int VictoryPointCards { get; internal set; }
+
+    public bool HasLongestRoad { get; internal set; }
+
+    public bool HasLargestArmy { get; internal set; }
+
+    /// <summary>طول بلندترین جاده‌ی پیوسته‌ی این بازیکن (بعد از هر تغییر بازمحاسبه می‌شود).</summary>
+    public int LongestRoadLength { get; internal set; }
+
+    public int KnightsPlayed { get; internal set; }
+
+    /// <summary>در هر نوبت فقط یک کارت توسعه می‌توان بازی کرد.</summary>
+    public bool PlayedDevelopmentCardThisTurn { get; internal set; }
+
+    /// <summary>امتیازی که همه می‌بینند — کارت‌های امتیاز پنهان در آن نیست.</summary>
+    public int PublicVictoryPoints =>
+        BuildingPoints + (HasLongestRoad ? 2 : 0) + (HasLargestArmy ? 2 : 0);
+
+    /// <summary>امتیاز واقعی؛ مبنای برد.</summary>
+    public int VictoryPoints => PublicVictoryPoints + VictoryPointCards;
 
     public int TotalCards => _resources.Values.Sum();
 
+    public int TotalDevelopmentCards => _development.Values.Sum() + _newDevelopment.Values.Sum();
+
     public int this[Resource resource] => _resources[resource];
+
+    public int this[DevelopmentCard card] => _development.GetValueOrDefault(card);
 
     internal void Add(Resource resource, int amount) => _resources[resource] += amount;
 
@@ -52,5 +86,21 @@ public sealed class PlayerState
         {
             _resources[resource] -= amount;
         }
+    }
+
+    internal void AddNewDevelopmentCard(DevelopmentCard card) =>
+        _newDevelopment[card] = _newDevelopment.GetValueOrDefault(card) + 1;
+
+    internal void RemoveDevelopmentCard(DevelopmentCard card) => _development[card]--;
+
+    /// <summary>پایان نوبت: کارت‌های خریداری‌شده قابل بازی می‌شوند.</summary>
+    internal void ReleaseNewDevelopmentCards()
+    {
+        foreach (var (card, count) in _newDevelopment)
+        {
+            _development[card] = _development.GetValueOrDefault(card) + count;
+        }
+
+        _newDevelopment.Clear();
     }
 }

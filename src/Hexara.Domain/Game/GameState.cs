@@ -16,12 +16,19 @@ public sealed class GameState
     private readonly Dictionary<EdgeId, int> _roads = [];
     private readonly Dictionary<Resource, int> _bank;
     private readonly Dictionary<int, int> _pendingDiscards = [];
+    private readonly List<DevelopmentCard> _deck;
 
-    private GameState(GameOptions options, BoardLayout board, IReadOnlyList<Guid> playerIds, Rng rng)
+    private GameState(
+        GameOptions options,
+        BoardLayout board,
+        IReadOnlyList<Guid> playerIds,
+        Rng rng,
+        List<DevelopmentCard> deck)
     {
         Options = options;
         Board = board;
         Rng = rng;
+        _deck = deck;
         Players = [.. playerIds.Select((id, i) => new PlayerState(i, id, options))];
         _bank = TerrainExtensions.AllResources.ToDictionary(r => r, _ => options.BankPerResource);
 
@@ -80,6 +87,16 @@ public sealed class GameState
     /// <summary>بازیکنانی که بعد از تاس ۷ باید کارت دور بریزند: اندیس ⇐ تعداد.</summary>
     public IReadOnlyDictionary<int, int> PendingDiscards => _pendingDiscards;
 
+    /// <summary>تعداد کارت باقی‌مانده در دسته‌ی توسعه.</summary>
+    public int DevelopmentDeckCount => _deck.Count;
+
+    /// <summary>پیشنهاد معامله‌ی روی میز، اگر باشد.</summary>
+    public TradeOffer? PendingTrade { get; internal set; }
+
+    public int? LongestRoadHolder => Players.FirstOrDefault(p => p.HasLongestRoad)?.Index;
+
+    public int? LargestArmyHolder => Players.FirstOrDefault(p => p.HasLargestArmy)?.Index;
+
     public bool IsSetup => Phase is TurnPhase.SetupSettlement or TurnPhase.SetupRoad;
 
     public static GameState Create(GameOptions options, IReadOnlyList<Guid> playerIds)
@@ -101,7 +118,10 @@ public sealed class GameState
         // مولد تاس از seed دیگری شروع می‌شود تا چیدمان برد دنباله‌ی تاس‌ها را لو ندهد.
         var rng = new Rng(options.Seed ^ 0xA5A5_5A5A_C3C3_3C3CUL);
 
-        return new GameState(options, board, playerIds, rng);
+        // دسته‌ی توسعه هم مولد جدا دارد تا ترتیبش با تعداد تاس‌های ریخته‌شده جابه‌جا نشود.
+        var deck = DevelopmentDeck.Build(board.Tiles.Count, new Rng(options.Seed ^ 0x1234_5678_9ABC_DEF0UL));
+
+        return new GameState(options, board, playerIds, rng, deck);
     }
 
     public PlayerState Player(int index) => Players[index];
@@ -121,11 +141,24 @@ public sealed class GameState
 
     internal void PlaceRoad(EdgeId edge, int playerIndex) => _roads[edge] = playerIndex;
 
+    /// <summary>فقط برای پس‌گرفتن جاده‌ای که وسط یک حرکتِ ردشده گذاشته شده بود.</summary>
+    internal void RemoveRoad(EdgeId edge) => _roads.Remove(edge);
+
     internal int BankOf(Resource resource) => _bank[resource];
 
     internal void BankTake(Resource resource, int amount) => _bank[resource] -= amount;
 
     internal void BankReturn(Resource resource, int amount) => _bank[resource] += amount;
+
+    /// <summary>کارت بعدی دسته بدون برداشتنش.</summary>
+    internal DevelopmentCard PeekDevelopmentCard() => _deck[^1];
+
+    internal DevelopmentCard DrawDevelopmentCard()
+    {
+        var card = _deck[^1];
+        _deck.RemoveAt(_deck.Count - 1);
+        return card;
+    }
 
     internal void SetPendingDiscard(int playerIndex, int amount) => _pendingDiscards[playerIndex] = amount;
 

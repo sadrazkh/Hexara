@@ -31,6 +31,15 @@ public sealed record GameOptions
     /// <summary>حد امتیاز مصونیت در وریانت دزد مهربان.</summary>
     public int FriendlyRobberThreshold { get; init; } = 2;
 
+    /// <summary>حداقل طول جاده برای گرفتن کارت «طولانی‌ترین جاده».</summary>
+    public int LongestRoadMinimum { get; init; } = 5;
+
+    /// <summary>حداقل تعداد شوالیه برای گرفتن کارت «بزرگ‌ترین ارتش».</summary>
+    public int LargestArmyMinimum { get; init; } = 3;
+
+    /// <summary>نرخ معامله با بانک بدون بندر.</summary>
+    public int BankTradeRate { get; init; } = 4;
+
     public int SettlementsPerPlayer { get; init; } = 5;
 
     public int CitiesPerPlayer { get; init; } = 4;
@@ -77,5 +86,12 @@ public static class BuildCosts
     {
         [Resource.Ore] = 3,
         [Resource.Grain] = 2
+    };
+
+    public static readonly IReadOnlyDictionary<Resource, int> DevelopmentCard = new Dictionary<Resource, int>
+    {
+        [Resource.Ore] = 1,
+        [Resource.Wool] = 1,
+        [Resource.Grain] = 1
     };
 }
