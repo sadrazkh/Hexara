@@ -1,0 +1,76 @@
+/* ── توکن‌های طراحی هگزارا ───────────────────────────────────────────────
+   یک لایه‌ی واحد که هم Razor و هم کامپوننت‌های Vue از آن استفاده می‌کنند.
+   تم پایه تیره است؛ روشنایی برد سه‌بعدی هم از همین رنگ‌ها گرفته می‌شود. */
+
+:root {
+  /* سطوح */
+  --hx-bg: #070b16;
+  --hx-bg-2: #0b1020;
+  --hx-surface: rgb(255 255 255 / 4%);
+  --hx-surface-2: rgb(255 255 255 / 7%);
+  --hx-surface-solid: #111830;
+  --hx-border: rgb(255 255 255 / 10%);
+  --hx-border-strong: rgb(255 255 255 / 18%);
+
+  /* متن */
+  --hx-text: #e8ecf6;
+  --hx-text-dim: #a8b2c9;
+  --hx-text-faint: #6f7b96;
+
+  /* برند */
+  --hx-accent: #4f9cf9;
+  --hx-accent-2: #5ee7c6;
+  --hx-accent-grad: linear-gradient(135deg, #5ee7c6 0%, #4f9cf9 100%);
+  --hx-danger: #f0616d;
+  --hx-warn: #f2b134;
+  --hx-ok: #3fbf7f;
+
+  /* رنگ منابع بازی — در فاز ۳ متریال برد هم از همین‌ها ساخته می‌شود */
+  --hx-res-brick: #c05a3e;
+  --hx-res-lumber: #2f7d4f;
+  --hx-res-wool: #8fc95a;
+  --hx-res-grain: #e0b23c;
+  --hx-res-ore: #7d8aa3;
+  --hx-res-desert: #cbb187;
+  --hx-res-sea: #1c4f7c;
+
+  /* شعاع و سایه */
+  --hx-r-sm: 8px;
+  --hx-r-md: 14px;
+  --hx-r-lg: 22px;
+  --hx-r-pill: 999px;
+  --hx-shadow-sm: 0 2px 8px rgb(0 0 0 / 25%);
+  --hx-shadow-md: 0 10px 30px rgb(0 0 0 / 35%);
+  --hx-shadow-lg: 0 24px 70px rgb(0 0 0 / 45%);
+  --hx-glow: 0 0 0 1px rgb(94 231 198 / 25%), 0 8px 32px rgb(79 156 249 / 22%);
+
+  /* فاصله */
+  --hx-sp-1: 4px;
+  --hx-sp-2: 8px;
+  --hx-sp-3: 12px;
+  --hx-sp-4: 16px;
+  --hx-sp-5: 24px;
+  --hx-sp-6: 32px;
+  --hx-sp-7: 48px;
+  --hx-sp-8: 72px;
+
+  /* تایپوگرافی */
+  --hx-font-fa: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
+  --hx-font-en: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --hx-font: var(--hx-font-fa);
+
+  --hx-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --hx-dur: 220ms;
+
+  --hx-container: 1180px;
+}
+
+html[lang='en'] {
+  --hx-font: var(--hx-font-en);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --hx-dur: 1ms;
+  }
+}

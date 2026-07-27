@@ -1,0 +1,16 @@
+@model ErrorViewModel
+@{
+    ViewData["Title"] = T["error.title"];
+}
+
+<section class="hx-container hx-narrow">
+    <div class="hx-panel">
+        <h1>@T["error.title"]</h1>
+        <p>@T["error.generic"]</p>
+        @if (Model.ShowRequestId)
+        {
+            <p class="hx-muted"><code>@T["error.requestId"]: @Model.RequestId</code></p>
+        }
+        <a class="hx-btn hx-btn--primary" asp-controller="Home" asp-action="Index">@T["nav.home"]</a>
+    </div>
+</section>

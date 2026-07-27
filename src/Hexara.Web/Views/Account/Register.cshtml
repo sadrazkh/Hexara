@@ -1,0 +1,46 @@
+@model RegisterViewModel
+@{
+    ViewData["Title"] = T["auth.registerTitle"];
+}
+
+<section class="hx-container hx-narrow">
+    <div class="hx-panel hx-panel--auth">
+        <h1 class="hx-panel__title">@T["auth.registerTitle"]</h1>
+
+        <form asp-action="Register" method="post" class="hx-form">
+            <input type="hidden" asp-for="ReturnUrl" />
+            <div asp-validation-summary="ModelOnly" class="hx-form__errors"></div>
+
+            <label class="hx-field">
+                <span class="hx-field__label">@T["auth.displayName"]</span>
+                <input asp-for="DisplayName" class="hx-input" autocomplete="nickname" />
+                <span asp-validation-for="DisplayName" class="hx-field__error"></span>
+            </label>
+
+            <label class="hx-field">
+                <span class="hx-field__label">@T["auth.email"]</span>
+                <input asp-for="Email" class="hx-input" autocomplete="email" dir="ltr" />
+                <span asp-validation-for="Email" class="hx-field__error"></span>
+            </label>
+
+            <label class="hx-field">
+                <span class="hx-field__label">@T["auth.password"]</span>
+                <input asp-for="Password" class="hx-input" type="password" autocomplete="new-password" dir="ltr" />
+                <span asp-validation-for="Password" class="hx-field__error"></span>
+            </label>
+
+            <label class="hx-field">
+                <span class="hx-field__label">@T["auth.confirmPassword"]</span>
+                <input asp-for="ConfirmPassword" class="hx-input" type="password" autocomplete="new-password" dir="ltr" />
+                <span asp-validation-for="ConfirmPassword" class="hx-field__error"></span>
+            </label>
+
+            <button type="submit" class="hx-btn hx-btn--primary hx-btn--block">@T["auth.submitRegister"]</button>
+        </form>
+
+        <p class="hx-panel__foot">
+            @T["auth.hasAccount"]
+            <a asp-action="Login" asp-route-returnUrl="@Model.ReturnUrl">@T["nav.login"]</a>
+        </p>
+    </div>
+</section>

@@ -1,0 +1,62 @@
+@{
+    ViewData["Title"] = null;
+    var returnUrl = "/";
+}
+
+<section class="hx-hero">
+    <div class="hx-container hx-hero__inner">
+        <div class="hx-hero__copy">
+            <span class="hx-eyebrow">@T["app.tagline"]</span>
+            <h1 class="hx-hero__title">@T["home.heroTitle"]</h1>
+            <p class="hx-hero__sub">@T["home.heroSubtitle"]</p>
+
+            <div class="hx-hero__cta">
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <a class="hx-btn hx-btn--primary hx-btn--lg" href="#">@T["home.ctaPlay"]</a>
+                    <a class="hx-btn hx-btn--outline hx-btn--lg" href="#">@T["home.ctaLobby"]</a>
+                }
+                else
+                {
+                    <a class="hx-btn hx-btn--primary hx-btn--lg" asp-controller="Account" asp-action="Register">@T["home.ctaPlay"]</a>
+                    <form asp-controller="Account" asp-action="Guest" method="post" class="hx-inline-form">
+                        <input type="hidden" name="returnUrl" value="@returnUrl" />
+                        <button type="submit" class="hx-btn hx-btn--outline hx-btn--lg">@T["home.ctaGuest"]</button>
+                    </form>
+                }
+            </div>
+        </div>
+
+        @* جزیره‌ی Vue: پیش‌نمایش سه‌بعدی برد. اگر WebGL در دسترس نباشد خودش
+           به یک تصویر SVG ساده برمی‌گردد. *@
+        <div class="hx-hero__stage" id="island-hero-board" data-hex-radius="2"></div>
+    </div>
+</section>
+
+<section class="hx-features">
+    <div class="hx-container">
+        <h2 class="hx-section-title">@T["home.features.title"]</h2>
+        <div class="hx-grid">
+            @foreach (var (key, icon) in new[]
+            {
+                ("board", "M4 8l8-4 8 4v8l-8 4-8-4z"),
+                ("threeD", "M12 3l8 4.5v9L12 21l-8-4.5v-9z M12 12l8-4.5 M12 12v9 M12 12L4 7.5"),
+                ("rules", "M6 4h9l3 3v13H6z M15 4v3h3"),
+                ("realtime", "M4 12a8 8 0 1 1 2.34 5.66 M4 12v5 M4 17h5"),
+                ("teams", "M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M2 20a6 6 0 0 1 12 0 M17 11a3 3 0 1 0 0-6 M16 20h6a5 5 0 0 0-4-4.9"),
+                ("pwa", "M7 3h10v18H7z M11 18h2")
+            })
+            {
+                <article class="hx-card">
+                    <span class="hx-card__icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="@icon" />
+                        </svg>
+                    </span>
+                    <h3>@T[$"home.features.{key}.title"]</h3>
+                    <p>@T[$"home.features.{key}.text"]</p>
+                </article>
+            }
+        </div>
+    </div>
+</section>

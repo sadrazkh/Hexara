@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Hexara.Application/Hexara.Application.csproj" />
+    <Project Path="src/Hexara.Domain/Hexara.Domain.csproj" />
+    <Project Path="src/Hexara.Infrastructure/Hexara.Infrastructure.csproj" />
+    <Project Path="src/Hexara.Web/Hexara.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Hexara.Domain.Tests/Hexara.Domain.Tests.csproj" />
+  </Folder>
+</Solution>

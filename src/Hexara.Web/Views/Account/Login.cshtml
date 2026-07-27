@@ -1,0 +1,47 @@
+@model LoginViewModel
+@{
+    ViewData["Title"] = T["auth.loginTitle"];
+}
+
+<section class="hx-container hx-narrow">
+    <div class="hx-panel hx-panel--auth">
+        <h1 class="hx-panel__title">@T["auth.loginTitle"]</h1>
+
+        <form asp-action="Login" method="post" class="hx-form">
+            <input type="hidden" asp-for="ReturnUrl" />
+            <div asp-validation-summary="ModelOnly" class="hx-form__errors"></div>
+
+            <label class="hx-field">
+                <span class="hx-field__label">@T["auth.email"]</span>
+                <input asp-for="Email" class="hx-input" autocomplete="email" dir="ltr" />
+                <span asp-validation-for="Email" class="hx-field__error"></span>
+            </label>
+
+            <label class="hx-field">
+                <span class="hx-field__label">@T["auth.password"]</span>
+                <input asp-for="Password" class="hx-input" type="password" autocomplete="current-password" dir="ltr" />
+                <span asp-validation-for="Password" class="hx-field__error"></span>
+            </label>
+
+            <label class="hx-check">
+                <input asp-for="RememberMe" type="checkbox" />
+                <span>@T["auth.rememberMe"]</span>
+            </label>
+
+            <button type="submit" class="hx-btn hx-btn--primary hx-btn--block">@T["auth.submitLogin"]</button>
+        </form>
+
+        <div class="hx-divider"><span>@T["auth.orGuest"]</span></div>
+
+        <form asp-action="Guest" method="post">
+            <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+            <button type="submit" class="hx-btn hx-btn--outline hx-btn--block">@T["auth.guestButton"]</button>
+        </form>
+        <p class="hx-muted hx-small">@T["auth.guestNote"]</p>
+
+        <p class="hx-panel__foot">
+            @T["auth.noAccount"]
+            <a asp-action="Register" asp-route-returnUrl="@Model.ReturnUrl">@T["nav.register"]</a>
+        </p>
+    </div>
+</section>

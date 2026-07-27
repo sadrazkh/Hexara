@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "hexara-web",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "src/Hexara.Web/Hexara.Web.csproj", "--launch-profile", "http"],
+      "port": 5142
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: hexara-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: hexara
+      POSTGRES_USER: hexara
+      POSTGRES_PASSWORD: hexara
+    ports:
+      - '5432:5432'
+    volumes:
+      - hexara-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U hexara -d hexara']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hexara-web
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: '8080'
+      ConnectionStrings__Default: 'Host=db;Port=5432;Database=hexara;Username=hexara;Password=hexara'
+    ports:
+      - '8080:8080'
+    profiles: ['full']
+
+volumes:
+  hexara-db:

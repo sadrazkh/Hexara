@@ -1,0 +1,91 @@
+@{
+    var culture = UiTranslator.CurrentCulture();
+    var isRtl = UiTranslator.IsRtl(culture);
+    var dir = isRtl ? "rtl" : "ltr";
+    var otherCulture = culture == "fa" ? "en" : "fa";
+    var otherCultureLabel = otherCulture == "fa" ? "فارسی" : "English";
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+    var displayName = User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value;
+    var avatarColor = User.FindFirst(AppUserClaimsPrincipalFactory.AvatarColorClaimType)?.Value ?? "#4f9cf9";
+}
+<!DOCTYPE html>
+<html lang="@culture" dir="@dir" data-culture="@culture">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b1020" />
+    <meta name="description" content="@T["app.description"]" />
+    <title>@(ViewData["Title"] is null ? T["app.name"] : $"{ViewData["Title"]} · {T["app.name"]}")</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    @Html.ViteEntry("src/main.ts")
+    @await RenderSectionAsync("Head", required: false)
+</head>
+<body class="hx-body">
+    <div class="hx-aurora" aria-hidden="true">
+        <span class="hx-aurora__blob hx-aurora__blob--a"></span>
+        <span class="hx-aurora__blob hx-aurora__blob--b"></span>
+        <span class="hx-aurora__blob hx-aurora__blob--c"></span>
+    </div>
+
+    <header class="hx-header">
+        <div class="hx-container hx-header__inner">
+            <a class="hx-brand" asp-controller="Home" asp-action="Index">
+                <svg class="hx-brand__mark" viewBox="0 0 32 32" aria-hidden="true">
+                    <defs>
+                        <linearGradient id="hxBrandGrad" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#5ee7c6" />
+                            <stop offset="100%" stop-color="#4f9cf9" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M16 2.4 28 9.2v13.6L16 29.6 4 22.8V9.2z" fill="none" stroke="url(#hxBrandGrad)" stroke-width="2.4" stroke-linejoin="round" />
+                    <path d="M16 10 22 13.5v7L16 24l-6-3.5v-7z" fill="url(#hxBrandGrad)" opacity=".9" />
+                </svg>
+                <span class="hx-brand__text">@T["app.name"]</span>
+            </a>
+
+            <nav class="hx-nav" aria-label="@T["nav.home"]">
+                <a asp-controller="Home" asp-action="Index">@T["nav.home"]</a>
+            </nav>
+
+            <div class="hx-header__actions">
+                <form asp-controller="Language" asp-action="Set" method="post" class="hx-inline-form">
+                    <input type="hidden" name="culture" value="@otherCulture" />
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <button type="submit" class="hx-btn hx-btn--ghost hx-btn--sm" title="@T["nav.language"]">
+                        @otherCultureLabel
+                    </button>
+                </form>
+
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <span class="hx-avatar" style="--hx-avatar-color:@avatarColor" title="@displayName">
+                        @(string.IsNullOrEmpty(displayName) ? "?" : displayName[..1].ToUpperInvariant())
+                    </span>
+                    <span class="hx-header__name">@displayName</span>
+                    <form asp-controller="Account" asp-action="Logout" method="post" class="hx-inline-form">
+                        <button type="submit" class="hx-btn hx-btn--ghost hx-btn--sm">@T["nav.logout"]</button>
+                    </form>
+                }
+                else
+                {
+                    <a class="hx-btn hx-btn--ghost hx-btn--sm" asp-controller="Account" asp-action="Login">@T["nav.login"]</a>
+                    <a class="hx-btn hx-btn--primary hx-btn--sm" asp-controller="Account" asp-action="Register">@T["nav.register"]</a>
+                }
+            </div>
+        </div>
+    </header>
+
+    <main class="hx-main">
+        @RenderBody()
+    </main>
+
+    <footer class="hx-footer">
+        <div class="hx-container hx-footer__inner">
+            <span>@T["footer.builtWith"]</span>
+            <span class="hx-footer__note">@T["footer.independent"]</span>
+        </div>
+    </footer>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

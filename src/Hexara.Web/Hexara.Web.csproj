@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Hexara.Application\Hexara.Application.csproj" />
+    <ProjectReference Include="..\Hexara.Infrastructure\Hexara.Infrastructure.csproj" />
+    <ProjectReference Include="..\Hexara.Domain\Hexara.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!-- ClientApp توسط ویت build می‌شود، نه dotnet. خروجی‌اش در wwwroot/dist است. -->
+  <ItemGroup>
+    <Compile Remove="ClientApp\**" />
+    <Content Remove="ClientApp\**" />
+    <None Remove="ClientApp\**" />
+    <EmbeddedResource Remove="ClientApp\**" />
+  </ItemGroup>
+
+  <!-- فایل‌های ترجمه در زمان اجرا از دیسک خوانده می‌شوند (UiTranslator). -->
+  <ItemGroup>
+    <Content Update="Locales\**\*.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

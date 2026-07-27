@@ -1,0 +1,96 @@
+{
+  "app": {
+    "name": "Hexara",
+    "tagline": "Build, trade, conquer",
+    "description": "A 3D online strategy board game — claim land, gather resources and be the first to reach the victory target."
+  },
+  "nav": {
+    "home": "Home",
+    "play": "Play",
+    "lobby": "Lobby",
+    "rules": "Rules",
+    "profile": "Profile",
+    "leaderboard": "Leaderboard",
+    "login": "Sign in",
+    "register": "Sign up",
+    "logout": "Sign out",
+    "playAsGuest": "Play as guest",
+    "language": "Language"
+  },
+  "home": {
+    "heroTitle": "An island worth conquering",
+    "heroSubtitle": "A fully 3D board, complete rules, 2 to 6 players, and everything configurable.",
+    "ctaPlay": "Start a game",
+    "ctaGuest": "Quick guest entry",
+    "ctaLobby": "Browse rooms",
+    "features": {
+      "title": "What makes Hexara different",
+      "board": {
+        "title": "Fully custom board",
+        "text": "Board size, terrain distribution, hex numbers and port placement — lay it out by hand or roll it randomly, then share it with a seed code."
+      },
+      "threeD": {
+        "title": "Smooth and three-dimensional",
+        "text": "The board renders in WebGL with a free camera, soft shadows and animated dice and construction. Quality scales itself down on mobile."
+      },
+      "rules": {
+        "title": "The complete rules",
+        "text": "Development cards, longest road, largest army, 2:1 and 3:1 ports, the robber, discarding — plus optional variants like the friendly robber."
+      },
+      "realtime": {
+        "title": "Realtime and durable",
+        "text": "Every move is validated on the server. Disconnected? Come back and the game resumes exactly where it was, with a bot covering your seat."
+      },
+      "teams": {
+        "title": "Teams or free-for-all",
+        "text": "Create a room, invite friends with a code, split into teams and play for a shared score."
+      },
+      "pwa": {
+        "title": "Install it on your phone",
+        "text": "Hexara is a PWA — add it to your home screen and it behaves like a native app."
+      }
+    }
+  },
+  "auth": {
+    "loginTitle": "Sign in to Hexara",
+    "registerTitle": "Create an account",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "displayName": "Display name",
+    "rememberMe": "Remember me",
+    "submitLogin": "Sign in",
+    "submitRegister": "Sign up",
+    "noAccount": "No account yet?",
+    "hasAccount": "Already registered?",
+    "orGuest": "Or continue without an account",
+    "guestButton": "Continue as guest",
+    "guestNote": "A guest account stays on this browser and can be upgraded later.",
+    "invalidCredentials": "Incorrect email or password.",
+    "emailTaken": "That email is already registered.",
+    "upgradeTitle": "Upgrade guest account",
+    "loggedInAs": "Signed in as {0}"
+  },
+  "common": {
+    "loading": "Loading…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "error": "Error",
+    "retry": "Try again",
+    "notFound": "Not found",
+    "somethingWrong": "Something went wrong."
+  },
+  "error": {
+    "title": "Error",
+    "generic": "Something went wrong while processing your request.",
+    "requestId": "Request ID"
+  },
+  "footer": {
+    "builtWith": "Built with ASP.NET Core, Vue and Three.js",
+    "independent": "Hexara is an independent project and is not affiliated with any board game publisher."
+  }
+}
