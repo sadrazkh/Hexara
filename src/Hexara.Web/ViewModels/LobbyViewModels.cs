@@ -29,12 +29,15 @@ public class CreateRoomViewModel
 
     public bool FriendlyRobber { get; set; }
 
+    public bool Teams { get; set; }
+
     public RoomSettings ToSettings() => new()
     {
         MaxPlayers = MaxPlayers,
         VictoryPoints = VictoryPoints,
         BoardRadius = BoardRadius,
-        FriendlyRobber = FriendlyRobber
+        FriendlyRobber = FriendlyRobber,
+        Teams = Teams
     };
 }
 

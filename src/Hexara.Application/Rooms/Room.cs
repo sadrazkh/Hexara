@@ -39,6 +39,12 @@ public sealed record RoomSettings
 
     public bool HasCustomBoard => !string.IsNullOrWhiteSpace(BoardCode);
 
+    /// <summary>
+    /// بازی تیمی. تقسیم یک‌درمیان است تا هم‌تیمی‌ها پشت سر هم نوبت نگیرند؛
+    /// با تعداد فرد بازیکن یک تیم یک نفر بیشتر دارد.
+    /// </summary>
+    public bool Teams { get; init; }
+
     public bool IsValid =>
         MaxPlayers is >= 2 and <= 6
         && VictoryPoints is >= 3 and <= 20
@@ -52,7 +58,10 @@ public sealed record RoomSettings
         VictoryPoints = VictoryPoints,
         BoardRadius = BoardRadius,
         FriendlyRobber = FriendlyRobber,
-        Seed = seed
+        Seed = seed,
+
+        // با دو نفر تیم‌بندی همان بازی انفرادی است، پس نادیده گرفته می‌شود.
+        Teams = Teams && playerCount >= 4 ? TeamAssignment.Alternating(playerCount) : null
     };
 }
 

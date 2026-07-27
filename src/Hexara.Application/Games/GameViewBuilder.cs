@@ -51,9 +51,10 @@ public sealed class GameViewBuilder
                 new RoadSnapshot(r.Key.Hex.Q, r.Key.Hex.R, r.Key.Side, r.Value))],
             Bank = new Dictionary<Resource, int>(state.Bank),
             DevelopmentDeckCount = state.DevelopmentDeckCount,
-            Players = [.. state.Players.Select(p => ToView(p, game.PlayerIds[p.Index], profiles, onlineUserIds))],
+            Players = [.. state.Players.Select(p =>
+                ToView(p, game.PlayerIds[p.Index], profiles, onlineUserIds, state.Options.Teams))],
             Seat = viewerSeat,
-            Hand = viewerSeat is { } seat ? ToHand(state, state.Player(seat)) : null,
+            Hand = viewerSeat is { } seat ? ToHand(state, seat) : null,
             PendingDiscards = new Dictionary<int, int>(state.PendingDiscards),
             PendingTrade = state.PendingTrade is { } trade
                 ? new TradeOfferView(
@@ -70,7 +71,8 @@ public sealed class GameViewBuilder
         PlayerState player,
         Guid userId,
         IReadOnlyDictionary<Guid, PlayerProfile> profiles,
-        IReadOnlySet<Guid>? online)
+        IReadOnlySet<Guid>? online,
+        TeamAssignment? teams)
     {
         var profile = profiles.GetValueOrDefault(userId);
 
@@ -81,6 +83,7 @@ public sealed class GameViewBuilder
             DisplayName = profile?.DisplayName ?? string.Empty,
             AvatarColor = profile?.AvatarColor ?? "#4f9cf9",
             PublicVictoryPoints = player.PublicVictoryPoints,
+            Team = teams?.TeamOf(player.Index),
             CardCount = player.TotalCards,
             DevelopmentCardCount = player.TotalDevelopmentCards,
             KnightsPlayed = player.KnightsPlayed,
@@ -94,15 +97,21 @@ public sealed class GameViewBuilder
         };
     }
 
-    private static HandView ToHand(GameState state, PlayerState player) => new()
+    private static HandView ToHand(GameState state, int seat)
     {
-        Resources = new Dictionary<Resource, int>(player.Resources),
-        DevelopmentCards = new Dictionary<DevelopmentCard, int>(player.DevelopmentCards),
-        NewDevelopmentCards = new Dictionary<DevelopmentCard, int>(player.NewDevelopmentCards),
-        VictoryPoints = player.VictoryPoints,
-        PlayedDevelopmentCardThisTurn = player.PlayedDevelopmentCardThisTurn,
-        MustDiscard = state.PendingDiscards.GetValueOrDefault(player.Index)
-    };
+        var player = state.Player(seat);
+
+        return new HandView
+        {
+            Resources = new Dictionary<Resource, int>(player.Resources),
+            DevelopmentCards = new Dictionary<DevelopmentCard, int>(player.DevelopmentCards),
+            NewDevelopmentCards = new Dictionary<DevelopmentCard, int>(player.NewDevelopmentCards),
+            VictoryPoints = player.VictoryPoints,
+            Score = state.ScoreOf(seat),
+            PlayedDevelopmentCardThisTurn = player.PlayedDevelopmentCardThisTurn,
+            MustDiscard = state.PendingDiscards.GetValueOrDefault(seat)
+        };
+    }
 
     /// <summary>
     /// حرکت‌های قانونی فقط وقتی محاسبه می‌شوند که واقعاً نوبت این صندلی باشد —

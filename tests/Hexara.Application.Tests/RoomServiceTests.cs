@@ -344,6 +344,71 @@ public class RoomServiceTests
         }
     }
 
+    // ── بازی تیمی ────────────────────────────────────────────────────────
+
+    /// <summary>تقسیم یک‌درمیان است تا هم‌تیمی‌ها پشت سر هم نوبت نگیرند.</summary>
+    [Fact]
+    public async Task A_team_room_alternates_the_seats()
+    {
+        using var fixture = new SqliteFixture();
+        var users = await fixture.SeedUsersAsync(4);
+        var service = NewService(fixture, out var context);
+
+        await using (context)
+        {
+            var room = (await service.CreateAsync(users[0], new RoomSettings { Teams = true })).Room!;
+            foreach (var user in users.Skip(1))
+            {
+                await service.JoinAsync(room.Code, user);
+            }
+
+            var result = await service.StartAsync(room.Id, users[0]);
+
+            var games = new GameService(new GameRepository(context, fixture.Clock), fixture.Clock);
+            var game = await games.GetAsync(result.GameId!.Value);
+
+            Assert.Equal([0, 1, 0, 1], game!.State.Options.Teams!.BySeat);
+        }
+    }
+
+    /// <summary>با دو یا سه نفر تیم‌بندی معنا ندارد و نادیده گرفته می‌شود.</summary>
+    [Fact]
+    public async Task Teams_are_ignored_below_four_players()
+    {
+        using var fixture = new SqliteFixture();
+        var users = await fixture.SeedUsersAsync(3);
+        var service = NewService(fixture, out var context);
+
+        await using (context)
+        {
+            var room = (await service.CreateAsync(users[0], new RoomSettings { Teams = true })).Room!;
+            await service.JoinAsync(room.Code, users[1]);
+            await service.JoinAsync(room.Code, users[2]);
+
+            var result = await service.StartAsync(room.Id, users[0]);
+
+            var games = new GameService(new GameRepository(context, fixture.Clock), fixture.Clock);
+            var game = await games.GetAsync(result.GameId!.Value);
+
+            Assert.Null(game!.State.Options.Teams);
+        }
+    }
+
+    [Fact]
+    public async Task The_team_setting_survives_a_reload()
+    {
+        using var fixture = new SqliteFixture();
+        var users = await fixture.SeedUsersAsync(1);
+        var service = NewService(fixture, out var context);
+
+        await using (context)
+        {
+            var room = (await service.CreateAsync(users[0], new RoomSettings { Teams = true })).Room!;
+
+            Assert.True((await service.FindAsync(room.Code))!.Settings.Teams);
+        }
+    }
+
     // ── برد سفارشی ───────────────────────────────────────────────────────
 
     /// <summary>برد سفارشی باید عیناً همانی باشد که بازی با آن شروع می‌شود.</summary>

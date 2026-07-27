@@ -84,6 +84,8 @@ export interface PlayerView {
   displayName: string;
   avatarColor: string;
   publicVictoryPoints: number;
+  /** تهی یعنی بازی انفرادی است. */
+  team: number | null;
   cardCount: number;
   developmentCardCount: number;
   knightsPlayed: number;
@@ -101,6 +103,8 @@ export interface HandView {
   developmentCards: Record<string, number>;
   newDevelopmentCards: Record<string, number>;
   victoryPoints: number;
+  /** امتیازی که برای پیروزی شمرده می‌شود — در بازی تیمی مجموع تیم. */
+  score: number;
   playedDevelopmentCardThisTurn: boolean;
   mustDiscard: number;
 }

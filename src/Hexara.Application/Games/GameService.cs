@@ -57,11 +57,13 @@ public sealed class GameService
 {
     private readonly IGameRepository _games;
     private readonly IClock _clock;
+    private readonly IPlayerStats? _stats;
 
-    public GameService(IGameRepository games, IClock clock)
+    public GameService(IGameRepository games, IClock clock, IPlayerStats? stats = null)
     {
         _games = games;
         _clock = clock;
+        _stats = stats;
     }
 
     /// <summary>
@@ -138,14 +140,20 @@ public sealed class GameService
                 return null;
             }
 
-            if (game.State.Phase == TurnPhase.GameOver)
+            var finished = game.State.Phase == TurnPhase.GameOver;
+            if (finished)
             {
                 game.Status = GameStatus.Finished;
             }
 
-            return await _games.SaveMoveAsync(game, action, result.Events, cancellationToken)
-                ? new MoveOutcome(MoveStatus.Applied, GameError.None, result.Events, game.State.Version)
-                : null;
+            if (!await _games.SaveMoveAsync(game, action, result.Events, cancellationToken))
+            {
+                return null;
+            }
+
+            await RecordFinishAsync(game, finished, cancellationToken);
+
+            return new MoveOutcome(MoveStatus.Applied, GameError.None, result.Events, game.State.Version);
         }
 
         return null;
@@ -204,7 +212,8 @@ public sealed class GameService
             return MoveOutcome.Rejected(result.Error);
         }
 
-        if (game.State.Phase == TurnPhase.GameOver)
+        var finished = game.State.Phase == TurnPhase.GameOver;
+        if (finished)
         {
             game.Status = GameStatus.Finished;
         }
@@ -214,6 +223,23 @@ public sealed class GameService
             return MoveOutcome.Fail(MoveStatus.Conflict);
         }
 
+        await RecordFinishAsync(game, finished, cancellationToken);
+
         return new MoveOutcome(MoveStatus.Applied, GameError.None, result.Events, game.State.Version);
+    }
+
+    /// <summary>
+    /// کارنامه فقط در همان لحظه‌ی تمام‌شدن به‌روز می‌شود. دوباره شمرده نمی‌شود چون
+    /// بعد از آن نه موتور حرکتی می‌پذیرد و نه پوشش خودکار بازیِ تمام‌شده را برمی‌دارد.
+    /// </summary>
+    private async Task RecordFinishAsync(StoredGame game, bool finished, CancellationToken cancellationToken)
+    {
+        if (!finished || _stats is null)
+        {
+            return;
+        }
+
+        var winners = game.State.WinningSeats().Select(seat => game.PlayerIds[seat]).ToList();
+        await _stats.RecordFinishAsync(game.PlayerIds, winners, cancellationToken);
     }
 }

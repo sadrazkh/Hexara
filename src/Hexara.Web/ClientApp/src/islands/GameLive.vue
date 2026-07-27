@@ -392,6 +392,9 @@ onBeforeUnmount(() => {
               {{ (player.displayName || '?').slice(0, 1).toUpperCase() }}
             </span>
             <span class="hx-seat__name">{{ player.displayName }}</span>
+            <span v-if="player.team !== null" class="hx-chip">
+              {{ t('game.team', player.team + 1) }}
+            </span>
             <span class="hx-chip">{{ player.publicVictoryPoints }} ★</span>
             <span class="hx-chip">{{ player.cardCount }} 🂠</span>
             <span v-if="!player.isOnline" class="hx-chip hx-chip--muted">
@@ -411,6 +414,10 @@ onBeforeUnmount(() => {
           <li>
             <span>{{ t('game.victoryPoints') }}</span>
             <strong>{{ view.hand.victoryPoints }}</strong>
+          </li>
+          <li v-if="view.players[view.seat ?? 0]?.team !== null">
+            <span>{{ t('game.teamScore') }}</span>
+            <strong>{{ view.hand.score }}</strong>
           </li>
         </ul>
       </section>

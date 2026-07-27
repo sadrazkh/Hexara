@@ -1,0 +1,120 @@
+@model ProfileViewModel
+@{
+    ViewData["Title"] = T["nav.profile"];
+    var standing = Model.Standing;
+}
+
+<section class="hx-container hx-narrow hx-standings-page">
+    <h1 class="hx-section-title">@T["nav.profile"]</h1>
+
+    @if (!string.IsNullOrEmpty(Model.Message))
+    {
+        <p class="hx-alert hx-alert--ok" role="status">@Model.Message</p>
+    }
+
+    @if (standing is not null)
+    {
+        <div class="hx-panel">
+            <div class="hx-profile__head">
+                <span class="hx-avatar" style="--hx-avatar-color:@standing.AvatarColor">
+                    @(string.IsNullOrEmpty(standing.DisplayName) ? "?" : standing.DisplayName[..1].ToUpperInvariant())
+                </span>
+                <div>
+                    <h2 class="hx-panel__title">@standing.DisplayName</h2>
+                    @if (standing.IsGuest)
+                    {
+                        <span class="hx-chip hx-chip--muted">@T["lobby.guest"]</span>
+                    }
+                </div>
+            </div>
+
+            <ul class="hx-facts">
+                <li><span>@T["profile.played"]</span><strong>@standing.GamesPlayed</strong></li>
+                <li><span>@T["profile.won"]</span><strong>@standing.GamesWon</strong></li>
+                <li>
+                    <span>@T["profile.rate"]</span>
+                    <strong>@(standing.WinRate is { } rate ? $"{rate}%" : "—")</strong>
+                </li>
+            </ul>
+        </div>
+    }
+
+    @if (Model.IsGuest)
+    {
+        <div class="hx-panel">
+            <h2 class="hx-panel__title">@T["auth.upgradeTitle"]</h2>
+            <p class="hx-muted hx-small">@T["profile.upgradeNote"]</p>
+
+            <form asp-action="Upgrade" method="post" class="hx-form">
+                <div asp-validation-summary="ModelOnly" class="hx-form__errors"></div>
+
+                <label class="hx-field">
+                    <span class="hx-field__label">@T["auth.email"]</span>
+                    <input asp-for="Upgrade.Email" class="hx-input" autocomplete="email" dir="ltr" />
+                    <span asp-validation-for="Upgrade.Email" class="hx-field__error"></span>
+                </label>
+
+                <label class="hx-field">
+                    <span class="hx-field__label">@T["auth.displayName"]</span>
+                    <input asp-for="Upgrade.DisplayName" class="hx-input" autocomplete="nickname" />
+                    <span asp-validation-for="Upgrade.DisplayName" class="hx-field__error"></span>
+                </label>
+
+                <label class="hx-field">
+                    <span class="hx-field__label">@T["auth.password"]</span>
+                    <input asp-for="Upgrade.Password" class="hx-input" type="password"
+                           autocomplete="new-password" dir="ltr" />
+                    <span asp-validation-for="Upgrade.Password" class="hx-field__error"></span>
+                </label>
+
+                <label class="hx-field">
+                    <span class="hx-field__label">@T["auth.confirmPassword"]</span>
+                    <input asp-for="Upgrade.ConfirmPassword" class="hx-input" type="password"
+                           autocomplete="new-password" dir="ltr" />
+                    <span asp-validation-for="Upgrade.ConfirmPassword" class="hx-field__error"></span>
+                </label>
+
+                <button type="submit" class="hx-btn hx-btn--primary">@T["profile.upgradeButton"]</button>
+            </form>
+        </div>
+    }
+
+    <h2 class="hx-section-title hx-section-title--sm">@T["profile.recentGames"]</h2>
+
+    @if (Model.RecentGames.Count == 0)
+    {
+        <p class="hx-muted">@T["profile.noGames"]</p>
+    }
+    else
+    {
+        <ul class="hx-rooms">
+            @foreach (var game in Model.RecentGames)
+            {
+                <li class="hx-room">
+                    <div class="hx-room__main">
+                        <span class="hx-room__host">@T.T("game.turn") @game.TurnNumber</span>
+                        <span class="hx-room__code" dir="ltr">@game.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd")</span>
+                    </div>
+
+                    <div class="hx-room__meta">
+                        @if (game.Status == Hexara.Application.Games.GameStatus.Finished)
+                        {
+                            <span class="hx-chip @(game.WinnerId == standing?.UserId ? "hx-chip--live" : null)">
+                                @(game.WinnerId == standing?.UserId ? T["profile.youWon"] : T["profile.finished"])
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="hx-chip hx-chip--live">@T["profile.inProgress"]</span>
+                        }
+                    </div>
+
+                    <a class="hx-btn hx-btn--sm hx-btn--outline"
+                       asp-controller="Game" asp-action="Play" asp-route-id="@game.Id">
+                        @T["lobby.open"]
+                    </a>
+                </li>
+            }
+        </ul>
+    }
+</section>

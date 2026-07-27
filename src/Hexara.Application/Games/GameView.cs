@@ -84,6 +84,9 @@ public sealed record PlayerView
     /// <summary>امتیاز بدون کارت‌های پیروزی پنهان.</summary>
     public required int PublicVictoryPoints { get; init; }
 
+    /// <summary>تیم این بازیکن؛ تهی یعنی بازی انفرادی است.</summary>
+    public int? Team { get; init; }
+
     public required int CardCount { get; init; }
 
     public required int DevelopmentCardCount { get; init; }
@@ -117,6 +120,12 @@ public sealed record HandView
 
     /// <summary>امتیاز واقعی، شامل کارت‌های پیروزی پنهان.</summary>
     public required int VictoryPoints { get; init; }
+
+    /// <summary>
+    /// امتیازی که برای پیروزی شمرده می‌شود. در بازی انفرادی همان بالایی است و در
+    /// بازی تیمی مجموع تیم — از جمله کارت‌های پنهانِ هم‌تیمی، که در تیم مشترک است.
+    /// </summary>
+    public required int Score { get; init; }
 
     public required bool PlayedDevelopmentCardThisTurn { get; init; }
 

@@ -258,6 +258,34 @@ public sealed class GameState
 
     public PlayerState Player(int index) => Players[index];
 
+    /// <summary>
+    /// امتیازی که برای پیروزی شمرده می‌شود: در بازی انفرادی امتیاز خودِ بازیکن و
+    /// در بازی تیمی مجموع تیمش.
+    /// </summary>
+    public int ScoreOf(int playerIndex) =>
+        Options.Teams is { } teams
+            ? teams.SeatsOf(teams.TeamOf(playerIndex)).Sum(seat => Players[seat].VictoryPoints)
+            : Players[playerIndex].VictoryPoints;
+
+    /// <summary>امتیاز عمومی یک تیم — بدون کارت‌های پیروزی پنهان.</summary>
+    public int PublicScoreOf(int playerIndex) =>
+        Options.Teams is { } teams
+            ? teams.SeatsOf(teams.TeamOf(playerIndex)).Sum(seat => Players[seat].PublicVictoryPoints)
+            : Players[playerIndex].PublicVictoryPoints;
+
+    /// <summary>صندلی‌های برنده — در بازی تیمی کل تیم برنده است.</summary>
+    public IReadOnlyList<int> WinningSeats()
+    {
+        if (Winner is not { } winner)
+        {
+            return [];
+        }
+
+        return Options.Teams is { } teams
+            ? [.. teams.SeatsOf(teams.TeamOf(winner))]
+            : [winner];
+    }
+
     public Building? BuildingAt(VertexId vertex) => _buildings.GetValueOrDefault(vertex);
 
     public int? RoadAt(EdgeId edge) => _roads.TryGetValue(edge, out var owner) ? owner : null;

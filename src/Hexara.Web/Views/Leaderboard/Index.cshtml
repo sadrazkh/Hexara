@@ -1,0 +1,43 @@
+@model IReadOnlyList<Hexara.Application.Common.Interfaces.PlayerStanding>
+@{
+    ViewData["Title"] = T["nav.leaderboard"];
+}
+
+<section class="hx-container hx-narrow hx-standings-page">
+    <h1 class="hx-section-title">@T["nav.leaderboard"]</h1>
+
+    @if (Model.Count == 0)
+    {
+        <p class="hx-muted">@T["leaderboard.empty"]</p>
+    }
+    else
+    {
+        <ol class="hx-standings">
+            @foreach (var (player, index) in Model.Select((p, i) => (p, i)))
+            {
+                <li class="hx-standing">
+                    <span class="hx-standing__rank">@(index + 1)</span>
+
+                    <span class="hx-avatar hx-avatar--sm" style="--hx-avatar-color:@player.AvatarColor">
+                        @(string.IsNullOrEmpty(player.DisplayName) ? "?" : player.DisplayName[..1].ToUpperInvariant())
+                    </span>
+
+                    <span class="hx-standing__name">@player.DisplayName</span>
+
+                    @if (player.IsGuest)
+                    {
+                        <span class="hx-chip hx-chip--muted">@T["lobby.guest"]</span>
+                    }
+
+                    <span class="hx-standing__stats">
+                        <span class="hx-chip">@T.T("profile.wonOf", player.GamesWon, player.GamesPlayed)</span>
+                        @if (player.WinRate is { } rate)
+                        {
+                            <span class="hx-chip">@T.T("profile.winRate", rate)</span>
+                        }
+                    </span>
+                </li>
+            }
+        </ol>
+    }
+</section>

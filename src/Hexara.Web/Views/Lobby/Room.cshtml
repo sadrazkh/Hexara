@@ -92,6 +92,11 @@
                     <span>@T["lobby.friendlyRobber"]</span>
                 </label>
 
+                <label class="hx-check">
+                    <input name="Teams" type="checkbox" value="true" checked="@settings.Teams" />
+                    <span>@T["lobby.teams"]</span>
+                </label>
+
                 <button type="submit" class="hx-btn hx-btn--ghost">@T["common.save"]</button>
             </form>
 
@@ -125,6 +130,10 @@
                 <li>
                     <span>@T["lobby.friendlyRobber"]</span>
                     <strong>@(settings.FriendlyRobber ? T["common.yes"] : T["common.no"])</strong>
+                </li>
+                <li>
+                    <span>@T["lobby.teams"]</span>
+                    <strong>@(settings.Teams ? T["common.yes"] : T["common.no"])</strong>
                 </li>
             </ul>
         </div>

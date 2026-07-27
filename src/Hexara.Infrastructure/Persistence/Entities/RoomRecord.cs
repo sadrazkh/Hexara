@@ -28,6 +28,9 @@ public class RoomRecord
 
     public bool FriendlyRobber { get; set; }
 
+    /// <summary>بازی تیمی.</summary>
+    public bool Teams { get; set; }
+
     /// <summary>
     /// seed دلخواه برد. <c>ulong</c> در Postgres ستون ندارد، پس بدون بررسی سرریز به
     /// <c>long</c> تبدیل می‌شود؛ الگوی بیت‌ها دست‌نخورده می‌ماند و برگشتش دقیق است.

@@ -28,6 +28,16 @@ public sealed record GameOptions
     /// <summary>وریانت «دزد مهربان»: از بازیکنی که هنوز امتیاز کمی دارد نمی‌توان دزدید.</summary>
     public bool FriendlyRobber { get; init; }
 
+    /// <summary>
+    /// بازی تیمی. تهی یعنی هر کس برای خودش.
+    ///
+    /// تیم روی دو قانون اثر می‌گذارد و بس: امتیاز پیروزی روی کل تیم جمع می‌شود و
+    /// از هم‌تیمی نمی‌شود دزدید. معامله و بقیه‌ی قوانین دست‌نخورده‌اند.
+    /// </summary>
+    public TeamAssignment? Teams { get; init; }
+
+    public bool IsTeamGame => Teams is not null;
+
     /// <summary>حد امتیاز مصونیت در وریانت دزد مهربان.</summary>
     public int FriendlyRobberThreshold { get; init; } = 2;
 
@@ -61,6 +71,13 @@ public sealed record GameOptions
         if (VictoryPoints < 3)
         {
             throw new ArgumentOutOfRangeException(nameof(VictoryPoints), VictoryPoints, "امتیاز پیروزی باید حداقل ۳ باشد.");
+        }
+
+        if (Teams is not null && !Teams.IsValidFor(PlayerCount))
+        {
+            throw new ArgumentException(
+                "تقسیم تیمی باید برای هر صندلی یک تیم داشته باشد و حداقل دو تیم بسازد.",
+                nameof(Teams));
         }
     }
 }

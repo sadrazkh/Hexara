@@ -39,6 +39,7 @@ public sealed class RoomRepository : IRoomRepository
             VictoryPoints = settings.VictoryPoints,
             BoardRadius = settings.BoardRadius,
             FriendlyRobber = settings.FriendlyRobber,
+            Teams = settings.Teams,
             Seed = settings.Seed is { } seed ? unchecked((long)seed) : null,
             BoardCode = settings.BoardCode,
             CreatedAt = now,
@@ -103,6 +104,7 @@ public sealed class RoomRepository : IRoomRepository
                     .SetProperty(r => r.VictoryPoints, settings.VictoryPoints)
                     .SetProperty(r => r.BoardRadius, settings.BoardRadius)
                     .SetProperty(r => r.FriendlyRobber, settings.FriendlyRobber)
+                    .SetProperty(r => r.Teams, settings.Teams)
                     .SetProperty(r => r.Seed, settings.Seed is { } seed ? unchecked((long)seed) : null)
                     .SetProperty(r => r.BoardCode, settings.BoardCode),
                 cancellationToken);
@@ -203,6 +205,7 @@ public sealed class RoomRepository : IRoomRepository
             VictoryPoints = record.VictoryPoints,
             BoardRadius = record.BoardRadius,
             FriendlyRobber = record.FriendlyRobber,
+            Teams = record.Teams,
             Seed = record.Seed is { } seed ? unchecked((ulong)seed) : null,
             BoardCode = record.BoardCode
         };

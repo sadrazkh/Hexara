@@ -927,6 +927,71 @@ code {
   word-break: break-all;
 }
 
+/* ── پروفایل و جدول رده‌بندی ──────────────────────────────────────────── */
+
+.hx-standings-page {
+  padding-block: var(--hx-sp-6);
+}
+
+.hx-profile__head {
+  display: flex;
+  align-items: center;
+  gap: var(--hx-sp-3);
+  margin-bottom: var(--hx-sp-4);
+}
+
+.hx-standings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: standing;
+}
+
+.hx-standing {
+  display: flex;
+  align-items: center;
+  gap: var(--hx-sp-3);
+  padding: var(--hx-sp-2) var(--hx-sp-3);
+  border: 1px solid var(--hx-border);
+  border-radius: var(--hx-r-md);
+  background: var(--hx-glass);
+}
+
+.hx-standing__rank {
+  display: grid;
+  place-items: center;
+  min-width: 1.8rem;
+  height: 1.8rem;
+  border-radius: var(--hx-r-pill);
+  background: var(--hx-glass-2);
+  color: var(--hx-text-dim);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+}
+
+.hx-standing__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hx-standing__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hx-sp-2);
+  margin-inline-start: auto;
+}
+
+/* خبر خوب همان قالب هشدار را دارد با رنگ موفقیت. */
+.hx-alert--ok {
+  border-color: color-mix(in srgb, var(--hx-ok) 35%, transparent);
+  background: color-mix(in srgb, var(--hx-ok) 10%, transparent);
+}
+
 /* ── کمکی ─────────────────────────────────────────────────────────────── */
 
 /* روی جمله‌ی کامل می‌نشیند و بیرون از ظرف هم استفاده می‌شود، یعنی مستقیم

@@ -118,7 +118,8 @@
       "notEnoughPlayers": "At least two players are needed to start.",
       "invalidSettings": "Those settings aren't valid.",
       "seatTaken": "Someone just took that seat. Try again."
-    }
+    },
+    "teams": "Team game (four players or more)"
   },
   "board": {
     "title": "Board editor",
@@ -257,7 +258,9 @@
     "phase.Main": "Build and trade",
     "phase.GameOver": "Game over",
     "botCovering": "That player is away; the bot is covering.",
-    "deadlineIn": "{0}s until the bot steps in"
+    "deadlineIn": "{0}s until the bot steps in",
+    "team": "Team {0}",
+    "teamScore": "Team score"
   },
   "common": {
     "loading": "Loading…",
@@ -282,5 +285,24 @@
   "footer": {
     "builtWith": "Built with ASP.NET Core, Vue and Three.js",
     "independent": "Hexara is an independent project and is not affiliated with any board game publisher."
+  },
+  "profile": {
+    "played": "Games played",
+    "won": "Wins",
+    "rate": "Win rate",
+    "recentGames": "Recent games",
+    "noGames": "You haven't played yet.",
+    "inProgress": "In progress",
+    "finished": "Finished",
+    "youWon": "You won",
+    "upgradeNote": "Your guest account becomes a real one, keeping its history and record — nothing is lost.",
+    "upgradeButton": "Upgrade account",
+    "upgraded": "Your account is upgraded. Sign in with that email from now on.",
+    "alreadyFull": "Your account is already a full one.",
+    "wonOf": "{0} wins of {1}",
+    "winRate": "{0}%"
+  },
+  "leaderboard": {
+    "empty": "No games have finished yet."
   }
 }

@@ -60,6 +60,11 @@
             <nav class="hx-nav" aria-label="@T["nav.home"]">
                 <a asp-controller="Home" asp-action="Index">@T["nav.home"]</a>
                 <a asp-controller="Lobby" asp-action="Index">@T["nav.lobby"]</a>
+                <a asp-controller="Leaderboard" asp-action="Index">@T["nav.leaderboard"]</a>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <a asp-controller="Profile" asp-action="Index">@T["nav.profile"]</a>
+                }
             </nav>
 
             <div class="hx-header__actions">

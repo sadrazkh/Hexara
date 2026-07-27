@@ -433,6 +433,7 @@ public static class GameEngine
             .Distinct()
             .Where(index => index != moverIndex
                 && state.Player(index).TotalCards > 0
+                && state.Options.Teams?.AreTeammates(moverIndex, index) != true
                 && !IsProtectedByFriendlyRobber(state, index));
     }
 
@@ -1183,17 +1184,21 @@ public static class GameEngine
         }
     }
 
+    /// <summary>
+    /// در بازی تیمی امتیاز کل تیم شمرده می‌شود — از جمله کارت‌های پیروزی پنهانِ
+    /// هم‌تیمی‌ها، چون در تیم اطلاعات مشترک است.
+    /// </summary>
     private static void CheckVictory(GameState state, int playerIndex, List<GameEvent> events)
     {
-        var player = state.Player(playerIndex);
-        if (player.VictoryPoints < state.Options.VictoryPoints)
+        var score = state.ScoreOf(playerIndex);
+        if (score < state.Options.VictoryPoints)
         {
             return;
         }
 
         state.Winner = playerIndex;
         state.Phase = TurnPhase.GameOver;
-        events.Add(new GameWon(playerIndex, player.VictoryPoints));
+        events.Add(new GameWon(playerIndex, score));
     }
 
     // ── پرس‌وجوهای کمکی (رابط کاربری فاز ۶ و بات فاز ۸) ──────────────────

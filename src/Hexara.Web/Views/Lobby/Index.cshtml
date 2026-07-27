@@ -48,6 +48,11 @@
                     <span>@T["lobby.friendlyRobber"]</span>
                 </label>
 
+                <label class="hx-check">
+                    <input asp-for="Create.Teams" type="checkbox" />
+                    <span>@T["lobby.teams"]</span>
+                </label>
+
                 <button type="submit" class="hx-btn hx-btn--primary">@T["lobby.createButton"]</button>
             </form>
         </div>
