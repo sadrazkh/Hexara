@@ -69,6 +69,16 @@ code {
   border-radius: var(--hx-r-sm);
 }
 
+/* در لحظه‌ی عوض‌شدن تم همه‌ی transitionها خفه می‌شوند. بدون این، هر ویژگی‌
+   که transition دارد جداگانه و با زمان‌بندی خودش محو می‌شود و نتیجه یک
+   محوشدنِ گل‌آلود است — نه یک تعویضِ قاطع. theme.ts این کلاس را یک فریم
+   نگه می‌دارد و بعد برمی‌دارد. */
+:root.hx-theming *,
+:root.hx-theming *::before,
+:root.hx-theming *::after {
+  transition: none !important;
+}
+
 /* ── چیدمان ────────────────────────────────────────────────────────────── */
 
 .hx-container {
@@ -96,7 +106,7 @@ code {
   pointer-events: none;
   overflow: hidden;
   background:
-    radial-gradient(120% 80% at 50% -10%, #14203f 0%, transparent 60%),
+    radial-gradient(120% 80% at 50% -10%, var(--hx-wash) 0%, transparent 60%),
     var(--hx-bg);
 }
 
@@ -113,7 +123,7 @@ code {
   height: 46vw;
   inset-inline-start: -8vw;
   top: -10vh;
-  background: #1f6feb;
+  background: var(--hx-blob-a);
 }
 
 .hx-aurora__blob--b {
@@ -121,7 +131,7 @@ code {
   height: 38vw;
   inset-inline-end: -6vw;
   top: 12vh;
-  background: #14b8a6;
+  background: var(--hx-blob-b);
   animation-delay: -9s;
 }
 
@@ -130,7 +140,7 @@ code {
   height: 42vw;
   inset-inline-start: 30vw;
   bottom: -22vh;
-  background: #7c3aed;
+  background: var(--hx-blob-c);
   animation-delay: -17s;
   opacity: 0.28;
 }
@@ -157,7 +167,7 @@ code {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgb(7 11 22 / 72%);
+  background: var(--hx-header-veil);
   backdrop-filter: blur(16px) saturate(140%);
   border-bottom: 1px solid var(--hx-border);
 }
@@ -228,9 +238,9 @@ code {
   place-items: center;
   font-weight: 700;
   font-size: 0.85rem;
-  color: #06121f;
+  color: var(--hx-on-accent);
   background: var(--hx-avatar-color, var(--hx-accent));
-  box-shadow: 0 0 0 2px rgb(255 255 255 / 12%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--hx-text) 14%, transparent);
 }
 
 /* ── دکمه ─────────────────────────────────────────────────────────────── */
@@ -271,7 +281,7 @@ code {
 }
 
 .hx-btn--primary {
-  --hx-btn-fg: #04121b;
+  --hx-btn-fg: var(--hx-on-accent);
 
   background: var(--hx-accent-grad);
   border-color: transparent;
@@ -279,11 +289,9 @@ code {
 }
 
 .hx-btn--primary:hover {
-  --hx-btn-fg: #04121b;
-
   box-shadow:
-    0 0 0 1px rgb(94 231 198 / 40%),
-    0 14px 40px rgb(79 156 249 / 32%);
+    0 0 0 1px color-mix(in srgb, var(--hx-accent-2) 45%, transparent),
+    0 14px 40px color-mix(in srgb, var(--hx-accent) 34%, transparent);
 }
 
 .hx-btn--outline {
@@ -316,6 +324,14 @@ code {
   width: 100%;
 }
 
+/* دکمه‌ی آیکونی محتوای متنی ندارد که ارتفاعش را بسازد، پس SVG اندازه‌ی
+   صریح می‌گیرد. currentColor است تا با تم و با حالت hover همراه شود. */
+.hx-btn__icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
 /* ── هیرو ─────────────────────────────────────────────────────────────── */
 
 .hx-hero {
@@ -345,7 +361,7 @@ code {
 .hx-hero__title {
   font-size: clamp(2.1rem, 5vw, 3.5rem);
   font-weight: 800;
-  background: linear-gradient(180deg, #ffffff 30%, #a9c3e8 100%);
+  background: linear-gradient(180deg, var(--hx-title-from) 30%, var(--hx-title-to) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -425,7 +441,11 @@ code {
   height: 44px;
   margin-bottom: var(--hx-sp-4);
   border-radius: var(--hx-r-md);
-  background: linear-gradient(135deg, rgb(94 231 198 / 18%), rgb(79 156 249 / 18%));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--hx-accent-2) 22%, transparent),
+    color-mix(in srgb, var(--hx-accent) 22%, transparent)
+  );
   color: var(--hx-accent-2);
 }
 
@@ -441,7 +461,7 @@ code {
   margin-block: var(--hx-sp-7);
   border: 1px solid var(--hx-border);
   border-radius: var(--hx-r-lg);
-  background: rgb(17 24 48 / 62%);
+  background: var(--hx-panel-bg);
   backdrop-filter: blur(18px) saturate(140%);
   box-shadow: var(--hx-shadow-lg);
 }
@@ -478,9 +498,9 @@ code {
 .hx-input {
   width: 100%;
   padding: 11px 14px;
-  border: 1px solid var(--hx-border-strong);
+  border: 1px solid var(--hx-border-control);
   border-radius: var(--hx-r-md);
-  background: rgb(0 0 0 / 25%);
+  background: var(--hx-input-bg);
   color: var(--hx-text);
   font: inherit;
   font-size: 0.95rem;
@@ -496,7 +516,7 @@ code {
 .hx-input:focus {
   outline: none;
   border-color: var(--hx-accent);
-  box-shadow: 0 0 0 3px rgb(79 156 249 / 22%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--hx-accent) 26%, transparent);
 }
 
 .hx-check {
@@ -581,9 +601,9 @@ code {
 .hx-alert {
   margin-block: var(--hx-sp-3);
   padding: var(--hx-sp-3) var(--hx-sp-4);
-  border: 1px solid rgb(240 97 109 / 35%);
+  border: 1px solid color-mix(in srgb, var(--hx-danger) 40%, transparent);
   border-radius: var(--hx-r-md);
-  background: rgb(240 97 109 / 10%);
+  background: color-mix(in srgb, var(--hx-danger) 12%, transparent);
   color: var(--hx-text);
 }
 
@@ -600,7 +620,7 @@ code {
 }
 
 .hx-chip--live {
-  border-color: rgb(94 231 198 / 35%);
+  border-color: color-mix(in srgb, var(--hx-accent-2) 40%, transparent);
   color: var(--hx-accent-2);
 }
 
@@ -706,7 +726,7 @@ code {
 }
 
 .hx-seat--active {
-  border-color: rgb(94 231 198 / 45%);
+  border-color: color-mix(in srgb, var(--hx-accent-2) 50%, transparent);
   box-shadow: var(--hx-glow);
 }
 
@@ -871,7 +891,7 @@ code {
   z-index: 1;
   margin-top: var(--hx-sp-7);
   border-top: 1px solid var(--hx-border);
-  background: rgb(7 11 22 / 60%);
+  background: var(--hx-footer-veil);
 }
 
 .hx-footer__inner {

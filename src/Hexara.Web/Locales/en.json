@@ -15,7 +15,10 @@
     "register": "Sign up",
     "logout": "Sign out",
     "playAsGuest": "Play as guest",
-    "language": "Language"
+    "language": "Language",
+    "theme": "Switch theme",
+    "themeLight": "Light theme — parchment",
+    "themeDark": "Dark theme — night on the board"
   },
   "home": {
     "heroTitle": "An island worth conquering",

@@ -1,5 +1,6 @@
 import './styles/app.css';
 import { createApp, type Component } from 'vue';
+import { initTheme } from './theme';
 
 /**
  * الگوی «جزیره‌های Vue»: سرور HTML کامل می‌فرستد و فقط عناصری که شناسه‌ی
@@ -53,8 +54,13 @@ async function mountIslands(): Promise<void> {
   );
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => void mountIslands());
-} else {
+function start(): void {
+  initTheme();
   void mountIslands();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', start);
+} else {
+  start();
 }

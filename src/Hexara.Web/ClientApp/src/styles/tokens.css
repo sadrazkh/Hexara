@@ -1,63 +1,194 @@
 /* ── توکن‌های طراحی هگزارا ───────────────────────────────────────────────
    یک لایه‌ی واحد که هم Razor و هم کامپوننت‌های Vue از آن استفاده می‌کنند.
-   تم پایه تیره است؛ روشنایی برد سه‌بعدی هم از همین رنگ‌ها گرفته می‌شود. */
+   روشنایی برد سه‌بعدی هم از همین رنگ‌ها گرفته می‌شود.
+
+   رنگ‌آمیزی از خودِ تخته می‌آید: خشت، چوب، گندم، سنگ، پشم، بیابان، دریا.
+   دو تم دارد — «شب روی تخته» (تیره، پیش‌فرض) و «پارشمنت» (روشن).
+
+   ساختار: هر پالت یک‌بار به‌صورت --d-* و --l-* تعریف می‌شود، بعد به --hx-*
+   نگاشت می‌شود. کامپوننت‌ها فقط --hx-* را می‌بینند و از تم بی‌خبرند.
+   نگاشتِ روشن دو جا تکرار شده — یک‌بار برای prefers-color-scheme و یک‌بار
+   برای انتخاب دستی — چون CSS راهی ندارد که یک بلوکِ اعلان بین یک media
+   query و یک انتخابگر مشترک شود. مقادیر تکرار نشده‌اند، فقط نگاشت.
+
+   هر عددی که این‌جا هست با حسابرسی WCAG انتخاب شده، نه با چشم: در هر دو تم
+   همه‌ی ترکیب‌های واقعی متن/زمینه ۴.۵:۱ را رد می‌کنند. اگر مقداری را عوض
+   می‌کنی، حسابرسی را دوباره اجرا کن — به‌خصوص برای متن روی شفق، که چون
+   لکه‌های نور زیرِ محتوا هستند بیشترین ریسک را دارد. */
 
 :root {
-  /* سطوح */
-  --hx-bg: #070b16;
-  --hx-bg-2: #0b1020;
-  --hx-surface-solid: #111830;
-  --hx-border: rgb(255 255 255 / 10%);
-  --hx-border-strong: rgb(255 255 255 / 18%);
+  /* ═══ پالت تیره — «شب روی تخته» ═══════════════════════════════════════ */
+  --d-bg: #0f0c08;
 
-  /* «شیشه» — پایه‌ی تیره برای ظرف‌هایی که متن نگه می‌دارند.
-     پس‌زمینه‌ی شفق fixed است و همیشه زیر محتوا قرار دارد؛ ظرفِ نیمه‌شفافِ
-     روشن آن را روشن‌تر می‌کند و کنتراست متن به موقعیت لکه‌های نور وابسته
-     می‌شود. پایه‌ی تیره سقف روشنایی را مهار می‌کند تا کنتراست قطعی بماند. */
-  --hx-glass: rgb(17 24 48 / 55%);
-  --hx-glass-2: rgb(24 33 60 / 66%);
+  /* دو نقش جدا که نباید قاطی شوند:
+     glass  = ظرفِ متن. پس‌زمینه‌ی شفق fixed است و همیشه زیر محتوا می‌ماند؛
+              ظرفی که پس‌زمینه را روشن‌تر کند کنتراست متن را به موقعیت
+              لکه‌های نور گره می‌زند. پایه‌ی مات‌کننده این را مهار می‌کند.
+     fill   = پرکننده‌ی عنصر تعاملی (دکمه، hover). این یکی باید کنتراستش
+              با صفحه بیشتر شود، چون همان چیزی است که تعامل را نشان می‌دهد. */
+  --d-glass: rgb(32 24 15 / 58%);
+  --d-glass-2: rgb(46 34 21 / 68%);
+  --d-fill: rgb(255 240 214 / 5%);
+  --d-fill-2: rgb(255 240 214 / 9%);
+  --d-border: rgb(255 240 214 / 12%);
+  --d-border-strong: rgb(255 240 214 / 22%);
+  /* مرزِ کنترل‌های فرم. WCAG 1.4.11 می‌خواهد مرز یک کنترل ۳:۱ با پس‌زمینه‌ی
+     مجاورش کنتراست داشته باشد، و border-strong به آن نمی‌رسد. جداست چون
+     بالابردن border-strong کارت و دکمه‌ی outline را هم سنگین می‌کرد. */
+  --d-border-control: rgb(255 240 214 / 40%);
 
-  /* پرکننده‌ی روشن — فقط برای عناصر تعاملی، چون «روشن‌تر شدن» خودش
-     نشانه‌ی تعامل است. برای ظرف متن از --hx-glass استفاده کن. */
-  --hx-surface: rgb(255 255 255 / 4%);
-  --hx-surface-2: rgb(255 255 255 / 7%);
+  --d-text: #f6ecd8;
+  --d-text-dim: #d3c1a2;
+  --d-text-faint: #b3a184;
+  --d-on-accent: #241305;
 
-  /* متن */
-  --hx-text: #e8ecf6;
-  --hx-text-dim: #a8b2c9;
+  --d-accent: #e0a63a;
+  --d-accent-2: #f2cf7a;
+  --d-grad-from: #f2cf7a;
+  --d-grad-to: #c2762a;
 
-  /* faint فقط برای متادیتای داخل ظرف است (نام میزبان، placeholder، فوتر).
-     برای جمله‌ی کامل از --hx-text-dim استفاده کن. */
-  --hx-text-faint: #8d99b4;
+  --d-danger: #f0836f;
+  --d-warn: #edb63c;
+  --d-ok: #7cc98a;
 
-  /* برند */
-  --hx-accent: #4f9cf9;
-  --hx-accent-2: #5ee7c6;
-  --hx-accent-grad: linear-gradient(135deg, #5ee7c6 0%, #4f9cf9 100%);
-  --hx-danger: #f0616d;
-  --hx-warn: #f2b134;
-  --hx-ok: #3fbf7f;
+  --d-header-veil: rgb(15 12 8 / 74%);
+  --d-panel-bg: rgb(36 27 17 / 66%);
+  --d-input-bg: rgb(0 0 0 / 28%);
+  --d-footer-veil: rgb(15 12 8 / 62%);
 
-  /* رنگ منابع بازی — در فاز ۳ متریال برد هم از همین‌ها ساخته می‌شود */
-  --hx-res-brick: #c05a3e;
-  --hx-res-lumber: #2f7d4f;
-  --hx-res-wool: #8fc95a;
-  --hx-res-grain: #e0b23c;
-  --hx-res-ore: #7d8aa3;
-  --hx-res-desert: #cbb187;
-  --hx-res-sea: #1c4f7c;
+  --d-wash: #241a0f;
+  --d-blob-a: #8a4b1e;
+  --d-blob-b: #5f6a26;
+  --d-blob-c: #6d3320;
 
-  /* شعاع و سایه */
+  --d-title-from: #fdf5e6;
+  --d-title-to: #c9a877;
+
+  --d-shadow-rgb: 8 5 2;
+  --d-shadow-a1: 25%;
+  --d-shadow-a2: 35%;
+  --d-shadow-a3: 45%;
+
+  --d-res-brick: #c0603f;
+  --d-res-lumber: #4a9159;
+  --d-res-wool: #9fcb6a;
+  --d-res-grain: #e0b23c;
+  --d-res-ore: #98a2b4;
+  --d-res-desert: #d9c18f;
+  --d-res-sea: #4a90c4;
+
+  /* ═══ پالت روشن — «پارشمنت» ══════════════════════════════════════════ */
+  --l-bg: #efe2c8;
+  --l-glass: rgb(253 247 234 / 72%);
+  --l-glass-2: rgb(255 252 244 / 84%);
+  /* در تم روشن، پرکننده‌ی تعاملی تیره‌تر می‌شود نه روشن‌تر — چیزی که
+     نشانه‌ی تعامل است «کنتراست بیشتر با صفحه» است، نه «روشن‌تر». */
+  --l-fill: rgb(90 62 28 / 6%);
+  --l-fill-2: rgb(90 62 28 / 10%);
+  --l-border: rgb(90 62 28 / 18%);
+  --l-border-strong: rgb(90 62 28 / 30%);
+  --l-border-control: rgb(90 62 28 / 60%);
+
+  --l-text: #3a2a15;
+  --l-text-dim: #5e4a2c;
+  --l-text-faint: #6f5d43;
+  --l-on-accent: #fdf6e8;
+
+  --l-accent: #8d5209;
+  --l-accent-2: #73430e;
+  --l-grad-from: #9c5810;
+  --l-grad-to: #6f3d0c;
+
+  --l-danger: #a52318;
+  --l-warn: #8a5a06;
+  --l-ok: #2c6b39;
+
+  --l-header-veil: rgb(249 241 226 / 82%);
+  --l-panel-bg: rgb(253 248 236 / 78%);
+  --l-input-bg: rgb(255 255 255 / 62%);
+  --l-footer-veil: rgb(233 220 196 / 70%);
+
+  --l-wash: #f3e7ce;
+  --l-blob-a: #e3c795;
+  --l-blob-b: #cfd8a8;
+  --l-blob-c: #e6c0a0;
+
+  --l-title-from: #4a3316;
+  --l-title-to: #8a5c22;
+
+  --l-shadow-rgb: 70 48 20;
+  --l-shadow-a1: 8%;
+  --l-shadow-a2: 12%;
+  --l-shadow-a3: 18%;
+
+  --l-res-brick: #9d4527;
+  --l-res-lumber: #245c31;
+  --l-res-wool: #5f8c33;
+  --l-res-grain: #8a6410;
+  --l-res-ore: #5c6779;
+  --l-res-desert: #8a7546;
+  --l-res-sea: #1f5c85;
+
+  /* ═══ نگاشت پیش‌فرض: تیره ═════════════════════════════════════════════
+     تیره پیش‌فرض است تا بدون جاوااسکریپت هم صفحه درست بیاید. */
+  color-scheme: dark;
+
+  --hx-bg: var(--d-bg);
+  --hx-glass: var(--d-glass);
+  --hx-glass-2: var(--d-glass-2);
+  --hx-surface: var(--d-fill);
+  --hx-surface-2: var(--d-fill-2);
+  --hx-border: var(--d-border);
+  --hx-border-strong: var(--d-border-strong);
+  --hx-border-control: var(--d-border-control);
+  --hx-text: var(--d-text);
+  --hx-text-dim: var(--d-text-dim);
+  --hx-text-faint: var(--d-text-faint);
+  --hx-on-accent: var(--d-on-accent);
+  --hx-accent: var(--d-accent);
+  --hx-accent-2: var(--d-accent-2);
+  --hx-grad-from: var(--d-grad-from);
+  --hx-grad-to: var(--d-grad-to);
+  --hx-danger: var(--d-danger);
+  --hx-warn: var(--d-warn);
+  --hx-ok: var(--d-ok);
+  --hx-header-veil: var(--d-header-veil);
+  --hx-panel-bg: var(--d-panel-bg);
+  --hx-input-bg: var(--d-input-bg);
+  --hx-footer-veil: var(--d-footer-veil);
+  --hx-wash: var(--d-wash);
+  --hx-blob-a: var(--d-blob-a);
+  --hx-blob-b: var(--d-blob-b);
+  --hx-blob-c: var(--d-blob-c);
+  --hx-title-from: var(--d-title-from);
+  --hx-title-to: var(--d-title-to);
+  --hx-shadow-rgb: var(--d-shadow-rgb);
+  --hx-shadow-a1: var(--d-shadow-a1);
+  --hx-shadow-a2: var(--d-shadow-a2);
+  --hx-shadow-a3: var(--d-shadow-a3);
+  --hx-res-brick: var(--d-res-brick);
+  --hx-res-lumber: var(--d-res-lumber);
+  --hx-res-wool: var(--d-res-wool);
+  --hx-res-grain: var(--d-res-grain);
+  --hx-res-ore: var(--d-res-ore);
+  --hx-res-desert: var(--d-res-desert);
+  --hx-res-sea: var(--d-res-sea);
+
+  /* ═══ مشتق‌ها — از توکن‌های تم‌دار ساخته می‌شوند، پس خودکار تم عوض می‌کنند ═ */
+  --hx-accent-grad: linear-gradient(135deg, var(--hx-grad-from) 0%, var(--hx-grad-to) 100%);
+  --hx-shadow-sm: 0 2px 8px rgb(var(--hx-shadow-rgb) / var(--hx-shadow-a1));
+  --hx-shadow-md: 0 10px 30px rgb(var(--hx-shadow-rgb) / var(--hx-shadow-a2));
+  --hx-shadow-lg: 0 24px 70px rgb(var(--hx-shadow-rgb) / var(--hx-shadow-a3));
+  --hx-glow:
+    0 0 0 1px color-mix(in srgb, var(--hx-accent-2) 30%, transparent),
+    0 8px 32px color-mix(in srgb, var(--hx-accent) 24%, transparent);
+
+  /* ═══ بی‌ربط به تم ════════════════════════════════════════════════════ */
   --hx-r-sm: 8px;
   --hx-r-md: 14px;
   --hx-r-lg: 22px;
   --hx-r-pill: 999px;
-  --hx-shadow-sm: 0 2px 8px rgb(0 0 0 / 25%);
-  --hx-shadow-md: 0 10px 30px rgb(0 0 0 / 35%);
-  --hx-shadow-lg: 0 24px 70px rgb(0 0 0 / 45%);
-  --hx-glow: 0 0 0 1px rgb(94 231 198 / 25%), 0 8px 32px rgb(79 156 249 / 22%);
 
-  /* فاصله */
   --hx-sp-1: 4px;
   --hx-sp-2: 8px;
   --hx-sp-3: 12px;
@@ -67,7 +198,6 @@
   --hx-sp-7: 48px;
   --hx-sp-8: 72px;
 
-  /* تایپوگرافی */
   --hx-font-fa: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
   --hx-font-en: 'Inter', 'Segoe UI', system-ui, sans-serif;
   --hx-font: var(--hx-font-fa);
@@ -76,6 +206,102 @@
   --hx-dur: 220ms;
 
   --hx-container: 1180px;
+}
+
+/* ═══ نگاشت روشن ═══════════════════════════════════════════════════════════
+   دو بلوکِ زیر نگاشتِ یکسانی دارند و باید هم‌گام بمانند. اولی وقتی است که
+   کاربر انتخاب دستی نکرده و سیستمش روشن است؛ دومی انتخاب دستی. */
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    color-scheme: light;
+
+    --hx-bg: var(--l-bg);
+    --hx-glass: var(--l-glass);
+    --hx-glass-2: var(--l-glass-2);
+    --hx-surface: var(--l-fill);
+    --hx-surface-2: var(--l-fill-2);
+    --hx-border: var(--l-border);
+    --hx-border-strong: var(--l-border-strong);
+    --hx-border-control: var(--l-border-control);
+    --hx-text: var(--l-text);
+    --hx-text-dim: var(--l-text-dim);
+    --hx-text-faint: var(--l-text-faint);
+    --hx-on-accent: var(--l-on-accent);
+    --hx-accent: var(--l-accent);
+    --hx-accent-2: var(--l-accent-2);
+    --hx-grad-from: var(--l-grad-from);
+    --hx-grad-to: var(--l-grad-to);
+    --hx-danger: var(--l-danger);
+    --hx-warn: var(--l-warn);
+    --hx-ok: var(--l-ok);
+    --hx-header-veil: var(--l-header-veil);
+    --hx-panel-bg: var(--l-panel-bg);
+    --hx-input-bg: var(--l-input-bg);
+    --hx-footer-veil: var(--l-footer-veil);
+    --hx-wash: var(--l-wash);
+    --hx-blob-a: var(--l-blob-a);
+    --hx-blob-b: var(--l-blob-b);
+    --hx-blob-c: var(--l-blob-c);
+    --hx-title-from: var(--l-title-from);
+    --hx-title-to: var(--l-title-to);
+    --hx-shadow-rgb: var(--l-shadow-rgb);
+    --hx-shadow-a1: var(--l-shadow-a1);
+    --hx-shadow-a2: var(--l-shadow-a2);
+    --hx-shadow-a3: var(--l-shadow-a3);
+    --hx-res-brick: var(--l-res-brick);
+    --hx-res-lumber: var(--l-res-lumber);
+    --hx-res-wool: var(--l-res-wool);
+    --hx-res-grain: var(--l-res-grain);
+    --hx-res-ore: var(--l-res-ore);
+    --hx-res-desert: var(--l-res-desert);
+    --hx-res-sea: var(--l-res-sea);
+  }
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --hx-bg: var(--l-bg);
+  --hx-glass: var(--l-glass);
+  --hx-glass-2: var(--l-glass-2);
+  --hx-surface: var(--l-fill);
+  --hx-surface-2: var(--l-fill-2);
+  --hx-border: var(--l-border);
+  --hx-border-strong: var(--l-border-strong);
+  --hx-border-control: var(--l-border-control);
+  --hx-text: var(--l-text);
+  --hx-text-dim: var(--l-text-dim);
+  --hx-text-faint: var(--l-text-faint);
+  --hx-on-accent: var(--l-on-accent);
+  --hx-accent: var(--l-accent);
+  --hx-accent-2: var(--l-accent-2);
+  --hx-grad-from: var(--l-grad-from);
+  --hx-grad-to: var(--l-grad-to);
+  --hx-danger: var(--l-danger);
+  --hx-warn: var(--l-warn);
+  --hx-ok: var(--l-ok);
+  --hx-header-veil: var(--l-header-veil);
+  --hx-panel-bg: var(--l-panel-bg);
+  --hx-input-bg: var(--l-input-bg);
+  --hx-footer-veil: var(--l-footer-veil);
+  --hx-wash: var(--l-wash);
+  --hx-blob-a: var(--l-blob-a);
+  --hx-blob-b: var(--l-blob-b);
+  --hx-blob-c: var(--l-blob-c);
+  --hx-title-from: var(--l-title-from);
+  --hx-title-to: var(--l-title-to);
+  --hx-shadow-rgb: var(--l-shadow-rgb);
+  --hx-shadow-a1: var(--l-shadow-a1);
+  --hx-shadow-a2: var(--l-shadow-a2);
+  --hx-shadow-a3: var(--l-shadow-a3);
+  --hx-res-brick: var(--l-res-brick);
+  --hx-res-lumber: var(--l-res-lumber);
+  --hx-res-wool: var(--l-res-wool);
+  --hx-res-grain: var(--l-res-grain);
+  --hx-res-ore: var(--l-res-ore);
+  --hx-res-desert: var(--l-res-desert);
+  --hx-res-sea: var(--l-res-sea);
 }
 
 html[lang='en'] {

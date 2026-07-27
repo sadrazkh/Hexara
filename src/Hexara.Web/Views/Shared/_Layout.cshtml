@@ -13,8 +13,22 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#0b1020" />
+    @* بدون جاوااسکریپت هم نوار مرورگر با تم سیستم جور می‌ماند. اگر کاربر تم را
+       دستی خلافِ سیستمش انتخاب کند فقط رنگ همین نوار عقب می‌ماند، نه صفحه. *@
+    <meta name="theme-color" content="#0f0c08" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#efe2c8" media="(prefers-color-scheme: light)" />
     <meta name="description" content="@T["app.description"]" />
+    @* پیش از اولین رنگ‌آمیزی اجرا می‌شود تا صفحه با تم غلط پلک نزند. تا وقتی
+       کاربر انتخاب نکرده باشد data-theme گذاشته نمی‌شود و CSS خودش سراغ
+       prefers-color-scheme می‌رود. *@
+    <script>
+        try {
+            var hxTheme = localStorage.getItem('hx-theme');
+            if (hxTheme === 'light' || hxTheme === 'dark') {
+                document.documentElement.dataset.theme = hxTheme;
+            }
+        } catch (e) { /* حالت خصوصی مرورگر — تم سیستم می‌ماند */ }
+    </script>
     <title>@(ViewData["Title"] is null ? T["app.name"] : $"{ViewData["Title"]} · {T["app.name"]}")</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     @Html.ViteEntry("src/main.ts")
@@ -49,6 +63,22 @@
             </nav>
 
             <div class="hx-header__actions">
+                @* برچسب دقیق («تم روشن» / «تم تیره») را theme.ts می‌گذارد، چون فقط
+                   او می‌داند تم فعلی از سیستم آمده یا انتخاب کاربر بوده. این
+                   aria-label عمومی برای حالت بی‌جاوااسکریپت است. *@
+                <button type="button"
+                        class="hx-btn hx-btn--ghost hx-btn--sm"
+                        data-hx-theme-toggle
+                        data-label-light="@T["nav.themeLight"]"
+                        data-label-dark="@T["nav.themeDark"]"
+                        aria-label="@T["nav.theme"]"
+                        title="@T["nav.theme"]">
+                    <svg class="hx-btn__icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2" />
+                        <path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" />
+                    </svg>
+                </button>
+
                 <form asp-controller="Language" asp-action="Set" method="post" class="hx-inline-form">
                     <input type="hidden" name="culture" value="@otherCulture" />
                     <input type="hidden" name="returnUrl" value="@returnUrl" />

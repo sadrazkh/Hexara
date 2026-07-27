@@ -15,7 +15,10 @@
     "register": "ثبت‌نام",
     "logout": "خروج",
     "playAsGuest": "بازی به‌عنوان مهمان",
-    "language": "زبان"
+    "language": "زبان",
+    "theme": "تغییر تم",
+    "themeLight": "تم روشن — پارشمنت",
+    "themeDark": "تم تیره — شب روی تخته"
   },
   "home": {
     "heroTitle": "جزیره‌ای که باید فتحش کنی",
