@@ -12,6 +12,7 @@ using Hexara.Web.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -75,6 +76,18 @@ builder.Services.AddAntiforgery(options => options.HeaderName = "RequestVerifica
 builder.Services.AddSingleton<GamePresence>();
 builder.Services.AddSingleton<GameLocks>();
 builder.Services.AddScoped<GameViewBuilder>();
+builder.Services.AddScoped<GameBroadcaster>();
+
+builder.Services.Configure<AutoPlayOptions>(builder.Configuration.GetSection(AutoPlayOptions.Section));
+builder.Services.AddHostedService<AutoPlayService>();
+
+// همان مهلت‌ها به نمای بازی هم می‌روند تا کلاینت بتواند شمارش معکوس نشان دهد.
+// اگر پوشش خودکار خاموش باشد مهلت صفر می‌شود و کلاینت چیزی نشان نمی‌دهد.
+builder.Services.AddSingleton(provider =>
+{
+    var options = provider.GetRequiredService<IOptions<AutoPlayOptions>>().Value;
+    return options.Enabled ? options.ToPolicy() : new AutoPlayPolicy(TimeSpan.Zero, TimeSpan.Zero);
+});
 
 // هاب همان قالب JSON بازی را می‌گیرد: بدون آن، چندریختی حرکت‌ها و شناسه‌های
 // کانونی گوشه و ضلع روی سیم قابل خواندن نیستند.

@@ -31,6 +31,14 @@ public interface IGameRepository
         Guid userId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// بازی‌های در جریانی که از زمان داده‌شده جلوتر نرفته‌اند — یعنی کسی معطلشان کرده.
+    /// </summary>
+    Task<IReadOnlyList<Guid>> ListIdleAsync(
+        DateTimeOffset idleSince,
+        int limit,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<GameMoveLogEntry>> HistoryAsync(
         Guid gameId,
         CancellationToken cancellationToken = default);

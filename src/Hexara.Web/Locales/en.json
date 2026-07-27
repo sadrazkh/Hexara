@@ -255,7 +255,9 @@
     "phase.Discard": "Discard cards",
     "phase.MoveRobber": "Move the robber",
     "phase.Main": "Build and trade",
-    "phase.GameOver": "Game over"
+    "phase.GameOver": "Game over",
+    "botCovering": "That player is away; the bot is covering.",
+    "deadlineIn": "{0}s until the bot steps in"
   },
   "common": {
     "loading": "Loading…",

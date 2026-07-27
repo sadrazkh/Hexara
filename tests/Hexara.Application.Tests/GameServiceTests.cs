@@ -13,7 +13,7 @@ public class GameServiceTests
     {
         var repository = new FakeRepository();
         var users = Enumerable.Range(0, 3).Select(_ => Guid.NewGuid()).ToList();
-        return (new GameService(repository), repository, users);
+        return (new GameService(repository, new FakeClock()), repository, users);
     }
 
     private static GameAction NextSetupMove(GameState state) => new PlaceInitialSettlement(
@@ -253,6 +253,16 @@ public class GameServiceTests
             Guid gameId,
             CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<GameMoveLogEntry>>([.. Moves]);
+
+        public Task<IReadOnlyList<Guid>> ListIdleAsync(
+            DateTimeOffset idleSince,
+            int limit,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<Guid>>(
+                [.. Games.Where(g => g.Value.Status == GameStatus.Active
+                        && g.Value.UpdatedAt <= idleSince)
+                    .Select(g => g.Key)
+                    .Take(limit)]);
 
         public Task<IReadOnlyList<GameMoveLogEntry>> HistorySinceAsync(
             Guid gameId,

@@ -33,7 +33,7 @@ public class CatchUpTests
         int moves)
     {
         var users = await fixture.SeedUsersAsync(3);
-        var service = new GameService(new GameRepository(context, fixture.Clock));
+        var service = new GameService(new GameRepository(context, fixture.Clock), fixture.Clock);
 
         var id = await service.CreateAsync(new GameOptions { PlayerCount = 3, Seed = 4 }, users);
 
@@ -98,7 +98,7 @@ public class CatchUpTests
         await using var context = fixture.NewContext();
 
         var users = await fixture.SeedUsersAsync(3);
-        var service = new GameService(new GameRepository(context, fixture.Clock));
+        var service = new GameService(new GameRepository(context, fixture.Clock), fixture.Clock);
         var id = await service.CreateAsync(new GameOptions { PlayerCount = 3, Seed = 4 }, users);
 
         // بازی را دستی به حالتی می‌بریم که بازیکن ۰ بتواند بدزدد.

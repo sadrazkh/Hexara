@@ -1,4 +1,5 @@
 using Hexara.Application.Common.Interfaces;
+using Hexara.Domain.Common;
 using Hexara.Domain.Game;
 
 namespace Hexara.Application.Games;
@@ -38,11 +39,30 @@ public sealed record MoveOutcome(
 /// نقطه‌ی ورود لایه‌های بالاتر به بازی. کنترلر (فاز ۴) و هاب (فاز ۵) فقط با این
 /// کلاس حرف می‌زنند و هرگز مستقیم <c>GameEngine</c> را صدا نمی‌زنند.
 /// </summary>
+/// <summary>
+/// چه وقت بات جای یک بازیکن را بگیرد.
+///
+/// دو مهلت جدا لازم است: کسی که اتصالش قطع شده زود باید پوشش داده شود وگرنه بقیه
+/// معطل می‌مانند، ولی کسی که حاضر است و دارد فکر می‌کند نباید با یک تایمر کوتاه
+/// از بازی بیرون رانده شود.
+/// </summary>
+public sealed record AutoPlayPolicy(TimeSpan AbsentGrace, TimeSpan TurnDeadline)
+{
+    public static AutoPlayPolicy Default { get; } = new(TimeSpan.FromSeconds(25), TimeSpan.FromMinutes(3));
+
+    public TimeSpan Shortest => AbsentGrace < TurnDeadline ? AbsentGrace : TurnDeadline;
+}
+
 public sealed class GameService
 {
     private readonly IGameRepository _games;
+    private readonly IClock _clock;
 
-    public GameService(IGameRepository games) => _games = games;
+    public GameService(IGameRepository games, IClock clock)
+    {
+        _games = games;
+        _clock = clock;
+    }
 
     /// <summary>
     /// بازی تازه. اگر <paramref name="layout"/> داده شود همان برد سفارشی استفاده
@@ -70,6 +90,74 @@ public sealed class GameService
         Guid gameId,
         CancellationToken cancellationToken = default) =>
         _games.HistoryAsync(gameId, cancellationToken);
+
+    public Task<IReadOnlyList<Guid>> ListIdleAsync(
+        TimeSpan idleFor,
+        int limit,
+        CancellationToken cancellationToken = default) =>
+        _games.ListIdleAsync(_clock.UtcNow - idleFor, limit, cancellationToken);
+
+    /// <summary>
+    /// اگر کسی که نوبتش است غایب یا از مهلت گذشته باشد، بات یک حرکت به جایش می‌زند.
+    /// <c>null</c> یعنی کاری لازم نبود.
+    ///
+    /// انتخاب بات از روی نسخه‌ی وضعیت seed می‌گیرد، پس روی یک وضعیت مشخص همیشه
+    /// همان حرکت درمی‌آید — که دیباگ کردنِ «چرا بات این را زد» را ممکن می‌کند.
+    /// </summary>
+    public async Task<MoveOutcome?> AutoPlayAsync(
+        Guid gameId,
+        IReadOnlySet<Guid> onlineUserIds,
+        AutoPlayPolicy policy,
+        CancellationToken cancellationToken = default)
+    {
+        var game = await _games.LoadAsync(gameId, cancellationToken);
+        if (game is null || game.Status != GameStatus.Active)
+        {
+            return null;
+        }
+
+        var idle = _clock.UtcNow - game.UpdatedAt;
+
+        foreach (var seat in BotPlayer.SeatsToAct(game.State))
+        {
+            var absent = !onlineUserIds.Contains(game.PlayerIds[seat]);
+            if (idle < (absent ? policy.AbsentGrace : policy.TurnDeadline))
+            {
+                continue;
+            }
+
+            if (BotPlayer.NextAction(game.State, seat, RngFor(game)) is not { } action)
+            {
+                continue;
+            }
+
+            var result = GameEngine.Apply(game.State, action);
+            if (!result.Success)
+            {
+                // نباید پیش بیاید — تست‌های دود بازی‌های کامل را با همین بات می‌برند.
+                return null;
+            }
+
+            if (game.State.Phase == TurnPhase.GameOver)
+            {
+                game.Status = GameStatus.Finished;
+            }
+
+            return await _games.SaveMoveAsync(game, action, result.Events, cancellationToken)
+                ? new MoveOutcome(MoveStatus.Applied, GameError.None, result.Events, game.State.Version)
+                : null;
+        }
+
+        return null;
+    }
+
+    private static Rng RngFor(StoredGame game)
+    {
+        Span<byte> bytes = stackalloc byte[16];
+        game.Id.TryWriteBytes(bytes);
+
+        return new Rng(BitConverter.ToUInt64(bytes) ^ (ulong)game.State.Version);
+    }
 
     /// <summary>
     /// اتفاق‌هایی که یک بازیکنِ قطع‌شده از دست داده، سانسورشده برای صندلی خودش.

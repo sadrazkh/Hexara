@@ -26,8 +26,12 @@ const discard = ref<Record<string, number>>({});
 /** تاس‌ها قبل از نشستن روی عدد واقعی چند بار می‌چرخند. */
 const tumbling = ref<[number, number] | null>(null);
 
+/** ساعت دیواری که هر ثانیه تیک می‌زند — فقط برای شمارش معکوس مهلت نوبت. */
+const now = ref(Date.now());
+
 let connection: GameConnection | null = null;
 let tumble = 0;
+let ticker = 0;
 
 const RESOURCES = ['Lumber', 'Brick', 'Wool', 'Grain', 'Ore'] as const;
 
@@ -39,6 +43,39 @@ const phaseLabel = computed(() =>
 );
 
 const mustDiscard = computed(() => view.value?.hand?.mustDiscard ?? 0);
+
+/** بازیکنی که همه منتظرش هستند. در مرحله‌ی دور ریختن، بدهکارها منتظرند نه نوبت‌دار. */
+const waitingOn = computed(() => {
+  const current = view.value;
+  if (!current) return null;
+
+  if (current.phase === 'Discard') {
+    const owing = Object.keys(current.pendingDiscards).map(Number);
+    return owing.length > 0 ? (current.players[owing[0]!] ?? null) : null;
+  }
+
+  return current.players[current.currentPlayer] ?? null;
+});
+
+/**
+ * ثانیه‌های مانده تا بات جای بازیکنِ معطل را بگیرد.
+ *
+ * مهلتِ کسی که قطع شده کوتاه‌تر است. اگر پوشش خودکار خاموش باشد سرور صفر
+ * می‌فرستد و چیزی نشان داده نمی‌شود — ساعتی که کسی نبیند تله است.
+ */
+const countdown = computed(() => {
+  const current = view.value;
+  const target = waitingOn.value;
+  if (!current || !target || current.deadlineSeconds <= 0 || current.winner !== null) return null;
+
+  const limit = target.isOnline ? current.deadlineSeconds : current.absentGraceSeconds;
+  const elapsed = (now.value - Date.parse(current.updatedAt)) / 1000;
+
+  return Math.max(0, Math.ceil(limit - elapsed));
+});
+
+/** آیا کسی که منتظرش هستیم غایب است و بات دارد جایش را می‌گیرد؟ */
+const covered = computed(() => waitingOn.value !== null && !waitingOn.value.isOnline);
 
 const discardTotal = computed(() =>
   Object.values(discard.value).reduce((sum, n) => sum + n, 0),
@@ -224,10 +261,12 @@ onMounted(() => {
   });
 
   void connection.start();
+  ticker = window.setInterval(() => (now.value = Date.now()), 1000);
 });
 
 onBeforeUnmount(() => {
   clearInterval(tumble);
+  clearInterval(ticker);
   void connection?.stop();
 });
 </script>
@@ -243,6 +282,12 @@ onBeforeUnmount(() => {
       <span v-else-if="view?.die1" class="hx-live__dice">🎲 {{ view.die1 }} + {{ view.die2 }}</span>
       <span v-if="view?.winner !== null && view?.winner !== undefined" class="hx-chip hx-chip--live">
         {{ t('game.event.GameWon') }}
+      </span>
+
+      <span v-if="covered" class="hx-chip hx-chip--muted">{{ t('game.botCovering') }}</span>
+
+      <span v-else-if="countdown !== null && countdown <= 30" class="hx-chip">
+        {{ t('game.deadlineIn', countdown) }}
       </span>
     </header>
 

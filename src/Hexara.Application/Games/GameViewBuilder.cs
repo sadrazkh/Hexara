@@ -8,8 +8,13 @@ namespace Hexara.Application.Games;
 public sealed class GameViewBuilder
 {
     private readonly IPlayerDirectory _directory;
+    private readonly AutoPlayPolicy _policy;
 
-    public GameViewBuilder(IPlayerDirectory directory) => _directory = directory;
+    public GameViewBuilder(IPlayerDirectory directory, AutoPlayPolicy? policy = null)
+    {
+        _directory = directory;
+        _policy = policy ?? AutoPlayPolicy.Default;
+    }
 
     public async Task<GameView> BuildAsync(
         StoredGame game,
@@ -32,6 +37,9 @@ public sealed class GameViewBuilder
             Winner = state.Winner,
             Die1 = state.Die1,
             Die2 = state.Die2,
+            UpdatedAt = game.UpdatedAt,
+            DeadlineSeconds = (int)_policy.TurnDeadline.TotalSeconds,
+            AbsentGraceSeconds = (int)_policy.AbsentGrace.TotalSeconds,
             Robber = new HexSnapshot(state.Robber.Q, state.Robber.R),
             Tiles = [.. state.Board.Tiles.Select(t =>
                 new TileSnapshot(t.Position.Q, t.Position.R, t.Terrain, t.Number))],

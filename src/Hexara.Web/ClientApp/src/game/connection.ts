@@ -28,6 +28,10 @@ export interface GameView {
   winner: number | null;
   die1: number | null;
   die2: number | null;
+  updatedAt: string;
+  /** ۰ یعنی پوشش خودکار خاموش است و شمارش معکوسی در کار نیست. */
+  deadlineSeconds: number;
+  absentGraceSeconds: number;
   robber: Hex;
   tiles: Tile[];
   ports: Port[];

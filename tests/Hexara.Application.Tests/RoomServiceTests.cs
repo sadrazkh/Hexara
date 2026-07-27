@@ -14,7 +14,7 @@ public class RoomServiceTests
     {
         context = fixture.NewContext();
         var rooms = new RoomRepository(context, fixture.Clock);
-        var games = new GameService(new GameRepository(context, fixture.Clock));
+        var games = new GameService(new GameRepository(context, fixture.Clock), fixture.Clock);
         return new RoomService(rooms, games);
     }
 
@@ -296,7 +296,7 @@ public class RoomServiceTests
             Assert.Equal(RoomStatus.Started, result.Room!.Status);
             Assert.Equal(result.GameId, result.Room.GameId);
 
-            var games = new GameService(new GameRepository(context, fixture.Clock));
+            var games = new GameService(new GameRepository(context, fixture.Clock), fixture.Clock);
             var game = await games.GetAsync(result.GameId!.Value);
 
             Assert.NotNull(game);
@@ -374,7 +374,7 @@ public class RoomServiceTests
             var result = await service.StartAsync(room.Id, users[0]);
             Assert.True(result.Success);
 
-            var games = new GameService(new GameRepository(context, fixture.Clock));
+            var games = new GameService(new GameRepository(context, fixture.Clock), fixture.Clock);
             var game = await games.GetAsync(result.GameId!.Value);
 
             var land = game!.State.Board.Tiles.Where(t => t.Terrain != Domain.Board.Terrain.Desert).ToList();
@@ -401,7 +401,7 @@ public class RoomServiceTests
 
             var result = await service.StartAsync(room.Id, users[0]);
 
-            var games = new GameService(new GameRepository(context, fixture.Clock));
+            var games = new GameService(new GameRepository(context, fixture.Clock), fixture.Clock);
             var game = await games.GetAsync(result.GameId!.Value);
 
             Assert.Equal(37, game!.State.Board.Tiles.Count);
@@ -481,7 +481,7 @@ public class RoomServiceTests
 
             var result = await service.StartAsync(room.Id, users[0]);
 
-            var games = new GameService(new GameRepository(context, fixture.Clock));
+            var games = new GameService(new GameRepository(context, fixture.Clock), fixture.Clock);
             var game = await games.GetAsync(result.GameId!.Value);
 
             Assert.Equal(seed, game!.State.Options.Seed);

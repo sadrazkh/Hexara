@@ -24,22 +24,22 @@ public sealed class GameHub : Hub
 {
     private readonly GameService _games;
     private readonly GameViewBuilder _views;
+    private readonly GameBroadcaster _broadcaster;
     private readonly GamePresence _presence;
     private readonly GameLocks _locks;
-    private readonly ILogger<GameHub> _logger;
 
     public GameHub(
         GameService games,
         GameViewBuilder views,
+        GameBroadcaster broadcaster,
         GamePresence presence,
-        GameLocks locks,
-        ILogger<GameHub> logger)
+        GameLocks locks)
     {
         _games = games;
         _views = views;
+        _broadcaster = broadcaster;
         _presence = presence;
         _locks = locks;
-        _logger = logger;
     }
 
     private Guid? UserId =>
@@ -144,36 +144,12 @@ public sealed class GameHub : Hub
         await base.OnDisconnectedAsync(exception);
     }
 
-    /// <summary>
-    /// هر بازیکن رویدادهای سانسورشده‌ی خودش و نمای تازه‌ی خودش را می‌گیرد.
-    ///
-    /// نمای کامل هر بار فرستاده می‌شود چون تنها منبع حقیقت است؛ رویدادها فقط برای
-    /// انیمیشن و پیام‌اند. اگر بعداً حجمش زیاد شد، جای بهینه‌سازی همین‌جاست.
-    /// </summary>
     private async Task BroadcastAsync(Guid gameId, IReadOnlyList<GameEvent> events)
     {
         var game = await _games.GetAsync(gameId, Context.ConnectionAborted);
-        if (game is null)
+        if (game is not null)
         {
-            return;
-        }
-
-        var online = _presence.OnlineIn(gameId);
-
-        foreach (var (userId, seat) in game.PlayerIds.Select((id, seat) => (id, seat)))
-        {
-            try
-            {
-                var view = await _views.BuildAsync(game, seat, online, Context.ConnectionAborted);
-                await Clients.User(userId.ToString())
-                    .SendAsync("applied", GameEventRedactor.ForSeat(events, seat), view, Context.ConnectionAborted);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                // نرسیدن پیام به یک نفر نباید بقیه را از به‌روزرسانی محروم کند؛
-                // آن یک نفر با CatchUp خودش را می‌رساند.
-                _logger.LogWarning(ex, "ارسال وضعیت بازی {GameId} به بازیکن {UserId} ناموفق بود.", gameId, userId);
-            }
+            await _broadcaster.SendAsync(game, events, Context.ConnectionAborted);
         }
     }
 

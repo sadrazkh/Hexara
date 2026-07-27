@@ -255,7 +255,9 @@
     "phase.Discard": "دور ریختن کارت",
     "phase.MoveRobber": "جابه‌جایی دزد",
     "phase.Main": "ساخت‌وساز و معامله",
-    "phase.GameOver": "پایان بازی"
+    "phase.GameOver": "پایان بازی",
+    "botCovering": "بازیکن غایب است؛ بات جایش بازی می‌کند.",
+    "deadlineIn": "{0} ثانیه تا پوشش خودکار"
   },
   "common": {
     "loading": "در حال بارگذاری…",

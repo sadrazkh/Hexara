@@ -23,13 +23,22 @@ public enum GameStatus
 /// </summary>
 public sealed class StoredGame
 {
-    public StoredGame(Guid id, GameStatus status, IReadOnlyList<Guid> playerIds, GameState state)
+    public StoredGame(
+        Guid id,
+        GameStatus status,
+        IReadOnlyList<Guid> playerIds,
+        GameState state,
+        DateTimeOffset updatedAt = default)
     {
         Id = id;
         Status = status;
         PlayerIds = playerIds;
         State = state;
+        UpdatedAt = updatedAt;
     }
+
+    /// <summary>آخرین باری که حرکتی روی این بازی ثبت شد — مبنای مهلت نوبت.</summary>
+    public DateTimeOffset UpdatedAt { get; }
 
     public Guid Id { get; }
 

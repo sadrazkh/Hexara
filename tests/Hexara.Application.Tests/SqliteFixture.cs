@@ -28,6 +28,9 @@ internal sealed class SqliteFixture : IDisposable
 
     public FakeClock Clock { get; } = new();
 
+    /// <summary>جلو بردن ساعت — مهلت‌ها بدون انتظار واقعی تست می‌شوند.</summary>
+    public void Advance(TimeSpan by) => Clock.Advance(by);
+
     public AppDbContext NewContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()

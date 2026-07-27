@@ -28,6 +28,18 @@ public sealed record GameView
 
     public int? Die2 { get; init; }
 
+    /// <summary>آخرین باری که بازی جلو رفت — مبنای شمارش معکوس نوبت در کلاینت.</summary>
+    public required DateTimeOffset UpdatedAt { get; init; }
+
+    /// <summary>
+    /// چند ثانیه بعد از این، بات جای بازیکنِ معطل را می‌گیرد. صفر یعنی پوشش خودکار
+    /// خاموش است و کلاینت نباید شمارش معکوس نشان دهد.
+    /// </summary>
+    public required int DeadlineSeconds { get; init; }
+
+    /// <summary>مهلت کوتاه‌ترِ کسی که اتصالش قطع شده.</summary>
+    public required int AbsentGraceSeconds { get; init; }
+
     public required HexSnapshot Robber { get; init; }
 
     public required IReadOnlyList<TileSnapshot> Tiles { get; init; }

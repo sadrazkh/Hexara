@@ -62,7 +62,23 @@ public sealed class GameRepository : IGameRepository
         var playerIds = record.Players.OrderBy(p => p.Seat).Select(p => p.UserId).ToList();
         var state = GameState.Restore(GameJson.Deserialize<GameSnapshot>(record.Snapshot));
 
-        return new StoredGame(record.Id, record.Status, playerIds, state);
+        return new StoredGame(record.Id, record.Status, playerIds, state, Utc(record.UpdatedAt));
+    }
+
+    public async Task<IReadOnlyList<Guid>> ListIdleAsync(
+        DateTimeOffset idleSince,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        var cutoff = idleSince.UtcDateTime;
+
+        return await _db.Games
+            .AsNoTracking()
+            .Where(g => g.Status == GameStatus.Active && g.UpdatedAt <= cutoff)
+            .OrderBy(g => g.UpdatedAt)
+            .Take(limit)
+            .Select(g => g.Id)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<bool> SaveMoveAsync(
