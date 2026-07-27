@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { t } from '@/i18n';
+import GameBoard from './GameBoard.vue';
+import type { BoardData, Highlights, Pick } from '@/three/board';
+import { vertexHexes, vertexKey } from '@/three/hex';
 import {
   GameConnection,
   type GameEvent,
   type GameView,
   type Hex,
   type Link,
-  type Vertex,
 } from '@/game/connection';
 
 const props = defineProps<{ gameId: string }>();
@@ -21,29 +23,67 @@ const problem = ref<string | null>(null);
 const robberHex = ref<Hex | null>(null);
 const discard = ref<Record<string, number>>({});
 
+/** تاس‌ها قبل از نشستن روی عدد واقعی چند بار می‌چرخند. */
+const tumbling = ref<[number, number] | null>(null);
+
 let connection: GameConnection | null = null;
+let tumble = 0;
 
 const RESOURCES = ['Lumber', 'Brick', 'Wool', 'Grain', 'Ore'] as const;
 
 const isMyTurn = computed(() => view.value?.legal.isMyTurn ?? false);
+const phase = computed(() => view.value?.phase ?? '');
 
 const phaseLabel = computed(() =>
   view.value ? t(`game.phase.${view.value.phase}`) : t('common.loading'),
 );
 
+const mustDiscard = computed(() => view.value?.hand?.mustDiscard ?? 0);
+
 const discardTotal = computed(() =>
   Object.values(discard.value).reduce((sum, n) => sum + n, 0),
 );
 
-/** بازیکنانی که می‌شود از آن‌ها دزدید: ساختمانی کنار این خانه دارند و کارت دارند. */
+const board = computed<BoardData>(() => ({
+  tiles: view.value?.tiles ?? [],
+  ports: view.value?.ports ?? [],
+  buildings: view.value?.buildings ?? [],
+  roads: view.value?.roads ?? [],
+  robber: view.value?.robber ?? { q: 0, r: 0 },
+}));
+
+/**
+ * جاهایی که همین حالا می‌شود رویشان کلیک کرد.
+ *
+ * وقتی دزد در کار است فقط خانه‌ها روشن می‌شوند تا انتخاب دو مرحله‌ای (خانه، بعد
+ * قربانی) با ساخت‌وساز قاطی نشود.
+ */
+const highlights = computed<Highlights>(() => {
+  const current = view.value;
+  if (!current || !current.legal.isMyTurn || mustDiscard.value > 0) {
+    return { vertices: [], edges: [], hexes: [] };
+  }
+
+  if (current.phase === 'MoveRobber') {
+    return { vertices: [], edges: [], hexes: robberHex.value ? [] : current.legal.robberTargets };
+  }
+
+  return {
+    vertices: [...current.legal.settlements, ...current.legal.cities],
+    edges: current.legal.roads,
+    hexes: [],
+  };
+});
+
+/** بازیکنانی که می‌شود از آن‌ها دزدید: ساختمانی کنار خانه‌ی دزد دارند و کارت دارند. */
 const robberVictims = computed(() => {
   const current = view.value;
   const hex = robberHex.value;
-  if (!current || !hex || current.seat == null) return [];
+  if (!current || !hex || current.seat === null) return [];
 
   const owners = new Set<number>();
   for (const building of current.buildings) {
-    if (touches(building, hex)) owners.add(building.playerIndex);
+    if (vertexTouches(building, hex)) owners.add(building.playerIndex);
   }
 
   return current.players.filter(
@@ -51,33 +91,41 @@ const robberVictims = computed(() => {
   );
 });
 
-/** آیا این گوشه به آن خانه می‌رسد؟ گوشه‌ها کانونی‌اند، پس سه نمایش هم‌ارز بررسی می‌شود. */
-function touches(vertex: Vertex, hex: Hex): boolean {
-  const directions = [
-    [1, 0],
-    [1, -1],
-    [0, -1],
-    [-1, 0],
-    [-1, 1],
-    [0, 1],
-  ];
+/** آیا این گوشه به آن خانه می‌رسد؟ همان سه هگزی که سرور هم می‌شمارد. */
+function vertexTouches(vertex: { q: number; r: number; corner: number }, hex: Hex): boolean {
+  return vertexHexes(vertex).some((h) => h.q === hex.q && h.r === hex.r);
+}
 
-  const first = directions[vertex.corner % 6]!;
-  const second = directions[(vertex.corner + 1) % 6]!;
+/**
+ * چرخیدن کوتاه تاس‌ها. عمداً دوبعدی است: عددی که مهم است سرور تعیین کرده و
+ * انیمیشن فقط باید لحظه‌ی انداختن را حس‌دار کند، نه اینکه نتیجه را معلق نگه دارد.
+ */
+function rollDice(): void {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-  return (
-    (vertex.q === hex.q && vertex.r === hex.r) ||
-    (vertex.q + first[0]! === hex.q && vertex.r + first[1]! === hex.r) ||
-    (vertex.q + second[0]! === hex.q && vertex.r + second[1]! === hex.r)
-  );
+  clearInterval(tumble);
+  const until = Date.now() + 620;
+
+  tumble = window.setInterval(() => {
+    if (Date.now() >= until) {
+      clearInterval(tumble);
+      tumbling.value = null;
+      return;
+    }
+
+    tumbling.value = [1 + Math.floor(Math.random() * 6), 1 + Math.floor(Math.random() * 6)];
+  }, 70);
 }
 
 function describe(event: GameEvent): string {
   const kind = String(event.$kind);
-  const key = `game.event.${kind}`;
-  const label = t(key);
+  const label = t(`game.event.${kind}`);
 
-  return label === key ? kind : label;
+  return label === `game.event.${kind}` ? kind : label;
+}
+
+function seat(): number {
+  return view.value?.seat ?? 0;
 }
 
 async function play(action: Record<string, unknown>): Promise<void> {
@@ -86,12 +134,44 @@ async function play(action: Record<string, unknown>): Promise<void> {
 
   if (outcome && outcome.status !== 'Applied') {
     problem.value =
-      outcome.status === 'Rejected' ? t(`game.error.${outcome.error}`) : t(`game.error.${outcome.status}`);
+      outcome.status === 'Rejected'
+        ? t(`game.error.${outcome.error}`)
+        : t(`game.error.${outcome.status}`);
   }
 }
 
-function seat(): number {
-  return view.value?.seat ?? 0;
+/** کلیک روی برد. کدام حرکت است، از روی مرحله و فهرست مجازها معلوم می‌شود. */
+function onPick(pick: Pick): void {
+  const current = view.value;
+  if (!current || !current.legal.isMyTurn) return;
+
+  if (pick.kind === 'hex') {
+    robberHex.value = pick.id;
+    return;
+  }
+
+  if (pick.kind === 'vertex') {
+    const key = vertexKey(pick.id);
+    const id = `${pick.id.q},${pick.id.r},${pick.id.corner}`;
+
+    if (current.phase === 'SetupSettlement') {
+      void play({ $kind: 'PlaceInitialSettlement', playerIndex: seat(), vertex: id });
+      return;
+    }
+
+    // شهر روی آبادی خودت ساخته می‌شود و آبادی روی گوشه‌ی خالی؛ این دو هرگز یکی نیستند.
+    if (current.legal.cities.some((c) => vertexKey(c) === key)) {
+      void play({ $kind: 'BuildCity', playerIndex: seat(), vertex: id });
+    } else {
+      void play({ $kind: 'BuildSettlement', playerIndex: seat(), vertex: id });
+    }
+
+    return;
+  }
+
+  const id = `${pick.id.q},${pick.id.r},${pick.id.side}`;
+  const action = current.phase === 'SetupRoad' ? 'PlaceInitialRoad' : 'BuildRoad';
+  void play({ $kind: action, playerIndex: seat(), edge: id });
 }
 
 const actions = {
@@ -99,18 +179,7 @@ const actions = {
   endTurn: () => play({ $kind: 'EndTurn', playerIndex: seat() }),
   buyCard: () => play({ $kind: 'BuyDevelopmentCard', playerIndex: seat() }),
 
-  setupSettlement: (v: Vertex) =>
-    play({ $kind: 'PlaceInitialSettlement', playerIndex: seat(), vertex: vertexId(v) }),
-  setupRoad: (e: { q: number; r: number; side: number }) =>
-    play({ $kind: 'PlaceInitialRoad', playerIndex: seat(), edge: edgeId(e) }),
-
-  settlement: (v: Vertex) =>
-    play({ $kind: 'BuildSettlement', playerIndex: seat(), vertex: vertexId(v) }),
-  road: (e: { q: number; r: number; side: number }) =>
-    play({ $kind: 'BuildRoad', playerIndex: seat(), edge: edgeId(e) }),
-  city: (v: Vertex) => play({ $kind: 'BuildCity', playerIndex: seat(), vertex: vertexId(v) }),
-
-  moveRobber: (victim: number | null) =>
+  rob: (victim: number | null) =>
     play({
       $kind: 'MoveRobber',
       playerIndex: seat(),
@@ -126,15 +195,6 @@ const actions = {
     }),
 };
 
-// شناسه‌های هندسی روی سیم رشته‌اند — همان قالبی که مبدل‌های سرور می‌فهمند.
-function vertexId(v: Vertex): string {
-  return `${v.q},${v.r},${v.corner}`;
-}
-
-function edgeId(e: { q: number; r: number; side: number }): string {
-  return `${e.q},${e.r},${e.side}`;
-}
-
 function adjust(resource: string, delta: number): void {
   const owned = view.value?.hand?.resources[resource] ?? 0;
   const next = (discard.value[resource] ?? 0) + delta;
@@ -144,12 +204,18 @@ function adjust(resource: string, delta: number): void {
 onMounted(() => {
   connection = new GameConnection(props.gameId, {
     onLink: (value) => (link.value = value),
-    onView: (value) => (view.value = value),
+    onView: (value) => {
+      view.value = value;
+
+      // اگر مرحله عوض شد، انتخاب نیمه‌کاره‌ی دزد دیگر معنا ندارد.
+      if (value.phase !== 'MoveRobber') robberHex.value = null;
+    },
     onEvents: (events) => {
+      if (events.some((e) => e.$kind === 'DiceRolled')) rollDice();
       log.value = [...events.map(describe), ...log.value].slice(0, 40);
     },
     onPresence: () => {
-      /* حضور از راه نمای تازه هم می‌رسد؛ اینجا فقط برای واکنش سریع‌تر است. */
+      /* حضور از راه نمای تازه هم می‌رسد؛ این فقط واکنش سریع‌تر است. */
     },
     onError: (message) => (problem.value = message),
   });
@@ -157,7 +223,10 @@ onMounted(() => {
   void connection.start();
 });
 
-onBeforeUnmount(() => void connection?.stop());
+onBeforeUnmount(() => {
+  clearInterval(tumble);
+  void connection?.stop();
+});
 </script>
 
 <template>
@@ -165,10 +234,98 @@ onBeforeUnmount(() => void connection?.stop());
     <header class="hx-live__bar">
       <span class="hx-live__link" :data-link="link">{{ t(`game.link.${link}`) }}</span>
       <span v-if="view">{{ t('game.turn') }} {{ view.turnNumber }} · {{ phaseLabel }}</span>
-      <span v-if="view?.die1">🎲 {{ view.die1 }} + {{ view.die2 }}</span>
+      <span v-if="tumbling" class="hx-live__dice hx-live__dice--rolling">
+        🎲 {{ tumbling[0] }} + {{ tumbling[1] }}
+      </span>
+      <span v-else-if="view?.die1" class="hx-live__dice">🎲 {{ view.die1 }} + {{ view.die2 }}</span>
+      <span v-if="view?.winner !== null && view?.winner !== undefined" class="hx-chip hx-chip--live">
+        {{ t('game.event.GameWon') }}
+      </span>
     </header>
 
     <p v-if="problem" class="hx-alert" role="alert">{{ problem }}</p>
+
+    <GameBoard v-if="view" :board="board" :highlights="highlights" @pick="onPick">
+      <template #fallback>{{ t('game.noWebgl') }}</template>
+    </GameBoard>
+
+    <section v-if="view && isMyTurn" class="hx-panel hx-live__controls">
+      <h3 class="hx-panel__title">{{ t('game.yourTurn') }}</h3>
+
+      <template v-if="mustDiscard > 0">
+        <p>{{ t('game.discardPrompt', mustDiscard) }}</p>
+        <div class="hx-live__counters">
+          <div v-for="resource in RESOURCES" :key="resource" class="hx-live__counter">
+            <button type="button" class="hx-btn hx-btn--sm" @click="adjust(resource, -1)">−</button>
+            <span>{{ t(`game.resource.${resource}`) }} {{ discard[resource] ?? 0 }}</span>
+            <button type="button" class="hx-btn hx-btn--sm" @click="adjust(resource, 1)">+</button>
+          </div>
+        </div>
+        <button
+          type="button"
+          class="hx-btn hx-btn--primary"
+          :disabled="discardTotal !== mustDiscard"
+          @click="actions.discard()"
+        >
+          {{ t('game.discard') }}
+        </button>
+      </template>
+
+      <template v-else-if="phase === 'MoveRobber'">
+        <p v-if="!robberHex">{{ t('game.pickRobberHex') }}</p>
+        <template v-else>
+          <p>{{ t('game.pickVictim') }}</p>
+          <div class="hx-live__choices">
+            <button
+              v-for="victim in robberVictims"
+              :key="victim.index"
+              type="button"
+              class="hx-btn hx-btn--sm hx-btn--outline"
+              @click="actions.rob(victim.index)"
+            >
+              {{ victim.displayName }}
+            </button>
+            <button
+              v-if="robberVictims.length === 0"
+              type="button"
+              class="hx-btn hx-btn--sm hx-btn--primary"
+              @click="actions.rob(null)"
+            >
+              {{ t('common.confirm') }}
+            </button>
+            <button type="button" class="hx-btn hx-btn--sm hx-btn--ghost" @click="robberHex = null">
+              {{ t('common.back') }}
+            </button>
+          </div>
+        </template>
+      </template>
+
+      <template v-else-if="phase === 'Roll'">
+        <button type="button" class="hx-btn hx-btn--primary hx-btn--lg" @click="actions.roll()">
+          {{ t('game.roll') }}
+        </button>
+      </template>
+
+      <template v-else-if="phase === 'Main'">
+        <p class="hx-muted hx-small">{{ t('game.clickTheBoard') }}</p>
+        <div class="hx-live__choices">
+          <button type="button" class="hx-btn hx-btn--sm" @click="actions.buyCard()">
+            {{ t('game.buyCard') }}
+          </button>
+          <button type="button" class="hx-btn hx-btn--sm hx-btn--primary" @click="actions.endTurn()">
+            {{ t('game.endTurn') }}
+          </button>
+        </div>
+      </template>
+
+      <template v-else>
+        <p class="hx-muted hx-small">{{ t('game.clickTheBoard') }}</p>
+      </template>
+    </section>
+
+    <section v-else-if="view" class="hx-panel">
+      <p class="hx-muted">{{ t('game.waitingForOthers') }}</p>
+    </section>
 
     <div v-if="view" class="hx-live__grid">
       <section class="hx-panel">
@@ -180,13 +337,18 @@ onBeforeUnmount(() => void connection?.stop());
             class="hx-seat"
             :class="{ 'hx-seat--active': player.index === view.currentPlayer }"
           >
-            <span class="hx-avatar hx-avatar--sm" :style="{ '--hx-avatar-color': player.avatarColor }">
+            <span
+              class="hx-avatar hx-avatar--sm"
+              :style="{ '--hx-avatar-color': player.avatarColor }"
+            >
               {{ (player.displayName || '?').slice(0, 1).toUpperCase() }}
             </span>
             <span class="hx-seat__name">{{ player.displayName }}</span>
             <span class="hx-chip">{{ player.publicVictoryPoints }} ★</span>
             <span class="hx-chip">{{ player.cardCount }} 🂠</span>
-            <span v-if="!player.isOnline" class="hx-chip hx-chip--muted">{{ t('game.link.offline') }}</span>
+            <span v-if="!player.isOnline" class="hx-chip hx-chip--muted">
+              {{ t('game.link.offline') }}
+            </span>
           </li>
         </ol>
       </section>
@@ -205,159 +367,6 @@ onBeforeUnmount(() => void connection?.stop());
         </ul>
       </section>
     </div>
-
-    <!-- تابلوی موقت فرمان: در فاز ۶ جای خودش را به برد سه‌بعدی می‌دهد. -->
-    <section v-if="view && isMyTurn" class="hx-panel hx-live__controls">
-      <h3 class="hx-panel__title">{{ t('game.yourTurn') }}</h3>
-
-      <template v-if="view.hand && view.hand.mustDiscard > 0">
-        <p>{{ t('game.discardPrompt', view.hand.mustDiscard) }}</p>
-        <div class="hx-live__counters">
-          <div v-for="resource in RESOURCES" :key="resource" class="hx-live__counter">
-            <button type="button" class="hx-btn hx-btn--sm" @click="adjust(resource, -1)">−</button>
-            <span>{{ t(`game.resource.${resource}`) }} {{ discard[resource] ?? 0 }}</span>
-            <button type="button" class="hx-btn hx-btn--sm" @click="adjust(resource, 1)">+</button>
-          </div>
-        </div>
-        <button
-          type="button"
-          class="hx-btn hx-btn--primary"
-          :disabled="discardTotal !== view.hand.mustDiscard"
-          @click="actions.discard()"
-        >
-          {{ t('game.discard') }}
-        </button>
-      </template>
-
-      <template v-else-if="view.phase === 'MoveRobber'">
-        <template v-if="!robberHex">
-          <p>{{ t('game.pickRobberHex') }}</p>
-          <div class="hx-live__choices">
-            <button
-              v-for="hex in view.legal.robberTargets"
-              :key="`${hex.q},${hex.r}`"
-              type="button"
-              class="hx-btn hx-btn--sm hx-btn--outline"
-              @click="robberHex = hex"
-            >
-              {{ hex.q }},{{ hex.r }}
-            </button>
-          </div>
-        </template>
-        <template v-else>
-          <p>{{ t('game.pickVictim') }}</p>
-          <div class="hx-live__choices">
-            <button
-              v-for="victim in robberVictims"
-              :key="victim.index"
-              type="button"
-              class="hx-btn hx-btn--sm hx-btn--outline"
-              @click="actions.moveRobber(victim.index)"
-            >
-              {{ victim.displayName }}
-            </button>
-            <button
-              v-if="robberVictims.length === 0"
-              type="button"
-              class="hx-btn hx-btn--sm hx-btn--primary"
-              @click="actions.moveRobber(null)"
-            >
-              {{ t('common.confirm') }}
-            </button>
-          </div>
-        </template>
-      </template>
-
-      <template v-else-if="view.phase === 'SetupSettlement' || view.phase === 'SetupRoad'">
-        <p>{{ t(`game.phase.${view.phase}`) }}</p>
-        <div class="hx-live__choices">
-          <button
-            v-for="spot in view.legal.settlements"
-            :key="`v${spot.q},${spot.r},${spot.corner}`"
-            type="button"
-            class="hx-btn hx-btn--sm hx-btn--outline"
-            @click="actions.setupSettlement(spot)"
-          >
-            {{ spot.q }},{{ spot.r }},{{ spot.corner }}
-          </button>
-          <button
-            v-for="spot in view.legal.roads"
-            :key="`e${spot.q},${spot.r},${spot.side}`"
-            type="button"
-            class="hx-btn hx-btn--sm hx-btn--outline"
-            @click="actions.setupRoad(spot)"
-          >
-            {{ spot.q }},{{ spot.r }},{{ spot.side }}
-          </button>
-        </div>
-      </template>
-
-      <template v-else-if="view.phase === 'Roll'">
-        <button type="button" class="hx-btn hx-btn--primary hx-btn--lg" @click="actions.roll()">
-          {{ t('game.roll') }}
-        </button>
-      </template>
-
-      <template v-else-if="view.phase === 'Main'">
-        <div class="hx-live__choices">
-          <button type="button" class="hx-btn hx-btn--sm" @click="actions.buyCard()">
-            {{ t('game.buyCard') }}
-          </button>
-          <button type="button" class="hx-btn hx-btn--sm hx-btn--primary" @click="actions.endTurn()">
-            {{ t('game.endTurn') }}
-          </button>
-        </div>
-
-        <details>
-          <summary>{{ t('game.buildRoad') }}</summary>
-          <div class="hx-live__choices">
-            <button
-              v-for="spot in view.legal.roads"
-              :key="`r${spot.q},${spot.r},${spot.side}`"
-              type="button"
-              class="hx-btn hx-btn--sm hx-btn--outline"
-              @click="actions.road(spot)"
-            >
-              {{ spot.q }},{{ spot.r }},{{ spot.side }}
-            </button>
-          </div>
-        </details>
-
-        <details>
-          <summary>{{ t('game.buildSettlement') }}</summary>
-          <div class="hx-live__choices">
-            <button
-              v-for="spot in view.legal.settlements"
-              :key="`s${spot.q},${spot.r},${spot.corner}`"
-              type="button"
-              class="hx-btn hx-btn--sm hx-btn--outline"
-              @click="actions.settlement(spot)"
-            >
-              {{ spot.q }},{{ spot.r }},{{ spot.corner }}
-            </button>
-          </div>
-        </details>
-
-        <details v-if="view.legal.cities.length > 0">
-          <summary>{{ t('game.buildCity') }}</summary>
-          <div class="hx-live__choices">
-            <button
-              v-for="spot in view.legal.cities"
-              :key="`c${spot.q},${spot.r},${spot.corner}`"
-              type="button"
-              class="hx-btn hx-btn--sm hx-btn--outline"
-              @click="actions.city(spot)"
-            >
-              {{ spot.q }},{{ spot.r }},{{ spot.corner }}
-            </button>
-          </div>
-        </details>
-      </template>
-    </section>
-
-    <section v-else-if="view" class="hx-panel">
-      <p class="hx-muted">{{ t('game.waitingForOthers') }}</p>
-    </section>
 
     <section v-if="log.length > 0" class="hx-panel">
       <h3 class="hx-panel__title">{{ t('game.log') }}</h3>

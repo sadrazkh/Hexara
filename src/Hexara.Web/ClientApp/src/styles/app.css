@@ -804,6 +804,14 @@ code {
   align-items: start;
 }
 
+.hx-live__dice {
+  font-variant-numeric: tabular-nums;
+}
+
+.hx-live__dice--rolling {
+  color: var(--hx-accent-2);
+}
+
 .hx-live__controls {
   display: flex;
   flex-direction: column;

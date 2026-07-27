@@ -135,8 +135,10 @@
     "buildCity": "Build a city",
     "discard": "Discard",
     "discardPrompt": "You must discard {0} cards.",
-    "pickRobberHex": "Where should the robber go?",
+    "pickRobberHex": "Pick the tile the robber moves to on the board.",
     "pickVictim": "Who do you rob?",
+    "clickTheBoard": "The legal spots are lit up on the board — click one.",
+    "noWebgl": "Your browser doesn't support WebGL, so the 3D board can't be shown.",
     "link": {
       "connecting": "Connecting…",
       "live": "Live",
