@@ -29,7 +29,7 @@
     @* پیش از اولین رنگ‌آمیزی اجرا می‌شود تا صفحه با تم غلط پلک نزند. تا وقتی
        کاربر انتخاب نکرده باشد data-theme گذاشته نمی‌شود و CSS خودش سراغ
        prefers-color-scheme می‌رود. *@
-    <script>
+    <script nonce="@Context.CspNonce()">
         try {
             var hxTheme = localStorage.getItem('hx-theme');
             if (hxTheme === 'light' || hxTheme === 'dark') {

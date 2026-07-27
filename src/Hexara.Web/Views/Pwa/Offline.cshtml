@@ -12,8 +12,9 @@
     <h1 class="hx-section-title">@T["offline.title"]</h1>
     <p class="hx-muted">@T["offline.body"]</p>
 
-    @* بارگذاری دوباره‌ی همان آدرس؛ وقتی شبکه برگشت، همان‌جایی که بود ادامه می‌دهد. *@
-    <button type="button" class="hx-btn hx-btn--primary" onclick="location.reload()">
+    @* بارگذاری دوباره‌ی همان آدرس؛ وقتی شبکه برگشت، همان‌جایی که بود ادامه می‌دهد.
+       رفتارش در pwa.ts بسته شده و نه با onclick، چون CSP اسکریپت درون‌خطی را نمی‌پذیرد. *@
+    <button type="button" class="hx-btn hx-btn--primary" data-hx-reload>
         @T["common.retry"]
     </button>
 </section>

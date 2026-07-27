@@ -8,5 +8,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/Hexara.Application.Tests/Hexara.Application.Tests.csproj" />
     <Project Path="tests/Hexara.Domain.Tests/Hexara.Domain.Tests.csproj" />
+    <Project Path="tests/Hexara.Web.Tests/Hexara.Web.Tests.csproj" />
   </Folder>
 </Solution>

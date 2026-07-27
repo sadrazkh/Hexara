@@ -12,7 +12,11 @@ public static class ViteHtmlHelpers
     /// </summary>
     public static IHtmlContent ViteEntry(this IHtmlHelper html, string entry)
     {
-        var manifest = html.ViewContext.HttpContext.RequestServices.GetRequiredService<ViteManifest>();
+        var context = html.ViewContext.HttpContext;
+        var manifest = context.RequestServices.GetRequiredService<ViteManifest>();
+
+        // اسکریپت‌های ماژولی هم nonce می‌گیرند تا CSP بدون unsafe-inline کار کند.
+        var nonce = $" nonce=\"{context.CspNonce()}\"";
         var (script, styles) = manifest.Resolve(entry);
         var builder = new HtmlContentBuilder();
 

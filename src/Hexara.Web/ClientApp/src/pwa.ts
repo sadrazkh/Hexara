@@ -45,8 +45,16 @@ function wireInstallButton(): void {
   });
 }
 
+/** دکمه‌ی «تلاش دوباره» در صفحه‌ی آفلاین — با CSP نمی‌شود onclick درون‌خطی گذاشت. */
+function wireReloadButton(): void {
+  document
+    .querySelector<HTMLElement>('[data-hx-reload]')
+    ?.addEventListener('click', () => location.reload());
+}
+
 export function initPwa(): void {
   wireInstallButton();
+  wireReloadButton();
 
   if (!import.meta.env.PROD || !('serviceWorker' in navigator)) {
     return;

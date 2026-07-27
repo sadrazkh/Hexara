@@ -1,0 +1,78 @@
+using System.Buffers.Text;
+using System.Security.Cryptography;
+
+namespace Hexara.Web.Infrastructure;
+
+/// <summary>
+/// هدرهای امنیتی و سیاست محتوا.
+///
+/// CSP با nonce نوشته شده و نه با <c>unsafe-inline</c> برای اسکریپت: تنها اسکریپت
+/// درون‌خطی صفحه، همان تکه‌ی کوچکِ اعمالِ تم در <c>head</c> است و همان یکی nonce
+/// می‌گیرد. اگر روزی اسکریپت درون‌خطی دیگری اضافه شود، بدون nonce اجرا نمی‌شود —
+/// که دقیقاً همان چیزی است که می‌خواهیم.
+/// </summary>
+public static class SecurityHeaders
+{
+    private const string NonceKey = "hexara:csp-nonce";
+
+    /// <summary>nonce همین درخواست؛ ویو از این استفاده می‌کند.</summary>
+    public static string CspNonce(this HttpContext context) =>
+        context.Items.TryGetValue(NonceKey, out var value) && value is string nonce ? nonce : string.Empty;
+
+    public static IApplicationBuilder UseHexaraSecurityHeaders(
+        this IApplicationBuilder app,
+        bool allowViteDevServer,
+        string devServerUrl)
+    {
+        return app.Use(async (context, next) =>
+        {
+            // base64url و نه base64 معمولی: کدگذار HTML رِیزر نویسه‌ی ‎+‎ را به
+            // ‎&#x2B;‎ تبدیل می‌کند، پس مقدارِ داخل صفحه دیگر با هدر یکی نبود.
+            // مرورگر آن را رمزگشایی می‌کند و عملاً کار می‌کرد، ولی تکیه بر این
+            // رفتار شکننده است. الفبای base64url هیچ نویسه‌ی نیازمند کدگذاری ندارد.
+            var nonce = Base64Url.EncodeToString(RandomNumberGenerator.GetBytes(16));
+            context.Items[NonceKey] = nonce;
+
+            var headers = context.Response.Headers;
+            headers["Content-Security-Policy"] = BuildPolicy(nonce, allowViteDevServer, devServerUrl);
+            headers["X-Content-Type-Options"] = "nosniff";
+            headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+
+            // همراهِ قدیمیِ frame-ancestors برای مرورگرهایی که CSP سطح ۲ ندارند.
+            headers["X-Frame-Options"] = "DENY";
+
+            // هیچ‌کدام از این‌ها در بازی لازم نیست؛ بستنشان سطح حمله را کم می‌کند.
+            headers["Permissions-Policy"] =
+                "accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()";
+
+            await next();
+        });
+    }
+
+    private static string BuildPolicy(string nonce, bool allowViteDevServer, string devServerUrl)
+    {
+        // در حالت dev، دارایی‌ها و سوکت HMR از سرور ویت می‌آیند و باید مجاز شوند.
+        var dev = allowViteDevServer ? $" {devServerUrl}" : string.Empty;
+        var devSocket = allowViteDevServer ? $" {devServerUrl.Replace("http", "ws")}" : string.Empty;
+
+        return string.Join(
+            "; ",
+            "default-src 'self'",
+            $"script-src 'self' 'nonce-{nonce}'{dev}",
+
+            // سبک‌های درون‌خطی لازم‌اند: رنگ آواتار و نمونه‌رنگ‌های ویرایشگر با
+            // ویژگی style و متغیر CSS ست می‌شوند و nonce به ویژگی تعلق نمی‌گیرد.
+            $"style-src 'self' 'unsafe-inline'{dev}",
+            $"img-src 'self' data: blob:{dev}",
+            $"font-src 'self'{dev}",
+
+            // SignalR روی همین ریشه وب‌سوکت می‌زند و 'self' آن را می‌پوشاند.
+            $"connect-src 'self'{dev}{devSocket}",
+            "worker-src 'self'",
+            "manifest-src 'self'",
+            "object-src 'none'",
+            "base-uri 'self'",
+            "form-action 'self'",
+            "frame-ancestors 'none'");
+    }
+}

@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# یک اجرا در هر شاخه کافی است؛ پوش پشت سر هم، اجرای قبلی را لغو می‌کند.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  server:
+    name: دات‌نت — build و تست
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # کش بر اساس فایل‌های پروژه؛ با عوض‌شدن یک بسته دوباره ساخته می‌شود.
+      - name: کش بسته‌های NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - run: dotnet restore Hexara.slnx
+
+      # هشدارها خطا حساب می‌شوند: تا امروز صفر هشدار داشته‌ایم و همان‌طور می‌ماند.
+      - name: Build
+        run: dotnet build Hexara.slnx --no-restore --configuration Release -warnaserror
+
+      # تست‌های وب برنامه‌ی واقعی را بالا می‌آورند. دارایی‌های ویت اینجا ساخته
+      # نشده‌اند و لازم هم نیستند: ‎ViteManifest‎ نبودشان را با هشدار رد می‌کند و
+      # صفحه‌ها همچنان رندر می‌شوند. دیتابیس هم SQLite در حافظه است.
+      - name: تست‌ها
+        run: dotnet test Hexara.slnx --no-build --configuration Release --verbosity normal
+
+  client:
+    name: کلاینت — تست و type-check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/Hexara.Web/ClientApp
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: src/Hexara.Web/ClientApp/package-lock.json
+
+      - run: npm ci
+
+      - name: تست‌ها
+        run: npm test
+
+      # ‎npm run build‎ اول ‎vue-tsc --noEmit‎ را اجرا می‌کند، پس type-check هم همین‌جاست.
+      - name: Build
+        run: npm run build
+
+      # سرویس‌ورکر ساخته‌ی همین build است و در گیت نیست؛ اگر افزونه بشکند، build
+      # همچنان سبز می‌ماند و فقط این بررسی متوجه می‌شود.
+      - name: بررسی وجود سرویس‌ورکر ساخته‌شده
+        run: test -f ../wwwroot/sw.js
+
+  image:
+    name: ایمیج داکر
+    runs-on: ubuntu-latest
+    # ایمیج هر دو نیمه را با هم می‌سازد؛ اگر آن‌ها سبز نباشند این هم بی‌معناست.
+    needs: [server, client]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ساخت کامل ایمیج بدون push. این همان چیزی است که یک‌بار جلوی جا افتادنِ
+      # ‎sw.js‎ از ایمیج را می‌گرفت: چیزی که فقط در Dockerfile می‌شکند، در build
+      # معمولی دیده نمی‌شود.
+      - name: Build image
+        run: docker build --tag hexara:ci .

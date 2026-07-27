@@ -6,6 +6,7 @@ using Hexara.Web.Infrastructure;
 using Hexara.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Hexara.Web.Controllers;
 
@@ -17,6 +18,7 @@ namespace Hexara.Web.Controllers;
 /// پیاده شده، پس هر بار که کد لازم است کلاینت همین‌جا می‌آید.
 /// </summary>
 [Authorize]
+[EnableRateLimiting(RateLimitPolicies.Api)]
 public class BoardController : Controller
 {
     private readonly RoomService _rooms;

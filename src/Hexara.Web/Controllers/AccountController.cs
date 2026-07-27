@@ -5,9 +5,13 @@ using Hexara.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Hexara.Web.Controllers;
 
+// ورود، ثبت‌نام و مهمان همه بر اساس IP بسته می‌شوند: بدون این، حدس‌زدن رمز
+// فقط به پهنای باند محدود است.
+[EnableRateLimiting(RateLimitPolicies.Auth)]
 public class AccountController : Controller
 {
     private readonly UserManager<AppUser> _users;

@@ -10,7 +10,10 @@ using Hexara.Infrastructure.Identity;
 using Hexara.Infrastructure.Persistence;
 using Hexara.Web.Infrastructure;
 using Microsoft.AspNetCore.Identity;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Serilog;
@@ -52,9 +55,50 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.Name = "hexara.auth";
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.HttpOnly = true;
+
+    // پشت پراکسی، درخواست به‌صورت HTTP می‌رسد و پیش‌فرض ‎SameAsRequest‎ کوکی را
+    // بدون Secure می‌فرستد. جز در توسعه، همیشه Secure.
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always;
 });
 
 builder.Services.AddAuthorization();
+
+builder.Services.Configure<HardeningOptions>(builder.Configuration.GetSection(HardeningOptions.Section));
+var hardening = builder.Configuration.GetSection(HardeningOptions.Section).Get<HardeningOptions>()
+    ?? new HardeningOptions();
+
+// محدودیت نرخ عمداً فقط روی نقطه‌های حساس است و نه سراسری: هاب SignalR اتصال
+// بلندمدت دارد و یک محدودکننده‌ی سراسری وسط بازی قطعش می‌کرد.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    // ورود و ثبت‌نام بر اساس IP بسته می‌شوند، چون هنوز کاربری در کار نیست.
+    options.AddPolicy(RateLimitPolicies.Auth, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = hardening.AuthPermitsPerWindow,
+                Window = TimeSpan.FromMinutes(hardening.AuthWindowMinutes),
+                QueueLimit = 0
+            }));
+
+    // نقطه‌های JSON بر اساس کاربر، و اگر ناشناس بود بر اساس IP.
+    options.AddPolicy(RateLimitPolicies.Api, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.User.Identity?.IsAuthenticated == true
+                ? context.User.Identity.Name ?? "user"
+                : context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = hardening.ApiPermitsPerMinute,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+});
 
 builder.Services.Configure<RequestLocalizationOptions>(options =>
 {
@@ -110,6 +154,24 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
+// باید پیش از هر چیزی بیاید که به پروتکل یا IP نگاه می‌کند — هدایت به HTTPS،
+// کوکی Secure و محدودیت نرخ همه به همین وابسته‌اند.
+if (hardening.BehindReverseProxy)
+{
+    var forwarded = new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    };
+
+    // پراکسیِ CapRover آدرس ثابتی ندارد؛ فهرست پیش‌فرض باید خالی شود وگرنه
+    // هدرها نادیده گرفته می‌شوند. امن بودنش به همان فرضِ گزینه بستگی دارد:
+    // برنامه نباید جز از راه پراکسی قابل دسترسی باشد.
+    forwarded.KnownIPNetworks.Clear();
+    forwarded.KnownProxies.Clear();
+
+    app.UseForwardedHeaders(forwarded);
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -121,6 +183,10 @@ else
 }
 
 app.UseSerilogRequestLogging();
+
+var vite = app.Services.GetRequiredService<IOptions<ViteOptions>>().Value;
+app.UseHexaraSecurityHeaders(vite.UseDevServer, vite.DevServerUrl);
+
 app.UseHttpsRedirection();
 app.UseStaticFiles(new StaticFileOptions
 {
@@ -138,6 +204,7 @@ app.UseStaticFiles(new StaticFileOptions
 app.UseRequestLocalization();
 
 app.UseRouting();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -145,26 +212,43 @@ app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Inde
 app.MapHub<GameHub>("/hubs/game");
 app.MapHealthChecks("/health");
 
-await MigrateAsync(app);
+await MigrateAsync(app, hardening);
 
 app.Run();
 
-static async Task MigrateAsync(WebApplication app)
+/// <summary>
+/// مهاجرت دیتابیس.
+///
+/// در توسعه خودکار است و خطایش فقط لاگ می‌شود، تا بشود بدون Postgres هم برنامه را
+/// بالا آورد. در تولید عمدی است و **با شکست، برنامه بالا نمی‌آید** — بالا آمدنِ
+/// برنامه روی اسکیمای ناقص یعنی خطاهای عجیب در زمان اجرا به‌جای یک شکستِ صریح.
+/// </summary>
+static async Task MigrateAsync(WebApplication app, HardeningOptions hardening)
 {
-    // مهاجرت خودکار فقط در توسعه؛ در تولید مهاجرت باید عمدی و کنترل‌شده اجرا شود.
-    if (!app.Environment.IsDevelopment())
+    var development = app.Environment.IsDevelopment();
+    if (!development && !hardening.MigrateOnStartup)
     {
+        app.Logger.LogInformation(
+            "مهاجرت خودکار خاموش است. اسکیما را با «dotnet ef database update» به‌روز کن.");
         return;
     }
 
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
     try
     {
         await db.Database.MigrateAsync();
     }
-    catch (Exception ex)
+    catch (Exception ex) when (development)
     {
         app.Logger.LogError(ex, "اجرای مهاجرت دیتابیس ناموفق بود. آیا Postgres بالا است؟");
     }
 }
+
+/// <summary>
+/// برنامه با دستورهای سطح بالا نوشته شده و کلاس ‎Program‎ خودکار ساخته می‌شود.
+/// این اعلانِ جزئی فقط آن را عمومی می‌کند تا ‎WebApplicationFactory‎ در تست‌ها
+/// بتواند همین برنامه — با همان میان‌افزارها — را بالا بیاورد.
+/// </summary>
+public partial class Program;
