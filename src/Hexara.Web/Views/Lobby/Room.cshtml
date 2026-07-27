@@ -1,0 +1,145 @@
+@model RoomViewModel
+@{
+    ViewData["Title"] = T.T("lobby.roomTitle", Model.Room.Code);
+    var error = TempData["RoomError"] as string;
+    var settings = Model.Room.Settings;
+}
+
+<section class="hx-container hx-narrow hx-room-page">
+    <header class="hx-room-page__head">
+        <span class="hx-eyebrow">@T["lobby.inviteCode"]</span>
+        <h1 class="hx-room-page__code" dir="ltr">@Model.Room.Code</h1>
+        <p class="hx-muted">@T["lobby.inviteHint"]</p>
+    </header>
+
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <p class="hx-alert" role="alert">@error</p>
+    }
+
+    <div class="hx-panel">
+        <h2 class="hx-panel__title">@T["lobby.seats"]</h2>
+
+        <ol class="hx-seats">
+            @foreach (var (seat, index) in Model.Seats.Select((s, i) => (s, i)))
+            {
+                <li class="hx-seat @(seat is null ? "hx-seat--empty" : null)">
+                    <span class="hx-seat__number">@(index + 1)</span>
+
+                    @if (seat is null)
+                    {
+                        <span class="hx-seat__name hx-muted">@T["lobby.emptySeat"]</span>
+                    }
+                    else
+                    {
+                        <span class="hx-avatar hx-avatar--sm" style="--hx-avatar-color:@seat.AvatarColor">
+                            @(string.IsNullOrEmpty(seat.DisplayName) ? "?" : seat.DisplayName[..1].ToUpperInvariant())
+                        </span>
+                        <span class="hx-seat__name">@seat.DisplayName</span>
+
+                        @if (Model.Room.IsHost(seat.UserId))
+                        {
+                            <span class="hx-chip">@T["lobby.host"]</span>
+                        }
+
+                        @if (seat.IsGuest)
+                        {
+                            <span class="hx-chip hx-chip--muted">@T["lobby.guest"]</span>
+                        }
+                    }
+                </li>
+            }
+        </ol>
+    </div>
+
+    @if (Model.IsHost)
+    {
+        <div class="hx-panel">
+            <h2 class="hx-panel__title">@T["lobby.settings"]</h2>
+
+            <form asp-action="Settings" method="post" class="hx-form">
+                <input type="hidden" name="roomId" value="@Model.Room.Id" />
+
+                <div class="hx-form__row">
+                    <label class="hx-field">
+                        <span class="hx-field__label">@T["lobby.maxPlayers"]</span>
+                        <select name="MaxPlayers" class="hx-input">
+                            @for (var i = 2; i <= 6; i++)
+                            {
+                                <option value="@i" selected="@(i == settings.MaxPlayers)">@i</option>
+                            }
+                        </select>
+                    </label>
+
+                    <label class="hx-field">
+                        <span class="hx-field__label">@T["lobby.victoryPoints"]</span>
+                        <input name="VictoryPoints" class="hx-input" type="number" min="3" max="20"
+                               value="@settings.VictoryPoints" />
+                    </label>
+
+                    <label class="hx-field">
+                        <span class="hx-field__label">@T["lobby.boardRadius"]</span>
+                        <select name="BoardRadius" class="hx-input">
+                            <option value="2" selected="@(settings.BoardRadius == 2)">@T["lobby.boardClassic"]</option>
+                            <option value="3" selected="@(settings.BoardRadius == 3)">@T["lobby.boardLarge"]</option>
+                            <option value="4" selected="@(settings.BoardRadius == 4)">@T["lobby.boardHuge"]</option>
+                        </select>
+                    </label>
+                </div>
+
+                <label class="hx-check">
+                    <input name="FriendlyRobber" type="checkbox" value="true" checked="@settings.FriendlyRobber" />
+                    <span>@T["lobby.friendlyRobber"]</span>
+                </label>
+
+                <button type="submit" class="hx-btn hx-btn--ghost">@T["common.save"]</button>
+            </form>
+        </div>
+    }
+    else
+    {
+        <div class="hx-panel">
+            <h2 class="hx-panel__title">@T["lobby.settings"]</h2>
+            <ul class="hx-facts">
+                <li><span>@T["lobby.maxPlayers"]</span><strong>@settings.MaxPlayers</strong></li>
+                <li><span>@T["lobby.victoryPoints"]</span><strong>@settings.VictoryPoints</strong></li>
+                <li>
+                    <span>@T["lobby.friendlyRobber"]</span>
+                    <strong>@(settings.FriendlyRobber ? T["common.yes"] : T["common.no"])</strong>
+                </li>
+            </ul>
+        </div>
+    }
+
+    <div class="hx-room-page__actions">
+        @if (Model.IsMember)
+        {
+            <form asp-action="Leave" method="post" class="hx-inline-form">
+                <input type="hidden" name="roomId" value="@Model.Room.Id" />
+                <button type="submit" class="hx-btn hx-btn--ghost">@T["lobby.leave"]</button>
+            </form>
+        }
+        else
+        {
+            <form asp-action="Join" method="post" class="hx-inline-form">
+                <input type="hidden" name="code" value="@Model.Room.Code" />
+                <button type="submit" class="hx-btn hx-btn--outline">@T["lobby.joinButton"]</button>
+            </form>
+        }
+
+        @if (Model.IsHost)
+        {
+            <form asp-action="Start" method="post" class="hx-inline-form">
+                <input type="hidden" name="roomId" value="@Model.Room.Id" />
+                <button type="submit" class="hx-btn hx-btn--primary hx-btn--lg" disabled="@(!Model.CanStart)">
+                    @T["lobby.start"]
+                </button>
+            </form>
+
+            @if (!Model.CanStart)
+            {
+                <p class="hx-muted hx-small">@T["lobby.needTwoPlayers"]</p>
+            }
+        }
+    </div>
+</section>

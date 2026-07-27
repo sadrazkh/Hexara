@@ -1,0 +1,27 @@
+@model IReadOnlyList<Hexara.Application.Rooms.RoomSummary>
+
+<ul class="hx-rooms">
+    @foreach (var room in Model)
+    {
+        <li class="hx-room">
+            <div class="hx-room__main">
+                <span class="hx-room__code" dir="ltr">@room.Code</span>
+                <span class="hx-room__host">@room.HostName</span>
+            </div>
+
+            <div class="hx-room__meta">
+                <span class="hx-chip">@T.T("lobby.seatsOf", room.MemberCount, room.MaxPlayers)</span>
+                <span class="hx-chip">@T.T("lobby.pointsShort", room.VictoryPoints)</span>
+                @if (room.Status == Hexara.Application.Rooms.RoomStatus.Started)
+                {
+                    <span class="hx-chip hx-chip--live">@T["lobby.statusStarted"]</span>
+                }
+            </div>
+
+            <a class="hx-btn hx-btn--sm hx-btn--outline"
+               asp-controller="Lobby" asp-action="Room" asp-route-code="@room.Code">
+                @T["lobby.open"]
+            </a>
+        </li>
+    }
+</ul>

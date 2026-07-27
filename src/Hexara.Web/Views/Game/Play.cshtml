@@ -1,0 +1,36 @@
+@model GamePlayViewModel
+@{
+    ViewData["Title"] = T["game.title"];
+    var state = Model.Game.State;
+}
+
+<section class="hx-container hx-narrow">
+    <h1 class="hx-section-title">@T["game.title"]</h1>
+
+    <div class="hx-panel">
+        <ul class="hx-facts">
+            <li><span>@T["game.turn"]</span><strong>@state.TurnNumber</strong></li>
+            <li><span>@T["game.phase"]</span><strong>@T[$"game.phase.{state.Phase}"]</strong></li>
+            <li>
+                <span>@T["game.yourSeat"]</span>
+                <strong>@(Model.Seat + 1) @(Model.IsMyTurn ? T["game.yourTurn"] : string.Empty)</strong>
+            </li>
+        </ul>
+    </div>
+
+    <div class="hx-panel">
+        <h2 class="hx-panel__title">@T["game.players"]</h2>
+        <ol class="hx-seats">
+            @foreach (var player in state.Players)
+            {
+                <li class="hx-seat @(player.Index == state.CurrentPlayer ? "hx-seat--active" : null)">
+                    <span class="hx-seat__number">@(player.Index + 1)</span>
+                    <span class="hx-seat__name">@T.T("game.playerLine", player.PublicVictoryPoints, player.TotalCards)</span>
+                </li>
+            }
+        </ol>
+    </div>
+
+    @* برد سه‌بعدی در فاز ۶ و به‌روزرسانی زنده در فاز ۵ اینجا می‌نشینند. *@
+    <p class="hx-muted">@T["game.boardComingSoon"]</p>
+</section>

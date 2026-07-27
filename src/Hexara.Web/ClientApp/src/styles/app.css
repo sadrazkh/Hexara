@@ -546,6 +546,210 @@ code {
   background: var(--hx-border);
 }
 
+/* ── لابی و اتاق ──────────────────────────────────────────────────────── */
+
+.hx-lobby {
+  padding-block: var(--hx-sp-6);
+}
+
+.hx-section-title--sm {
+  margin-top: var(--hx-sp-6);
+  font-size: 1.15rem;
+}
+
+.hx-lobby__top {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: var(--hx-sp-4);
+  align-items: start;
+}
+
+.hx-form__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--hx-sp-3);
+}
+
+/* کد اتاق را آدم‌ها می‌خوانند و تایپ می‌کنند؛ تک‌فاصله و درشت. */
+.hx-input--code {
+  font-family: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', monospace;
+  font-size: 1.1rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.hx-alert {
+  margin-block: var(--hx-sp-3);
+  padding: var(--hx-sp-3) var(--hx-sp-4);
+  border: 1px solid rgb(240 97 109 / 35%);
+  border-radius: var(--hx-r-md);
+  background: rgb(240 97 109 / 10%);
+  color: var(--hx-text);
+}
+
+.hx-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.6rem;
+  border: 1px solid var(--hx-border);
+  border-radius: var(--hx-r-pill);
+  background: var(--hx-surface);
+  color: var(--hx-text-dim);
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.hx-chip--live {
+  border-color: rgb(94 231 198 / 35%);
+  color: var(--hx-accent-2);
+}
+
+.hx-chip--muted {
+  color: var(--hx-text-faint);
+}
+
+.hx-rooms {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hx-room {
+  display: flex;
+  align-items: center;
+  gap: var(--hx-sp-3);
+  padding: var(--hx-sp-3) var(--hx-sp-4);
+  border: 1px solid var(--hx-border);
+  border-radius: var(--hx-r-md);
+  background: var(--hx-surface);
+}
+
+.hx-room__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hx-room__code {
+  font-family: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', monospace;
+  font-size: 1rem;
+  letter-spacing: 0.14em;
+  color: var(--hx-text);
+}
+
+.hx-room__host {
+  color: var(--hx-text-faint);
+  font-size: 0.82rem;
+}
+
+.hx-room__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hx-sp-2);
+  margin-inline-start: auto;
+}
+
+.hx-room-page {
+  padding-block: var(--hx-sp-6);
+}
+
+.hx-room-page__head {
+  text-align: center;
+  margin-bottom: var(--hx-sp-5);
+}
+
+.hx-room-page__code {
+  margin: var(--hx-sp-2) 0;
+  font-family: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', monospace;
+  font-size: clamp(2rem, 8vw, 3rem);
+  letter-spacing: 0.24em;
+  background: var(--hx-accent-grad);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.hx-room-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--hx-sp-3);
+  margin-top: var(--hx-sp-5);
+}
+
+.hx-seats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hx-seat {
+  display: flex;
+  align-items: center;
+  gap: var(--hx-sp-3);
+  padding: var(--hx-sp-2) var(--hx-sp-3);
+  border: 1px solid var(--hx-border);
+  border-radius: var(--hx-r-md);
+  background: var(--hx-surface);
+}
+
+.hx-seat--empty {
+  border-style: dashed;
+  background: transparent;
+}
+
+.hx-seat--active {
+  border-color: rgb(94 231 198 / 45%);
+  box-shadow: var(--hx-glow);
+}
+
+.hx-seat__number {
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: var(--hx-r-pill);
+  background: var(--hx-surface-2);
+  color: var(--hx-text-faint);
+  font-size: 0.8rem;
+}
+
+.hx-seat__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hx-avatar--sm {
+  width: 1.6rem;
+  height: 1.6rem;
+  font-size: 0.78rem;
+}
+
+.hx-facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hx-facts li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--hx-sp-3);
+  color: var(--hx-text-dim);
+}
+
 /* ── کمکی ─────────────────────────────────────────────────────────────── */
 
 .hx-muted {
@@ -589,8 +793,19 @@ code {
     aspect-ratio: 4 / 3;
   }
 
-  .hx-header__name,
-  .hx-nav {
+  .hx-header__name {
     display: none;
+  }
+
+  .hx-lobby__top {
+    grid-template-columns: 1fr;
+  }
+
+  .hx-room {
+    flex-wrap: wrap;
+  }
+
+  .hx-room__meta {
+    margin-inline-start: 0;
   }
 }

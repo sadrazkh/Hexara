@@ -13,8 +13,10 @@
             <div class="hx-hero__cta">
                 @if (User.Identity?.IsAuthenticated == true)
                 {
-                    <a class="hx-btn hx-btn--primary hx-btn--lg" href="#">@T["home.ctaPlay"]</a>
-                    <a class="hx-btn hx-btn--outline hx-btn--lg" href="#">@T["home.ctaLobby"]</a>
+                    <a class="hx-btn hx-btn--primary hx-btn--lg"
+                       asp-controller="Lobby" asp-action="Index">@T["home.ctaPlay"]</a>
+                    <a class="hx-btn hx-btn--outline hx-btn--lg"
+                       asp-controller="Lobby" asp-action="Index">@T["home.ctaLobby"]</a>
                 }
                 else
                 {

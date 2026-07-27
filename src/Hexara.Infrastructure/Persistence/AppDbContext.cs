@@ -17,6 +17,10 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
 
     public DbSet<GameMoveRecord> GameMoves => Set<GameMoveRecord>();
 
+    public DbSet<RoomRecord> Rooms => Set<RoomRecord>();
+
+    public DbSet<RoomMemberRecord> RoomMembers => Set<RoomMemberRecord>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -83,6 +87,44 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
             e.HasOne(m => m.Game)
                 .WithMany(g => g.Moves)
                 .HasForeignKey(m => m.GameId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<RoomRecord>(e =>
+        {
+            e.ToTable("Rooms");
+            e.HasKey(r => r.Id);
+            e.Property(r => r.Code).HasMaxLength(12).IsRequired();
+            e.HasIndex(r => r.Code).IsUnique();
+            e.HasIndex(r => new { r.Status, r.CreatedAt });
+
+            e.HasOne(r => r.Host)
+                .WithMany()
+                .HasForeignKey(r => r.HostId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // بازی بعد از شروع ساخته می‌شود؛ حذف بازی نباید اتاق را با خودش ببرد.
+            e.HasOne(r => r.Game)
+                .WithMany()
+                .HasForeignKey(r => r.GameId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        builder.Entity<RoomMemberRecord>(e =>
+        {
+            e.ToTable("RoomMembers");
+            e.HasKey(m => new { m.RoomId, m.UserId });
+            e.HasIndex(m => new { m.RoomId, m.Seat }).IsUnique();
+            e.HasIndex(m => m.UserId);
+
+            e.HasOne(m => m.Room)
+                .WithMany(r => r.Members)
+                .HasForeignKey(m => m.RoomId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(m => m.User)
+                .WithMany()
+                .HasForeignKey(m => m.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

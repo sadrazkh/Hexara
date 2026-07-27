@@ -26,6 +26,7 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString, npgsql => npgsql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
 
         services.AddScoped<IGameRepository, GameRepository>();
+        services.AddScoped<IRoomRepository, RoomRepository>();
 
         return services
             .AddIdentityCore<AppUser>(options =>

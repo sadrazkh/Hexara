@@ -1,0 +1,88 @@
+@model LobbyIndexViewModel
+@{
+    ViewData["Title"] = T["lobby.title"];
+    var error = TempData["RoomError"] as string;
+}
+
+<section class="hx-container hx-lobby">
+    <h1 class="hx-section-title">@T["lobby.title"]</h1>
+
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <p class="hx-alert" role="alert">@error</p>
+    }
+
+    <div class="hx-lobby__top">
+        <div class="hx-panel">
+            <h2 class="hx-panel__title">@T["lobby.createTitle"]</h2>
+
+            <form asp-action="Create" method="post" class="hx-form">
+                <div class="hx-form__row">
+                    <label class="hx-field">
+                        <span class="hx-field__label">@T["lobby.maxPlayers"]</span>
+                        <select asp-for="Create.MaxPlayers" class="hx-input">
+                            @for (var i = 2; i <= 6; i++)
+                            {
+                                <option value="@i">@i</option>
+                            }
+                        </select>
+                    </label>
+
+                    <label class="hx-field">
+                        <span class="hx-field__label">@T["lobby.victoryPoints"]</span>
+                        <input asp-for="Create.VictoryPoints" class="hx-input" type="number" min="3" max="20" />
+                    </label>
+
+                    <label class="hx-field">
+                        <span class="hx-field__label">@T["lobby.boardRadius"]</span>
+                        <select asp-for="Create.BoardRadius" class="hx-input">
+                            <option value="2">@T["lobby.boardClassic"]</option>
+                            <option value="3">@T["lobby.boardLarge"]</option>
+                            <option value="4">@T["lobby.boardHuge"]</option>
+                        </select>
+                    </label>
+                </div>
+
+                <label class="hx-check">
+                    <input asp-for="Create.FriendlyRobber" type="checkbox" />
+                    <span>@T["lobby.friendlyRobber"]</span>
+                </label>
+
+                <button type="submit" class="hx-btn hx-btn--primary">@T["lobby.createButton"]</button>
+            </form>
+        </div>
+
+        <div class="hx-panel">
+            <h2 class="hx-panel__title">@T["lobby.joinTitle"]</h2>
+
+            <form asp-action="Join" method="post" class="hx-form">
+                <label class="hx-field">
+                    <span class="hx-field__label">@T["lobby.code"]</span>
+                    <input name="code" class="hx-input hx-input--code" value="@Model.JoinCode"
+                           maxlength="8" autocomplete="off" dir="ltr" placeholder="ABC123" />
+                </label>
+
+                <button type="submit" class="hx-btn hx-btn--outline">@T["lobby.joinButton"]</button>
+            </form>
+
+            <p class="hx-muted hx-small">@T["lobby.joinNote"]</p>
+        </div>
+    </div>
+
+    @if (Model.MyRooms.Count > 0)
+    {
+        <h2 class="hx-section-title hx-section-title--sm">@T["lobby.myRooms"]</h2>
+        <partial name="_RoomList" model="Model.MyRooms" />
+    }
+
+    <h2 class="hx-section-title hx-section-title--sm">@T["lobby.openRooms"]</h2>
+
+    @if (Model.OpenRooms.Count == 0)
+    {
+        <p class="hx-muted">@T["lobby.noRooms"]</p>
+    }
+    else
+    {
+        <partial name="_RoomList" model="Model.OpenRooms" />
+    }
+</section>
