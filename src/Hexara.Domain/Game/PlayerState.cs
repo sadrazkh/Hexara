@@ -93,6 +93,38 @@ public sealed class PlayerState
 
     internal void RemoveDevelopmentCard(DevelopmentCard card) => _development[card]--;
 
+    /// <summary>بازگرداندن وضعیت از روی عکس ذخیره‌شده.</summary>
+    internal void RestoreFrom(PlayerSnapshot snapshot)
+    {
+        foreach (var (resource, amount) in snapshot.Resources)
+        {
+            _resources[resource] = amount;
+        }
+
+        _development.Clear();
+        foreach (var (card, count) in snapshot.DevelopmentCards)
+        {
+            _development[card] = count;
+        }
+
+        _newDevelopment.Clear();
+        foreach (var (card, count) in snapshot.NewDevelopmentCards)
+        {
+            _newDevelopment[card] = count;
+        }
+
+        SettlementsLeft = snapshot.SettlementsLeft;
+        CitiesLeft = snapshot.CitiesLeft;
+        RoadsLeft = snapshot.RoadsLeft;
+        BuildingPoints = snapshot.BuildingPoints;
+        VictoryPointCards = snapshot.VictoryPointCards;
+        HasLongestRoad = snapshot.HasLongestRoad;
+        HasLargestArmy = snapshot.HasLargestArmy;
+        LongestRoadLength = snapshot.LongestRoadLength;
+        KnightsPlayed = snapshot.KnightsPlayed;
+        PlayedDevelopmentCardThisTurn = snapshot.PlayedDevelopmentCardThisTurn;
+    }
+
     /// <summary>پایان نوبت: کارت‌های خریداری‌شده قابل بازی می‌شوند.</summary>
     internal void ReleaseNewDevelopmentCards()
     {

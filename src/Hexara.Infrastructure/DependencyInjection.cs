@@ -1,3 +1,4 @@
+using Hexara.Application.Common.Interfaces;
 using Hexara.Infrastructure.Identity;
 using Hexara.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
@@ -23,6 +24,8 @@ public static class DependencyInjection
 
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(connectionString, npgsql => npgsql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
+
+        services.AddScoped<IGameRepository, GameRepository>();
 
         return services
             .AddIdentityCore<AppUser>(options =>

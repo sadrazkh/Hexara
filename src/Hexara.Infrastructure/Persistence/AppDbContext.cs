@@ -1,4 +1,5 @@
 using Hexara.Infrastructure.Identity;
+using Hexara.Infrastructure.Persistence.Entities;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,6 +10,12 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
     }
+
+    public DbSet<GameRecord> Games => Set<GameRecord>();
+
+    public DbSet<GamePlayerRecord> GamePlayers => Set<GamePlayerRecord>();
+
+    public DbSet<GameMoveRecord> GameMoves => Set<GameMoveRecord>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -22,7 +29,64 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
             e.HasIndex(u => u.IsGuest);
         });
 
-        // جدول‌های Identity با پیشوند تا از جدول‌های بازی (فاز ۲) جدا بمانند.
+        // ستون jsonb فقط در Postgres وجود دارد؛ تست‌ها روی SQLite اجرا می‌شوند.
+        var json = Database.IsNpgsql() ? "jsonb" : null;
+
+        builder.Entity<GameRecord>(e =>
+        {
+            e.ToTable("Games");
+            e.HasKey(g => g.Id);
+            e.Property(g => g.Snapshot).IsRequired();
+            if (json is not null)
+            {
+                e.Property(g => g.Snapshot).HasColumnType(json);
+            }
+
+            // نسخه‌ی وضعیت، توکن هم‌زمانی است: دو حرکت هم‌زمان روی یک بازی، دومی رد می‌شود.
+            e.Property(g => g.Version).IsConcurrencyToken();
+
+            e.HasIndex(g => g.Status);
+            e.HasIndex(g => g.UpdatedAt);
+        });
+
+        builder.Entity<GamePlayerRecord>(e =>
+        {
+            e.ToTable("GamePlayers");
+            e.HasKey(p => new { p.GameId, p.Seat });
+            e.HasIndex(p => p.UserId);
+            e.HasIndex(p => new { p.GameId, p.UserId }).IsUnique();
+
+            e.HasOne(p => p.Game)
+                .WithMany(g => g.Players)
+                .HasForeignKey(p => p.GameId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(p => p.User)
+                .WithMany()
+                .HasForeignKey(p => p.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<GameMoveRecord>(e =>
+        {
+            e.ToTable("GameMoves");
+            e.HasKey(m => m.Id);
+            e.HasIndex(m => new { m.GameId, m.Sequence }).IsUnique();
+            e.Property(m => m.Action).IsRequired();
+            e.Property(m => m.Events).IsRequired();
+            if (json is not null)
+            {
+                e.Property(m => m.Action).HasColumnType(json);
+                e.Property(m => m.Events).HasColumnType(json);
+            }
+
+            e.HasOne(m => m.Game)
+                .WithMany(g => g.Moves)
+                .HasForeignKey(m => m.GameId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // جدول‌های Identity با پیشوند تا از جدول‌های بازی جدا بمانند.
         foreach (var entity in builder.Model.GetEntityTypes())
         {
             var table = entity.GetTableName();

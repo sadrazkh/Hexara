@@ -14,4 +14,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- تست‌ها برای شبیه‌سازی کاری که GameService می‌کند به setterهای internal نیاز دارند. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Hexara.Application.Tests" />
+  </ItemGroup>
+
 </Project>

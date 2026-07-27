@@ -47,5 +47,16 @@ public sealed class TradeOffer
 
     public bool CanRespond(int playerIndex) => _responses.ContainsKey(playerIndex);
 
+    internal static TradeOffer Restore(TradeOfferSnapshot snapshot)
+    {
+        var offer = new TradeOffer(snapshot.Proposer, snapshot.Give, snapshot.Take, snapshot.Responses.Keys);
+        foreach (var (playerIndex, response) in snapshot.Responses)
+        {
+            offer._responses[playerIndex] = response;
+        }
+
+        return offer;
+    }
+
     internal void Respond(int playerIndex, TradeResponse response) => _responses[playerIndex] = response;
 }

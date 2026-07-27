@@ -6,6 +6,7 @@
     <Project Path="src/Hexara.Web/Hexara.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Hexara.Application.Tests/Hexara.Application.Tests.csproj" />
     <Project Path="tests/Hexara.Domain.Tests/Hexara.Domain.Tests.csproj" />
   </Folder>
 </Solution>
