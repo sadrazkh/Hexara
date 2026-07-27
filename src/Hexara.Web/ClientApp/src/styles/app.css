@@ -335,7 +335,7 @@ code {
   margin-bottom: var(--hx-sp-4);
   border: 1px solid var(--hx-border-strong);
   border-radius: var(--hx-r-pill);
-  background: var(--hx-surface);
+  background: var(--hx-glass);
   color: var(--hx-accent-2);
   font-size: 0.8rem;
   font-weight: 600;
@@ -393,7 +393,7 @@ code {
   padding: var(--hx-sp-5);
   border: 1px solid var(--hx-border);
   border-radius: var(--hx-r-lg);
-  background: var(--hx-surface);
+  background: var(--hx-glass);
   backdrop-filter: blur(12px);
   transition:
     transform var(--hx-dur) var(--hx-ease),
@@ -404,7 +404,7 @@ code {
 .hx-card:hover {
   transform: translateY(-4px);
   border-color: var(--hx-border-strong);
-  background: var(--hx-surface-2);
+  background: var(--hx-glass-2);
 }
 
 .hx-card h3 {
@@ -593,7 +593,7 @@ code {
   padding: 0.15rem 0.6rem;
   border: 1px solid var(--hx-border);
   border-radius: var(--hx-r-pill);
-  background: var(--hx-surface);
+  background: var(--hx-glass);
   color: var(--hx-text-dim);
   font-size: 0.76rem;
   white-space: nowrap;
@@ -624,7 +624,7 @@ code {
   padding: var(--hx-sp-3) var(--hx-sp-4);
   border: 1px solid var(--hx-border);
   border-radius: var(--hx-r-md);
-  background: var(--hx-surface);
+  background: var(--hx-glass);
 }
 
 .hx-room__main {
@@ -697,7 +697,7 @@ code {
   padding: var(--hx-sp-2) var(--hx-sp-3);
   border: 1px solid var(--hx-border);
   border-radius: var(--hx-r-md);
-  background: var(--hx-surface);
+  background: var(--hx-glass);
 }
 
 .hx-seat--empty {
@@ -716,8 +716,8 @@ code {
   width: 1.6rem;
   height: 1.6rem;
   border-radius: var(--hx-r-pill);
-  background: var(--hx-surface-2);
-  color: var(--hx-text-faint);
+  background: var(--hx-glass-2);
+  color: var(--hx-text-dim);
   font-size: 0.8rem;
 }
 
@@ -766,7 +766,7 @@ code {
   padding: var(--hx-sp-2) var(--hx-sp-3);
   border: 1px solid var(--hx-border);
   border-radius: var(--hx-r-md);
-  background: var(--hx-surface);
+  background: var(--hx-glass);
   color: var(--hx-text-dim);
   font-size: 0.88rem;
 }
@@ -854,8 +854,10 @@ code {
 
 /* ── کمکی ─────────────────────────────────────────────────────────────── */
 
+/* روی جمله‌ی کامل می‌نشیند و بیرون از ظرف هم استفاده می‌شود، یعنی مستقیم
+   روی شفق؛ پس dim است نه faint. */
 .hx-muted {
-  color: var(--hx-text-faint);
+  color: var(--hx-text-dim);
 }
 
 .hx-small {
@@ -880,6 +882,31 @@ code {
   padding-block: var(--hx-sp-5);
   color: var(--hx-text-faint);
   font-size: 0.82rem;
+}
+
+/* ── لمس ──────────────────────────────────────────────────────────────────
+   با ماوس، اندازه‌ی دیداری این عناصر کافی است؛ با انگشت نه. هرجا دستگاه
+   ورودی درشت داشته باشد، هدف لمسی به ۴۴×۴۴ می‌رسد بدون این‌که ظاهر
+   دسکتاپ سنگین شود. any-pointer به‌کار می‌رود نه pointer، چون لپ‌تاپ
+   لمسی نشانگر اصلی‌اش دقیق است ولی انگشت هم دارد. */
+
+@media (any-pointer: coarse) {
+  /* هدر (ورود/خروج/زبان) و دکمه‌های ± منابع در GameLive از این کلاس‌اند؛
+     min-inline-size برای همان ±هاست که محتوایشان یک نویسه است. */
+  .hx-btn--sm {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+
+  /* لیبل، خودش هدف کلیک است و ورودی درونش را هم می‌پوشاند. */
+  .hx-check {
+    min-block-size: 44px;
+  }
+
+  .hx-check input {
+    width: 20px;
+    height: 20px;
+  }
 }
 
 /* ── واکنش‌گرا ────────────────────────────────────────────────────────── */
