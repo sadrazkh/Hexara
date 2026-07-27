@@ -5,6 +5,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import gsap from 'gsap';
 import { BoardScene, type BoardData, type Highlights, type Pick } from '@/three/board';
+import { THEME_CHANGE, token } from '@/theme';
 
 const props = defineProps<{ board: BoardData; highlights: Highlights }>();
 const emit = defineEmits<{ pick: [Pick] }>();
@@ -20,6 +21,10 @@ let controls: OrbitControls | null = null;
 let board: BoardScene | null = null;
 let observer: ResizeObserver | null = null;
 let frame = 0;
+
+/** نورهای تم‌دار — با عوض‌شدن تم رنگشان به‌روز می‌شود. */
+let ambient: THREE.AmbientLight | null = null;
+let rim: THREE.DirectionalLight | null = null;
 
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
@@ -44,6 +49,19 @@ function quality() {
     antialias: !weak,
     pixelRatio: Math.min(window.devicePixelRatio, weak ? 1.5 : 2),
   };
+}
+
+/** رنگ یک توکن نور، با جایگزین در صورت نبودنش. */
+function themeLight(name: string, fallback: number): THREE.Color {
+  const raw = token(name);
+  return raw ? new THREE.Color(raw) : new THREE.Color(fallback);
+}
+
+/** تم عوض شد: زمین، دریا و نشانه‌ها و نورها رنگ تازه می‌گیرند. */
+function onThemeChange(): void {
+  board?.refreshTheme();
+  ambient?.color.copy(themeLight('--hx-light-ambient', 0x8a6a3f));
+  rim?.color.copy(themeLight('--hx-light-rim', 0xe0a63a));
 }
 
 function build(container: HTMLDivElement): void {
@@ -104,11 +122,17 @@ function build(container: HTMLDivElement): void {
     key.shadow.camera.bottom = -span;
   }
   scene.add(key);
-  scene.add(new THREE.AmbientLight(0x8fb3ff, 0.5));
 
-  const rim = new THREE.DirectionalLight(0x5ee7c6, 0.7);
+  // پُرکننده و لبه رنگشان از تم می‌آید: «شب روی تخته» گرم و طلایی، «پارشمنت»
+  // خنک و روشن. نور اصلی سفید می‌ماند تا رنگ خودِ زمین‌ها را تغییر ندهد.
+  ambient = new THREE.AmbientLight(themeLight('--hx-light-ambient', 0x8a6a3f), 0.5);
+  scene.add(ambient);
+
+  rim = new THREE.DirectionalLight(themeLight('--hx-light-rim', 0xe0a63a), 0.7);
   rim.position.set(-reach, reach * 0.8, -reach);
   scene.add(rim);
+
+  document.addEventListener(THEME_CHANGE, onThemeChange);
 
   observer = new ResizeObserver(() => resize(container));
   observer.observe(container);
@@ -219,6 +243,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   cancelAnimationFrame(frame);
+  document.removeEventListener(THEME_CHANGE, onThemeChange);
   observer?.disconnect();
   controls?.dispose();
   board?.dispose();

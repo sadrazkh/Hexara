@@ -77,6 +77,10 @@
   --d-res-desert: #d9c18f;
   --d-res-sea: #4a90c4;
 
+  /* نور صحنه‌ی برد. «شب روی تخته» یعنی پُرکننده‌ی گرمِ کم‌جان و لبه‌ی طلایی. */
+  --d-light-ambient: #8a6a3f;
+  --d-light-rim: #e0a63a;
+
   /* ═══ پالت روشن — «پارشمنت» ══════════════════════════════════════════ */
   --l-bg: #efe2c8;
   --l-glass: rgb(253 247 234 / 72%);
@@ -129,6 +133,10 @@
   --l-res-desert: #8a7546;
   --l-res-sea: #1f5c85;
 
+  /* «پارشمنت» یعنی روز: پُرکننده‌ی خنکِ آسمان و لبه‌ی کاغذیِ روشن. */
+  --l-light-ambient: #c8d4e4;
+  --l-light-rim: #fff4dd;
+
   /* ═══ نگاشت پیش‌فرض: تیره ═════════════════════════════════════════════
      تیره پیش‌فرض است تا بدون جاوااسکریپت هم صفحه درست بیاید. */
   color-scheme: dark;
@@ -173,6 +181,8 @@
   --hx-res-ore: var(--d-res-ore);
   --hx-res-desert: var(--d-res-desert);
   --hx-res-sea: var(--d-res-sea);
+  --hx-light-ambient: var(--d-light-ambient);
+  --hx-light-rim: var(--d-light-rim);
 
   /* ═══ مشتق‌ها — از توکن‌های تم‌دار ساخته می‌شوند، پس خودکار تم عوض می‌کنند ═ */
   --hx-accent-grad: linear-gradient(135deg, var(--hx-grad-from) 0%, var(--hx-grad-to) 100%);
@@ -182,6 +192,26 @@
   --hx-glow:
     0 0 0 1px color-mix(in srgb, var(--hx-accent-2) 30%, transparent),
     0 8px 32px color-mix(in srgb, var(--hx-accent) 24%, transparent);
+
+  /* ═══ قطعه‌های فیزیکی برد — عمداً تم عوض نمی‌کنند ═════════════════════
+     مهره‌ی دزد، ژتون عدد و مهره‌های بازیکن اشیاء فیزیکی‌اند؛ با عوض‌شدن تمِ
+     رابط رنگشان تغییر نمی‌کند، همان‌طور که یک مهره‌ی چوبی با روشن‌شدن چراغ
+     اتاق رنگ عوض نمی‌کند. در مقابل، زمین و دریا و نور صحنه از توکن‌های
+     تم‌دار می‌آیند، چون آن‌ها «حال‌وهوای» صحنه‌اند نه جنسِ قطعه. */
+  --hx-piece-robber: #17130d;
+  --hx-token-face: #f2e8d5;
+  --hx-token-ink: #2b2b2b;
+  --hx-token-hot: #b8352f;
+  --hx-port-generic: #e8dcc0;
+
+  /* رنگ بازیکن‌ها به ترتیب صندلی — چهار رنگ پایه‌ی کاتان، بعلاوه دو رنگِ
+     بسط‌ ۵–۶ نفره. */
+  --hx-seat-1: #c0392b;
+  --hx-seat-2: #2b6ca3;
+  --hx-seat-3: #d97b28;
+  --hx-seat-4: #e8e0cf;
+  --hx-seat-5: #3f8a4a;
+  --hx-seat-6: #8a5a3b;
 
   /* ═══ بی‌ربط به تم ════════════════════════════════════════════════════ */
   --hx-r-sm: 8px;
@@ -256,6 +286,8 @@
     --hx-res-ore: var(--l-res-ore);
     --hx-res-desert: var(--l-res-desert);
     --hx-res-sea: var(--l-res-sea);
+    --hx-light-ambient: var(--l-light-ambient);
+    --hx-light-rim: var(--l-light-rim);
   }
 }
 
@@ -302,6 +334,8 @@
   --hx-res-ore: var(--l-res-ore);
   --hx-res-desert: var(--l-res-desert);
   --hx-res-sea: var(--l-res-sea);
+  --hx-light-ambient: var(--l-light-ambient);
+  --hx-light-rim: var(--l-light-rim);
 }
 
 html[lang='en'] {

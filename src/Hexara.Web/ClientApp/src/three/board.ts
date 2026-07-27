@@ -14,26 +14,54 @@ import {
 
 export const TILE_SIZE = 1;
 
-/** رنگ زمین‌ها همان توکن‌های CSS است تا برد و رابط یک‌دست بمانند. */
-const TERRAIN_COLOR: Record<string, number> = {
-  Desert: 0xcbb187,
-  Forest: 0x2f7d4f,
-  Hills: 0xc05a3e,
-  Pasture: 0x8fc95a,
-  Fields: 0xe0b23c,
-  Mountains: 0x7d8aa3,
+/**
+ * رنگ‌ها از توکن‌های CSS خوانده می‌شوند، نه از عددهای کپی‌شده — وگرنه برد و
+ * رابط با هم می‌لغزند. زمین و دریا تم‌دارند و با تعویض تم عوض می‌شوند؛
+ * قطعه‌ها (مهره، ژتون) نه، چون شیء فیزیکی‌اند. جدول `tokens.css` را ببین.
+ */
+const TERRAIN_TOKEN: Record<string, string> = {
+  Desert: '--hx-res-desert',
+  Forest: '--hx-res-lumber',
+  Hills: '--hx-res-brick',
+  Pasture: '--hx-res-wool',
+  Fields: '--hx-res-grain',
+  Mountains: '--hx-res-ore',
 };
 
-const RESOURCE_COLOR: Record<string, number> = {
-  Lumber: 0x2f7d4f,
-  Brick: 0xc05a3e,
-  Wool: 0x8fc95a,
-  Grain: 0xe0b23c,
-  Ore: 0x7d8aa3,
+const RESOURCE_TOKEN: Record<string, string> = {
+  Lumber: '--hx-res-lumber',
+  Brick: '--hx-res-brick',
+  Wool: '--hx-res-wool',
+  Grain: '--hx-res-grain',
+  Ore: '--hx-res-ore',
 };
 
-/** رنگ بازیکن‌ها به ترتیب صندلی. */
-export const SEAT_COLORS = [0xe0533d, 0x4f9cf9, 0xf2b134, 0x3fbf7f, 0xa06cd5, 0xef7ba8];
+const SEAT_TOKENS = [
+  '--hx-seat-1',
+  '--hx-seat-2',
+  '--hx-seat-3',
+  '--hx-seat-4',
+  '--hx-seat-5',
+  '--hx-seat-6',
+];
+
+/**
+ * رنگ یک توکن CSS به‌صورت رنگِ Three.
+ *
+ * عمداً تنبل خوانده می‌شود و نه در سطح ماژول: اگر موقع import صدا زده شود،
+ * ممکن است شیوه‌نامه هنوز اعمال نشده باشد و همه‌چیز سیاه دربیاید. رنگ
+ * جایگزین هم برای همان حالت است — بردِ بدرنگ بهتر از بردِ نامرئی است.
+ */
+function tokenColor(name: string, fallback: number): THREE.Color {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  if (!raw) return new THREE.Color(fallback);
+
+  try {
+    return new THREE.Color(raw);
+  } catch {
+    return new THREE.Color(fallback);
+  }
+}
 
 export interface Tile extends Axial {
   terrain: string;
@@ -119,17 +147,21 @@ export class BoardScene {
     markHex: new THREE.CylinderGeometry(TILE_SIZE * 0.5, TILE_SIZE * 0.5, 0.05, 6),
   };
 
+  /** نشانه‌ی انتخاب یک نشانگرِ رابط است روی برد، پس رنگ accent را می‌گیرد. */
   private readonly highlightMaterial = new THREE.MeshBasicMaterial({
-    color: 0x5ee7c6,
+    color: tokenColor('--hx-accent-2', 0xf2cf7a),
     transparent: true,
     opacity: 0.55,
     depthWrite: false,
   });
 
   private readonly robberMaterial = new THREE.MeshStandardMaterial({
-    color: 0x11151f,
+    color: tokenColor('--hx-piece-robber', 0x17130d),
     roughness: 0.6,
   });
+
+  /** دریا موقع تعویض تم باید به‌روز شود، پس ارجاعش نگه داشته می‌شود. */
+  private seaMaterial: THREE.MeshStandardMaterial | null = null;
 
   /** مش‌هایی که برخورد اشعه با آن‌ها یعنی انتخاب. */
   private readonly hotspots: THREE.Mesh[] = [];
@@ -168,10 +200,35 @@ export class BoardScene {
     this.rebuildMarkers(highlights);
   }
 
+  /**
+   * رنگ‌های تم‌دار را دوباره از CSS می‌خواند — بعد از عوض‌شدن تم صدا زده شود.
+   *
+   * متریال‌ها *جای خودشان* به‌روز می‌شوند و ساخته نمی‌شوند، چون مش‌ها همین
+   * نمونه‌ها را به اشتراک گذاشته‌اند؛ ساختن دوباره یعنی باید کل زمین را هم
+   * از نو چید. قطعه‌ها و ژتون‌ها عمداً دست‌نخورده می‌مانند: شیء فیزیکی‌اند.
+   */
+  refreshTheme(): void {
+    for (const [terrain, material] of this.terrainMaterials) {
+      material.color.copy(tokenColor(TERRAIN_TOKEN[terrain] ?? TERRAIN_TOKEN.Desert!, 0xd9c18f));
+    }
+
+    for (const [key, material] of this.portMaterials) {
+      material.color.copy(
+        key === 'generic'
+          ? tokenColor('--hx-port-generic', 0xe8dcc0)
+          : tokenColor(RESOURCE_TOKEN[key] ?? '--hx-port-generic', 0xffffff),
+      );
+    }
+
+    this.seaMaterial?.color.copy(tokenColor('--hx-res-sea', 0x4a90c4));
+    this.highlightMaterial.color.copy(tokenColor('--hx-accent-2', 0xf2cf7a));
+  }
+
   dispose(): void {
     for (const item of this.disposables) item.dispose();
     this.disposables.length = 0;
     this.hotspots.length = 0;
+    this.seaMaterial = null;
   }
 
   // ── زمین ثابت ────────────────────────────────────────────────────────
@@ -202,7 +259,7 @@ export class BoardScene {
     if (existing) return existing;
 
     const material = new THREE.MeshStandardMaterial({
-      color: TERRAIN_COLOR[terrain] ?? TERRAIN_COLOR.Desert!,
+      color: tokenColor(TERRAIN_TOKEN[terrain] ?? TERRAIN_TOKEN.Desert!, 0xd9c18f),
       roughness: 0.78,
       metalness: 0.04,
     });
@@ -240,13 +297,14 @@ export class BoardScene {
     canvas.height = 128;
 
     const ctx = canvas.getContext('2d')!;
-    ctx.fillStyle = '#f2e8d5';
+    ctx.fillStyle = tokenColor('--hx-token-face', 0xf2e8d5).getStyle();
     ctx.beginPath();
     ctx.arc(64, 64, 60, 0, Math.PI * 2);
     ctx.fill();
 
     const hot = value === 6 || value === 8;
-    ctx.fillStyle = hot ? '#b8352f' : '#2b2b2b';
+    ctx.fillStyle = tokenColor(hot ? '--hx-token-hot' : '--hx-token-ink', hot ? 0xb8352f : 0x2b2b2b)
+      .getStyle();
     ctx.font = 'bold 62px system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -276,7 +334,9 @@ export class BoardScene {
     let material = this.portMaterials.get(key);
     if (!material) {
       material = new THREE.MeshStandardMaterial({
-        color: port.resource ? (RESOURCE_COLOR[port.resource] ?? 0xffffff) : 0xe8ecf6,
+        color: port.resource
+          ? tokenColor(RESOURCE_TOKEN[port.resource] ?? '--hx-port-generic', 0xffffff)
+          : tokenColor('--hx-port-generic', 0xe8dcc0),
         roughness: 0.5,
         metalness: 0.2,
       });
@@ -297,10 +357,11 @@ export class BoardScene {
     const radius = this.extent(tiles) + TILE_SIZE * 1.4;
     const geometry = new THREE.CylinderGeometry(radius, radius, 0.14, 72);
     const material = new THREE.MeshStandardMaterial({
-      color: 0x1c4f7c,
+      color: tokenColor('--hx-res-sea', 0x4a90c4),
       roughness: 0.22,
       metalness: 0.4,
     });
+    this.seaMaterial = material;
     this.disposables.push(geometry, material);
 
     const mesh = new THREE.Mesh(geometry, material);
@@ -395,7 +456,7 @@ export class BoardScene {
     if (existing) return existing;
 
     const material = new THREE.MeshStandardMaterial({
-      color: SEAT_COLORS[seat % SEAT_COLORS.length],
+      color: tokenColor(SEAT_TOKENS[seat % SEAT_TOKENS.length]!, 0xc0392b),
       roughness: 0.45,
       metalness: 0.15,
     });
