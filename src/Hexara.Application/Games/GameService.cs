@@ -44,12 +44,17 @@ public sealed class GameService
 
     public GameService(IGameRepository games) => _games = games;
 
+    /// <summary>
+    /// بازی تازه. اگر <paramref name="layout"/> داده شود همان برد سفارشی استفاده
+    /// می‌شود؛ وگرنه برد از روی seed تولید می‌شود.
+    /// </summary>
     public async Task<Guid> CreateAsync(
         GameOptions options,
         IReadOnlyList<Guid> playerIds,
+        Domain.Board.BoardLayout? layout = null,
         CancellationToken cancellationToken = default)
     {
-        var state = GameState.Create(options, playerIds);
+        var state = GameState.Create(options, playerIds, layout);
         return await _games.CreateAsync(state, playerIds, GameStatus.Active, cancellationToken);
     }
 

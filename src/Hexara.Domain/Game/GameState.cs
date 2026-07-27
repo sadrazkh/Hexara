@@ -99,7 +99,14 @@ public sealed class GameState
 
     public bool IsSetup => Phase is TurnPhase.SetupSettlement or TurnPhase.SetupRoad;
 
-    public static GameState Create(GameOptions options, IReadOnlyList<Guid> playerIds)
+    /// <summary>
+    /// بازی تازه. اگر <paramref name="layout"/> داده شود همان برد استفاده می‌شود
+    /// (برد سفارشی، فاز ۷)؛ وگرنه از روی seed تولید می‌شود.
+    /// </summary>
+    public static GameState Create(
+        GameOptions options,
+        IReadOnlyList<Guid> playerIds,
+        BoardLayout? layout = null)
     {
         options.Validate();
 
@@ -113,7 +120,7 @@ public sealed class GameState
             throw new ArgumentException("شناسه‌ی بازیکن‌ها باید یکتا باشد.", nameof(playerIds));
         }
 
-        var board = BoardGenerator.Generate(options.BoardRadius, options.Seed);
+        var board = layout ?? BoardGenerator.Generate(options.BoardRadius, options.Seed);
 
         // مولد تاس از seed دیگری شروع می‌شود تا چیدمان برد دنباله‌ی تاس‌ها را لو ندهد.
         var rng = new Rng(options.Seed ^ 0xA5A5_5A5A_C3C3_3C3CUL);

@@ -120,6 +120,52 @@
       "seatTaken": "Someone just took that seat. Try again."
     }
   },
+  "board": {
+    "title": "Board editor",
+    "intro": "Click a tile to change its terrain and number, or roll a whole board at random. The code at the bottom is what you share with friends.",
+    "hint": "Click a tile to select · click a port to change its kind · drag to orbit",
+    "edit": "Edit the board",
+    "custom": "Custom board",
+    "randomBoard": "Random board",
+    "selected": "Tile ({0}, {1})",
+    "nothingSelected": "No tile selected",
+    "number": "Tile number",
+    "mix": "Terrain mix",
+    "hotClash": "{0} pairs of 6 and 8 sit next to each other. Allowed, but it skews the game.",
+    "random": "Roll a board",
+    "seed": "Seed",
+    "seedPlaceholder": "empty = random",
+    "shuffle": "Roll",
+    "share": "Share",
+    "code": "This board's code",
+    "saveFirst": "Save first to get a code.",
+    "copy": "Copy code",
+    "paste": "A code from someone else",
+    "load": "Load code",
+    "save": "Save to the room",
+    "savedAlready": "Saved",
+    "clear": "Back to a random board",
+    "terrain": {
+      "Forest": "Forest",
+      "Hills": "Hills",
+      "Pasture": "Pasture",
+      "Fields": "Fields",
+      "Mountains": "Mountains",
+      "Desert": "Desert"
+    },
+    "error": {
+      "empty": "The code is empty.",
+      "unknownVersion": "That code is from a different version of the game.",
+      "malformed": "The code's shape is wrong — it was probably cut short when copied.",
+      "badRadius": "The board size in the code isn't valid.",
+      "wrongTileCount": "The tile count doesn't match the board size.",
+      "unknownTerrain": "The code contains an unknown terrain.",
+      "wrongNumberCount": "The number count doesn't match the non-desert tiles.",
+      "badNumber": "One of the tile numbers isn't valid (7 never sits on a tile).",
+      "badPort": "One of the ports is malformed.",
+      "portNotOnCoast": "A port landed inland — ports must sit on a coast edge."
+    }
+  },
   "game": {
     "title": "Game",
     "turn": "Turn",

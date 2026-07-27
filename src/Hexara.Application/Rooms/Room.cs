@@ -31,10 +31,19 @@ public sealed record RoomSettings
     /// <summary>seed دلخواه برای برد؛ اگر تهی باشد هنگام شروع تصادفی انتخاب می‌شود.</summary>
     public ulong? Seed { get; init; }
 
+    /// <summary>
+    /// چیدمان دستیِ برد. اگر باشد از <see cref="Seed"/> و <see cref="BoardRadius"/>
+    /// جلو می‌افتد — کد خودش اندازه‌ی برد را هم در خود دارد.
+    /// </summary>
+    public string? BoardCode { get; init; }
+
+    public bool HasCustomBoard => !string.IsNullOrWhiteSpace(BoardCode);
+
     public bool IsValid =>
         MaxPlayers is >= 2 and <= 6
         && VictoryPoints is >= 3 and <= 20
-        && BoardRadius is >= 1 and <= 4;
+        && BoardRadius is >= 1 and <= 4
+        && (!HasCustomBoard || Domain.Board.BoardCode.IsValid(BoardCode));
 
     /// <summary>تبدیل به تنظیمات بازی برای تعداد بازیکنِ واقعی.</summary>
     public GameOptions ToGameOptions(int playerCount, ulong seed) => new()

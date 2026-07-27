@@ -85,10 +85,20 @@ export interface RoadAt extends Axial {
 }
 
 /** چیزی که کاربر می‌تواند رویش کلیک کند. */
+/**
+ * تنظیمات نمایش. حالت ویرایش دو فرق دارد: خودِ خانه‌ها و بندرها قابل انتخاب
+ * می‌شوند، و زمین با هر تغییر دوباره چیده می‌شود (چون در ویرایشگر زمین ثابت نیست).
+ */
+export interface BoardOptions {
+  editable?: boolean;
+  selected?: Axial | null;
+}
+
 export type Pick =
   | { kind: 'vertex'; id: VertexId }
   | { kind: 'edge'; id: EdgeId }
-  | { kind: 'hex'; id: Axial };
+  | { kind: 'hex'; id: Axial }
+  | { kind: 'port'; index: number };
 
 export interface BoardData {
   tiles: Tile[];
@@ -121,6 +131,8 @@ const EMPTY_HIGHLIGHTS: Highlights = { vertices: [], edges: [], hexes: [] };
 export class BoardScene {
   readonly root = new THREE.Group();
 
+  /** دریا — یک‌بار ساخته می‌شود و هرگز دوباره چیده نمی‌شود. */
+  private readonly backdrop = new THREE.Group();
   private readonly terrain = new THREE.Group();
   private readonly pieces = new THREE.Group();
   private readonly markers = new THREE.Group();
@@ -172,7 +184,7 @@ export class BoardScene {
   private built = false;
 
   constructor() {
-    this.root.add(this.terrain, this.pieces, this.markers);
+    this.root.add(this.backdrop, this.terrain, this.pieces, this.markers);
     this.disposables.push(...Object.values(this.geo), this.highlightMaterial, this.robberMaterial);
   }
 
@@ -190,14 +202,24 @@ export class BoardScene {
     return max + TILE_SIZE;
   }
 
-  update(data: BoardData, highlights: Highlights = EMPTY_HIGHLIGHTS): void {
+  update(
+    data: BoardData,
+    highlights: Highlights = EMPTY_HIGHLIGHTS,
+    options: BoardOptions = {},
+  ): void {
     if (!this.built) {
-      this.buildTerrain(data);
+      this.backdrop.add(this.sea(data.tiles));
       this.built = true;
     }
 
+    // بیرون از ویرایشگر زمین ثابت است و یک‌بار چیده می‌شود؛ در ویرایشگر با هر
+    // تغییرِ زمین یا عدد دوباره چیده می‌شود.
+    if (options.editable || this.terrain.children.length === 0) {
+      this.buildTerrain(data, options.editable === true);
+    }
+
     this.rebuildPieces(data);
-    this.rebuildMarkers(highlights);
+    this.rebuildMarkers(highlights, options);
   }
 
   /**
@@ -233,13 +255,20 @@ export class BoardScene {
 
   // ── زمین ثابت ────────────────────────────────────────────────────────
 
-  private buildTerrain(data: BoardData): void {
+  private buildTerrain(data: BoardData, editable: boolean): void {
+    this.clear(this.terrain);
+
     for (const tile of data.tiles) {
       const { x, z } = axialToWorld(tile.q, tile.r, TILE_SIZE);
       const mesh = new THREE.Mesh(this.geo.tile, this.terrainMaterial(tile.terrain));
       mesh.position.set(x, 0, z);
       mesh.receiveShadow = true;
       mesh.castShadow = true;
+
+      if (editable) {
+        mesh.userData.pick = { kind: 'hex', id: { q: tile.q, r: tile.r } } satisfies Pick;
+      }
+
       this.terrain.add(mesh);
 
       if (tile.number !== null) {
@@ -247,11 +276,15 @@ export class BoardScene {
       }
     }
 
-    for (const port of data.ports) {
-      this.terrain.add(this.portMarker(port));
-    }
+    for (const [index, port] of data.ports.entries()) {
+      const mesh = this.portMarker(port);
 
-    this.terrain.add(this.sea(data.tiles));
+      if (editable) {
+        mesh.userData.pick = { kind: 'port', index } satisfies Pick;
+      }
+
+      this.terrain.add(mesh);
+    }
   }
 
   private terrainMaterial(terrain: string): THREE.MeshStandardMaterial {
@@ -353,6 +386,7 @@ export class BoardScene {
     return mesh;
   }
 
+  /** یک‌بار در طول عمر صحنه ساخته می‌شود — بازساختنش با هر تغییر نشتی است. */
   private sea(tiles: Tile[]): THREE.Mesh {
     const radius = this.extent(tiles) + TILE_SIZE * 1.4;
     const geometry = new THREE.CylinderGeometry(radius, radius, 0.14, 72);
@@ -468,9 +502,26 @@ export class BoardScene {
 
   // ── نشانه‌های انتخاب ─────────────────────────────────────────────────
 
-  private rebuildMarkers(highlights: Highlights): void {
+  private rebuildMarkers(highlights: Highlights, options: BoardOptions): void {
     this.clear(this.markers);
     this.hotspots.length = 0;
+
+    // در ویرایشگر خودِ زمین و بندرها هدف کلیک‌اند، نه نشانه‌های جداگانه.
+    if (options.editable) {
+      for (const child of this.terrain.children) {
+        if (child instanceof THREE.Mesh && child.userData.pick) {
+          this.hotspots.push(child);
+        }
+      }
+
+      if (options.selected) {
+        const { x, z } = axialToWorld(options.selected.q, options.selected.r, TILE_SIZE);
+        const ring = new THREE.Mesh(this.geo.markHex, this.highlightMaterial);
+        ring.position.set(x, 0.2, z);
+        ring.userData.pulse = true;
+        this.markers.add(ring);
+      }
+    }
 
     for (const vertex of highlights.vertices) {
       const { x, z } = vertexToWorld(vertex, TILE_SIZE);

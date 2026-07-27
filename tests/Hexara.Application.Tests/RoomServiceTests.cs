@@ -344,6 +344,127 @@ public class RoomServiceTests
         }
     }
 
+    // ── برد سفارشی ───────────────────────────────────────────────────────
+
+    /// <summary>برد سفارشی باید عیناً همانی باشد که بازی با آن شروع می‌شود.</summary>
+    [Fact]
+    public async Task A_custom_board_reaches_the_game()
+    {
+        using var fixture = new SqliteFixture();
+        var users = await fixture.SeedUsersAsync(2);
+        var service = NewService(fixture, out var context);
+
+        await using (context)
+        {
+            // یک برد دست‌ساز که با هیچ seedی تصادفاً درنمی‌آید.
+            var draft = BoardEditor.Random(2, 8);
+            var edited = draft with
+            {
+                Tiles = [.. draft.Tiles.Select(t =>
+                    t.Terrain == Domain.Board.Terrain.Desert
+                        ? t
+                        : t with { Terrain = Domain.Board.Terrain.Mountains, Number = 11 })]
+            };
+
+            Assert.True(BoardEditor.TryWrite(edited, out var code, out _));
+
+            var room = (await service.CreateAsync(users[0], new RoomSettings { BoardCode = code })).Room!;
+            await service.JoinAsync(room.Code, users[1]);
+
+            var result = await service.StartAsync(room.Id, users[0]);
+            Assert.True(result.Success);
+
+            var games = new GameService(new GameRepository(context, fixture.Clock));
+            var game = await games.GetAsync(result.GameId!.Value);
+
+            var land = game!.State.Board.Tiles.Where(t => t.Terrain != Domain.Board.Terrain.Desert).ToList();
+            Assert.Equal(18, land.Count);
+            Assert.All(land, t => Assert.Equal(11, t.Number));
+        }
+    }
+
+    [Fact]
+    public async Task A_custom_board_sets_the_radius_from_the_code()
+    {
+        using var fixture = new SqliteFixture();
+        var users = await fixture.SeedUsersAsync(2);
+        var service = NewService(fixture, out var context);
+
+        await using (context)
+        {
+            Assert.True(BoardEditor.TryWrite(BoardEditor.Random(3, 5), out var code, out _));
+
+            // شعاع اتاق عمداً با کد نمی‌خواند؛ کد باید برنده شود.
+            var settings = new RoomSettings { BoardRadius = 2, BoardCode = code };
+            var room = (await service.CreateAsync(users[0], settings)).Room!;
+            await service.JoinAsync(room.Code, users[1]);
+
+            var result = await service.StartAsync(room.Id, users[0]);
+
+            var games = new GameService(new GameRepository(context, fixture.Clock));
+            var game = await games.GetAsync(result.GameId!.Value);
+
+            Assert.Equal(37, game!.State.Board.Tiles.Count);
+            Assert.Equal(3, game.State.Options.BoardRadius);
+        }
+    }
+
+    [Fact]
+    public async Task A_broken_board_code_is_refused_at_creation()
+    {
+        using var fixture = new SqliteFixture();
+        var users = await fixture.SeedUsersAsync(1);
+        var service = NewService(fixture, out var context);
+
+        await using (context)
+        {
+            var result = await service.CreateAsync(users[0], new RoomSettings { BoardCode = "nope" });
+
+            Assert.Equal(RoomError.InvalidSettings, result.Error);
+        }
+    }
+
+    [Fact]
+    public async Task The_board_code_survives_a_reload()
+    {
+        using var fixture = new SqliteFixture();
+        var users = await fixture.SeedUsersAsync(1);
+        var service = NewService(fixture, out var context);
+
+        await using (context)
+        {
+            Assert.True(BoardEditor.TryWrite(BoardEditor.Random(2, 77), out var code, out _));
+
+            var room = (await service.CreateAsync(users[0], new RoomSettings { BoardCode = code })).Room!;
+            var reloaded = await service.FindAsync(room.Code);
+
+            Assert.True(reloaded!.Settings.HasCustomBoard);
+            Assert.Equal(code, reloaded.Settings.BoardCode);
+        }
+    }
+
+    [Fact]
+    public async Task Clearing_the_board_code_returns_to_a_random_board()
+    {
+        using var fixture = new SqliteFixture();
+        var users = await fixture.SeedUsersAsync(1);
+        var service = NewService(fixture, out var context);
+
+        await using (context)
+        {
+            Assert.True(BoardEditor.TryWrite(BoardEditor.Random(2, 3), out var code, out _));
+
+            var room = (await service.CreateAsync(users[0], new RoomSettings { BoardCode = code })).Room!;
+            var cleared = await service.UpdateSettingsAsync(
+                room.Id,
+                users[0],
+                room.Settings with { BoardCode = null });
+
+            Assert.True(cleared.Success);
+            Assert.False(cleared.Room!.Settings.HasCustomBoard);
+        }
+    }
+
     /// <summary>seed دلخواه باید عیناً به بازی برسد تا برد قابل بازتولید باشد.</summary>
     [Fact]
     public async Task A_chosen_seed_reaches_the_game()

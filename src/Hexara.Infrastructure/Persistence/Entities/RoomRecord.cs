@@ -34,6 +34,12 @@ public class RoomRecord
     /// </summary>
     public long? Seed { get; set; }
 
+    /// <summary>
+    /// چیدمان دستیِ برد به شکل کد کوتاه. خودِ کد ذخیره می‌شود نه چیدمان بازشده،
+    /// چون همان چیزی است که کاربر کپی و پخش می‌کند.
+    /// </summary>
+    public string? BoardCode { get; set; }
+
     public Guid? GameId { get; set; }
 
     public DateTime CreatedAt { get; set; }

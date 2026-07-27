@@ -872,6 +872,61 @@ code {
   font-size: 0.85rem;
 }
 
+/* ── ویرایشگر برد ─────────────────────────────────────────────────────── */
+
+.hx-editor-page {
+  padding-block: var(--hx-sp-6);
+}
+
+.hx-editor-page__head {
+  margin-bottom: var(--hx-sp-4);
+}
+
+.hx-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-4);
+}
+
+.hx-editor__palette,
+.hx-editor__numbers,
+.hx-editor__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--hx-sp-2);
+}
+
+.hx-editor__terrain {
+  gap: var(--hx-sp-2);
+}
+
+/* حالت انتخاب‌شده با مرز و پرکننده نشان داده می‌شود، نه فقط با رنگ. */
+.hx-editor__terrain--on {
+  border-color: var(--hx-border-strong);
+  background: var(--hx-surface-2);
+}
+
+/*
+ * نمونه‌ی رنگ زمین. عمداً *کنارِ* آیکون و برچسب می‌نشیند و نه به‌جایشان:
+ * هفت رنگ منبع برای کوررنگی تفکیک‌ناپذیرند و رنگ هرگز تنها حاملِ معنا نیست.
+ */
+.hx-swatch {
+  width: 0.85rem;
+  height: 0.85rem;
+  border: 1px solid var(--hx-border-strong);
+  border-radius: var(--hx-r-sm);
+  background: var(--hx-swatch);
+}
+
+.hx-editor__code {
+  font-family: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', monospace;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  resize: vertical;
+  word-break: break-all;
+}
+
 /* ── کمکی ─────────────────────────────────────────────────────────────── */
 
 /* روی جمله‌ی کامل می‌نشیند و بیرون از ظرف هم استفاده می‌شود، یعنی مستقیم

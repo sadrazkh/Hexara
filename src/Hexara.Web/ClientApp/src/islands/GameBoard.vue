@@ -4,10 +4,19 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import gsap from 'gsap';
-import { BoardScene, type BoardData, type Highlights, type Pick } from '@/three/board';
+import {
+  BoardScene,
+  type BoardData,
+  type BoardOptions,
+  type Highlights,
+  type Pick,
+} from '@/three/board';
 import { THEME_CHANGE, token } from '@/theme';
 
-const props = defineProps<{ board: BoardData; highlights: Highlights }>();
+const props = withDefaults(
+  defineProps<{ board: BoardData; highlights: Highlights; options?: BoardOptions }>(),
+  { options: () => ({}) },
+);
 const emit = defineEmits<{ pick: [Pick] }>();
 
 const host = ref<HTMLDivElement | null>(null);
@@ -90,7 +99,7 @@ function build(container: HTMLDivElement): void {
 
   board = new BoardScene();
   scene.add(board.root);
-  board.update(props.board, props.highlights);
+  board.update(props.board, props.highlights, props.options);
 
   const reach = board.extent(props.board.tiles);
 
@@ -221,9 +230,9 @@ function onPointerUp(event: PointerEvent): void {
 }
 
 watch(
-  () => [props.board, props.highlights],
+  () => [props.board, props.highlights, props.options],
   () => {
-    board?.update(props.board, props.highlights);
+    board?.update(props.board, props.highlights, props.options);
     animateSpawned();
   },
   { deep: true },

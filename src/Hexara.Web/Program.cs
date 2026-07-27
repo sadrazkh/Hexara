@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Hexara.Application;
 using Hexara.Application.Common.Interfaces;
 using Hexara.Application.Games;
@@ -63,7 +64,13 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
     options.ApplyCurrentCultureToResponseHeaders = true;
 });
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews()
+    // نقطه‌های JSON ویرایشگر باید enum را با نام بفرستند: کلاینت روی 'Forest'
+    // حساب می‌کند نه روی عددی که با اضافه‌شدن یک عضو جابه‌جا می‌شود.
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+
+// ویرایشگر برد با fetch کار می‌کند و توکن ضدجعل را در هدر می‌فرستد، نه در فرم.
+builder.Services.AddAntiforgery(options => options.HeaderName = "RequestVerificationToken");
 
 builder.Services.AddSingleton<GamePresence>();
 builder.Services.AddSingleton<GameLocks>();

@@ -104,7 +104,21 @@ public class LobbyController : Controller
         CreateRoomViewModel model,
         CancellationToken cancellationToken)
     {
-        var result = await _rooms.UpdateSettingsAsync(roomId, UserId, model.ToSettings(), cancellationToken);
+        var room = await _rooms.FindByIdAsync(roomId, cancellationToken);
+        if (room is null)
+        {
+            return await IndexWithError(RoomError.RoomNotFound, cancellationToken);
+        }
+
+        // این فرم برد سفارشی و seed را نمی‌شناسد؛ اگر دست‌نخورده منتقلشان نکنیم،
+        // عوض‌کردن تعداد بازیکن بی‌صدا برد ساخته‌شده را دور می‌ریزد.
+        var settings = model.ToSettings() with
+        {
+            Seed = room.Settings.Seed,
+            BoardCode = room.Settings.BoardCode
+        };
+
+        var result = await _rooms.UpdateSettingsAsync(roomId, UserId, settings, cancellationToken);
         if (!result.Success)
         {
             TempData["RoomError"] = Describe(result.Error);

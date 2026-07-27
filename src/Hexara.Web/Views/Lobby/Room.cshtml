@@ -94,6 +94,25 @@
 
                 <button type="submit" class="hx-btn hx-btn--ghost">@T["common.save"]</button>
             </form>
+
+            <div class="hx-room-page__actions">
+                <a class="hx-btn hx-btn--outline hx-btn--sm"
+                   asp-controller="Board" asp-action="Edit" asp-route-code="@Model.Room.Code">
+                    @T["board.edit"]
+                </a>
+
+                <span class="hx-chip">
+                    @(settings.HasCustomBoard ? T["board.custom"] : T["board.randomBoard"])
+                </span>
+
+                @if (settings.HasCustomBoard)
+                {
+                    <form asp-controller="Board" asp-action="Clear" method="post" class="hx-inline-form">
+                        <input type="hidden" name="roomId" value="@Model.Room.Id" />
+                        <button type="submit" class="hx-btn hx-btn--ghost hx-btn--sm">@T["board.clear"]</button>
+                    </form>
+                }
+            </div>
         </div>
     }
     else

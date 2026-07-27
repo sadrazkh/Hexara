@@ -169,6 +169,9 @@ function onPick(pick: Pick): void {
     return;
   }
 
+  // بندر فقط در ویرایشگر قابل انتخاب است؛ سرِ بازی چنین کلیکی نمی‌آید.
+  if (pick.kind !== 'edge') return;
+
   const id = `${pick.id.q},${pick.id.r},${pick.id.side}`;
   const action = current.phase === 'SetupRoad' ? 'PlaceInitialRoad' : 'BuildRoad';
   void play({ $kind: action, playerIndex: seat(), edge: id });

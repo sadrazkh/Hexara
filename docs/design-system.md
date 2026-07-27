@@ -262,7 +262,8 @@ rAF اجرا نمی‌شود کلاس گیر می‌کرد — یعنی transiti
 
 ### چطور وصل است
 
-`board.ts` هیچ عدد رنگی ندارد؛ نام توکن نگه می‌دارد و تنبل می‌خواندشان:
+[`board.ts`](../src/Hexara.Web/ClientApp/src/three/board.ts) هیچ عدد رنگی ندارد؛ نام
+توکن نگه می‌دارد و تنبل می‌خواندشان:
 
 ```ts
 function tokenColor(name: string, fallback: number): THREE.Color {
@@ -287,8 +288,13 @@ function tokenColor(name: string, fallback: number): THREE.Color {
 `GameBoard.vue` روی `THEME_CHANGE` گوش می‌دهد، `refreshTheme()` را صدا می‌زند و رنگ دو
 نور را هم به‌روز می‌کند. شنونده در `onBeforeUnmount` برداشته می‌شود.
 
-> **هنوز باقی است:** `island-game-board` در [`main.ts`](../src/Hexara.Web/ClientApp/src/main.ts)
-> ثبت نشده، پس این جزیره هنوز جایی سوار نمی‌شود. کارِ باقی‌مانده‌ی فاز ۶ است.
+> **`GameBoard` جزیره نیست.** فرزندِ `GameLive` است
+> ([`GameLive.vue`](../src/Hexara.Web/ClientApp/src/islands/GameLive.vue))، و همان است که
+> `island-game-live` را در [`main.ts`](../src/Hexara.Web/ClientApp/src/main.ts) ثبت شده دارد و
+> از `Views/Game/Play.cshtml` سوار می‌شود. props و رویداد `pick` از والدش می‌آیند.
+>
+> پس **در `main.ts` ثبتش نکن.** هیچ `<div id="island-game-board">`ای وجود ندارد؛ اگر
+> کسی اضافه کند یک نمونه‌ی دومِ بدون prop سوار می‌شود و روی `props.board.tiles` می‌ترکد.
 
 ### قواعد Three.js که قبل از نوشتن ارزش خواندن دارند
 

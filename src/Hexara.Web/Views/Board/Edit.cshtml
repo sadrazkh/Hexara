@@ -1,0 +1,32 @@
+@using System.Text.Json
+@model BoardEditViewModel
+@{
+    ViewData["Title"] = T["board.title"];
+
+    // نقشه به‌صورت JSON در ‎data-*‎ می‌رود تا ویرایشگر بدون یک رفت‌وبرگشت اضافه بالا بیاید.
+    var draftJson = JsonSerializer.Serialize(Model.Draft, new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+    });
+}
+
+<section class="hx-container hx-narrow hx-editor-page">
+    <header class="hx-editor-page__head">
+        <span class="hx-eyebrow">@T.T("lobby.roomTitle", Model.RoomCode)</span>
+        <h1 class="hx-section-title">@T["board.title"]</h1>
+        <p class="hx-muted">@T["board.intro"]</p>
+    </header>
+
+    @* توکن ضدجعل برای فراخوانی‌های fetch؛ ویرایشگر آن را در هدر می‌فرستد. *@
+    @Html.AntiForgeryToken()
+
+    <div id="island-board-editor"
+         data-room-id="@Model.RoomId"
+         data-room-code="@Model.RoomCode"
+         data-code="@Model.Code"
+         data-saved="@(Model.IsSaved ? "true" : "false")"
+         data-draft="@draftJson">
+        <p class="hx-muted">@T["common.loading"]</p>
+    </div>
+</section>

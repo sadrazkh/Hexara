@@ -62,6 +62,21 @@ public class RoomViewModel
     }
 }
 
+/// <summary>صفحه‌ی ویرایشگر برد سفارشی.</summary>
+public class BoardEditViewModel
+{
+    public required Guid RoomId { get; init; }
+
+    public required string RoomCode { get; init; }
+
+    public required BoardDraft Draft { get; init; }
+
+    public required string Code { get; init; }
+
+    /// <summary>آیا این برد قبلاً روی اتاق ذخیره شده یا فقط پیش‌نویسِ نمایشی است؟</summary>
+    public required bool IsSaved { get; init; }
+}
+
 /// <summary>صفحه‌ی بازی — در این فاز فقط وضعیت و صندلی‌ها.</summary>
 public class GamePlayViewModel
 {

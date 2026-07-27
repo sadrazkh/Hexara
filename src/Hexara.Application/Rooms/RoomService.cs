@@ -229,9 +229,22 @@ public sealed class RoomService
 
         var seats = room.Members.OrderBy(m => m.Seat).Select(m => m.UserId).ToList();
         var seed = room.Settings.Seed ?? NewSeed();
-        var options = room.Settings.ToGameOptions(seats.Count, seed);
 
-        var gameId = await _games.CreateAsync(options, seats, cancellationToken);
+        // برد سفارشی اندازه‌ی خودش را دارد؛ تنظیمات باید با آن بخواند وگرنه بازی
+        // با شعاعی شروع می‌شود که با خانه‌های واقعی نمی‌سازد.
+        Domain.Board.BoardLayout? layout = null;
+        if (room.Settings.HasCustomBoard
+            && !Domain.Board.BoardCode.TryDecode(room.Settings.BoardCode, out layout, out _))
+        {
+            return RoomResult.Fail(RoomError.InvalidSettings);
+        }
+
+        var options = room.Settings.ToGameOptions(seats.Count, seed) with
+        {
+            BoardRadius = layout?.Radius ?? room.Settings.BoardRadius
+        };
+
+        var gameId = await _games.CreateAsync(options, seats, layout, cancellationToken);
         await _rooms.AttachGameAsync(roomId, gameId, cancellationToken);
 
         return new RoomResult(RoomError.None, await _rooms.FindByIdAsync(roomId, cancellationToken), gameId);

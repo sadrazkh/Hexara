@@ -96,6 +96,9 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
             e.HasKey(r => r.Id);
             e.Property(r => r.Code).HasMaxLength(12).IsRequired();
             e.HasIndex(r => r.Code).IsUnique();
+
+            // برد شعاع ۴ حدود ۶۱ خانه و ۲۰ بندر دارد؛ ۱۰۲۴ با فاصله‌ی زیاد کافی است.
+            e.Property(r => r.BoardCode).HasMaxLength(1024);
             e.HasIndex(r => new { r.Status, r.CreatedAt });
 
             e.HasOne(r => r.Host)
