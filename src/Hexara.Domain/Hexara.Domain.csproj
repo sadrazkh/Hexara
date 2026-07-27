@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- تست‌ها برای چیدن سناریو (مثلاً دادن منابع به یک بازیکن) به setterهای internal نیاز دارند. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Hexara.Domain.Tests" />
+  </ItemGroup>
+
 </Project>
