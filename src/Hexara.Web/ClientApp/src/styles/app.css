@@ -208,6 +208,19 @@ code {
   flex: none;
 }
 
+/*
+ * نشان همان گرادیانی را می‌گیرد که دکمه‌ی اصلی، پس با تعویض تم خودش عوض می‌شود.
+ * اینجا و نه در ویژگی ‎stop-color‎ خودِ SVG: ‎var()‎ داخل ویژگی‌های نمایشی در همه‌ی
+ * مرورگرها (به‌ویژه سافاری) پشتیبانی نمی‌شود، ولی به‌عنوان خاصیت CSS همه‌جا می‌شود.
+ */
+.hx-brand__from {
+  stop-color: var(--hx-grad-from);
+}
+
+.hx-brand__to {
+  stop-color: var(--hx-grad-to);
+}
+
 .hx-nav {
   display: flex;
   gap: var(--hx-sp-4);

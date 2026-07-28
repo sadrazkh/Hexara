@@ -19,10 +19,14 @@ from PIL import Image, ImageDraw
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "src" / "Hexara.Web" / "wwwroot" / "icons"
 
-# رنگ‌ها از خودِ نشان می‌آیند، نه از توکن‌های تم: تم عوض می‌شود، نشان نه.
-BACKDROP = (11, 16, 32)
-GRADIENT_FROM = (94, 231, 198)
-GRADIENT_TO = (79, 156, 249)
+# رنگ‌های تم تیره: ‎--d-bg‎ و دو سرِ ‎--hx-accent-grad‎.
+#
+# نشان درون‌خطیِ هدر همان توکن‌ها را زنده می‌خواند و با تم عوض می‌شود، ولی یک فایل
+# آیکون به CSS دسترسی ندارد. چون زمینه‌ی تیره‌ی خودش را همراه دارد، روی هر دو تم
+# و روی نوار روشن و تیره‌ی سیستم‌عامل درست می‌نشیند.
+BACKDROP = (15, 12, 8)
+GRADIENT_FROM = (242, 207, 122)
+GRADIENT_TO = (194, 118, 42)
 
 # کیفیت لبه‌ها از بزرگ کشیدن و کوچک کردن می‌آید — PIL ضدلبه‌دندانه‌ی برداری ندارد.
 SUPERSAMPLE = 4
@@ -108,6 +112,11 @@ def main() -> None:
 
     # iOS گوشه‌ی گرد را خودش اضافه می‌کند و شفافیت را سیاه می‌کند.
     draw_mark(180, rounded=False, inset=0.06).convert("RGB").save(OUT / "apple-touch-icon.png")
+
+    # favicon.ico چندسایزه، برای مرورگرهایی که هنوز SVG را برای آیکون نمی‌پذیرند.
+    icon = draw_mark(64, rounded=True, inset=0.0)
+    icon.save(ROOT / "src" / "Hexara.Web" / "wwwroot" / "favicon.ico",
+              sizes=[(16, 16), (32, 32), (48, 48), (64, 64)])
 
     for path in sorted(OUT.iterdir()):
         print(f"{path.relative_to(ROOT)}  {path.stat().st_size:,} bytes")

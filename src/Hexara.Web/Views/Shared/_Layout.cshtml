@@ -52,11 +52,17 @@
     <header class="hx-header">
         <div class="hx-container hx-header__inner">
             <a class="hx-brand" asp-controller="Home" asp-action="Index">
+                @* نشان درون‌خطی است، پس می‌تواند همان توکن‌های گرادیانِ دکمه‌ها را
+                   بخواند و با تعویض تم خودش عوض شود. فایل‌های مستقلِ آیکون این
+                   امکان را ندارند و رنگ ثابتِ تم تیره را می‌گیرند.
+
+                   رنگ توقف‌ها از app.css می‌آید و نه از ویژگی ‎stop-color‎: ‎var()‎
+                   داخل ویژگی‌های نمایشیِ SVG همه‌جا (به‌ویژه سافاری) کار نمی‌کند. *@
                 <svg class="hx-brand__mark" viewBox="0 0 32 32" aria-hidden="true">
                     <defs>
                         <linearGradient id="hxBrandGrad" x1="0" y1="0" x2="1" y2="1">
-                            <stop offset="0%" stop-color="#5ee7c6" />
-                            <stop offset="100%" stop-color="#4f9cf9" />
+                            <stop class="hx-brand__from" offset="0%" />
+                            <stop class="hx-brand__to" offset="100%" />
                         </linearGradient>
                     </defs>
                     <path d="M16 2.4 28 9.2v13.6L16 29.6 4 22.8V9.2z" fill="none" stroke="url(#hxBrandGrad)" stroke-width="2.4" stroke-linejoin="round" />

@@ -112,6 +112,23 @@ public class HardeningTests : IClassFixture<HexaraApp>
         }
     }
 
+    /// <summary>
+    /// نشان باید رنگش را از توکن‌های تم بگیرد، نه از یک کد رنگ ثابت. رنگ‌های
+    /// فیروزه‌ای/آبیِ نشانِ قبل از بازطراحی تم نباید جایی باقی مانده باشد.
+    /// </summary>
+    [Fact]
+    public async Task The_brand_mark_takes_its_colour_from_the_theme()
+    {
+        using var client = _app.NewClient();
+        using var response = await client.GetAsync("/");
+
+        var html = await response.Content.ReadAsStringAsync();
+
+        Assert.Contains("class=\"hx-brand__from\"", html);
+        Assert.Contains("class=\"hx-brand__to\"", html);
+        Assert.DoesNotContain("5ee7c6", html, StringComparison.OrdinalIgnoreCase);
+    }
+
     // ── PWA ──────────────────────────────────────────────────────────────
 
     [Fact]

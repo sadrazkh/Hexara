@@ -3,6 +3,7 @@ import { onBeforeUnmount, onMounted, ref, shallowRef } from 'vue';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { axialToWorld, hexDisc } from '@/three/hex';
+import { THEME_CHANGE, token } from '@/theme';
 
 const props = withDefaults(defineProps<{ radius?: number }>(), { radius: 2 });
 
@@ -12,6 +13,7 @@ const renderer = shallowRef<THREE.WebGLRenderer | null>(null);
 
 let frame = 0;
 let observer: ResizeObserver | null = null;
+let themeListener: (() => void) | null = null;
 let disposables: { dispose(): void }[] = [];
 
 // رنگ زمین‌ها از همان توکن‌های CSS گرفته می‌شود تا برد و رابط یک‌دست بمانند.
@@ -27,6 +29,12 @@ const TERRAIN_COLORS = [
 /** توزیع ثابت (بدون تصادف) تا پیش‌نمایش هیرو در هر بار بارگذاری یکسان باشد. */
 function terrainFor(index: number): number {
   return TERRAIN_COLORS[(index * 5 + 2) % TERRAIN_COLORS.length];
+}
+
+/** رنگ یک توکن نور، با جایگزین در صورت نبودنش. */
+function themeLight(name: string, fallback: number): THREE.Color {
+  const raw = token(name);
+  return raw ? new THREE.Color(raw) : new THREE.Color(fallback);
 }
 
 function buildScene(container: HTMLDivElement) {
@@ -56,11 +64,23 @@ function buildScene(container: HTMLDivElement) {
   const key = new THREE.DirectionalLight(0xffffff, 2.1);
   key.position.set(5, 10, 6);
   scene.add(key);
-  scene.add(new THREE.AmbientLight(0x8fb3ff, 0.55));
 
-  const rim = new THREE.DirectionalLight(0x5ee7c6, 0.8);
+  // نورهای پُرکننده و لبه از توکن‌های تم می‌آیند، مثل برد بازی. قبلاً رنگ ثابتِ
+  // نشانِ قدیمی (فیروزه‌ای) بود و کنارِ همان نشان روی صفحه‌ی اصلی می‌نشست.
+  const ambient = new THREE.AmbientLight(themeLight('--hx-light-ambient', 0x8a6a3f), 0.55);
+  scene.add(ambient);
+
+  const rim = new THREE.DirectionalLight(themeLight('--hx-light-rim', 0xe0a63a), 0.8);
   rim.position.set(-6, 4, -5);
   scene.add(rim);
+
+  const onThemeChange = () => {
+    ambient.color.copy(themeLight('--hx-light-ambient', 0x8a6a3f));
+    rim.color.copy(themeLight('--hx-light-rim', 0xe0a63a));
+  };
+
+  document.addEventListener(THEME_CHANGE, onThemeChange);
+  themeListener = onThemeChange;
 
   const board = new THREE.Group();
   scene.add(board);
@@ -147,6 +167,12 @@ onMounted(() => {
 onBeforeUnmount(() => {
   cancelAnimationFrame(frame);
   observer?.disconnect();
+
+  if (themeListener) {
+    document.removeEventListener(THEME_CHANGE, themeListener);
+    themeListener = null;
+  }
+
   for (const item of disposables) item.dispose();
   disposables = [];
   renderer.value?.dispose();
