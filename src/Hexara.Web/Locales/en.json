@@ -189,6 +189,8 @@
       "VictoryPoint": "Victory point",
       "Back": "Development card"
     },
+    "handEmpty": "No cards in hand.",
+    "devCards": "Development cards",
     "build": "Build",
     "buildPickOnBoard": "Pick a lit spot on the board.",
     "buildNotYourTurn": "Wait for your turn.",
@@ -200,6 +202,7 @@
     "trade": "Trade",
     "tradeBankHint": "Trade with the bank. Your ports set the rate.",
     "tradePlayersHint": "Or offer a swap to the other players.",
+    "tradePickHint": "Tap a card to add one; tap past your last to clear it.",
     "tradeGive": "You give",
     "tradeTake": "You get",
     "tradeWithBank": "Trade with the bank",

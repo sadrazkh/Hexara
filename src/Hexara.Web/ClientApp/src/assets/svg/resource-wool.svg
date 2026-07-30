@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 168" role="img">
+  <defs>
+    <linearGradient id="meadow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9fcb6a" />
+      <stop offset="1" stop-color="#5f8c33" />
+    </linearGradient>
+    <radialGradient id="fleece" cx="0.38" cy="0.32" r="0.78">
+      <stop offset="0" stop-color="#fffdf7" />
+      <stop offset="1" stop-color="#ddd3c0" />
+    </radialGradient>
+  </defs>
+
+  <rect width="120" height="168" rx="10" fill="url(#meadow)" />
+
+  <path d="M0 106 Q32 90 60 102 Q90 114 120 98 L120 168 L0 168 Z" fill="#4c7429" opacity="0.75" />
+
+  <!-- گوسفندِ جلو -->
+  <g>
+    <!-- پاها پیش از بدن، تا زیرش بروند -->
+    <g stroke="#3b3128" stroke-width="4.5" stroke-linecap="round">
+      <path d="M46 118 L45 130" />
+      <path d="M58 120 L58 132" />
+      <path d="M72 118 L74 130" />
+    </g>
+
+    <!-- پشمِ ابری: چند دایره‌ی هم‌پوشان -->
+    <g fill="url(#fleece)">
+      <circle cx="52" cy="104" r="15" />
+      <circle cx="66" cy="100" r="14" />
+      <circle cx="76" cy="108" r="12" />
+      <circle cx="60" cy="112" r="14" />
+      <ellipse cx="63" cy="106" rx="22" ry="14" />
+    </g>
+
+    <!-- سر -->
+    <ellipse cx="42" cy="98" rx="9" ry="10.5" fill="#4a3d31" />
+    <ellipse cx="39" cy="101" rx="5" ry="6" fill="#5c4c3d" />
+    <circle cx="38.5" cy="96" r="1.8" fill="#efe8dc" />
+    <path d="M48 90 Q54 86 52 94" fill="#4a3d31" />
+  </g>
+
+  <!-- گوسفندِ دورتر و کوچک‌تر، تا چراگاه شلوغ بخورد -->
+  <g opacity="0.85">
+    <g fill="url(#fleece)">
+      <circle cx="90" cy="80" r="8" />
+      <circle cx="98" cy="78" r="7" />
+      <ellipse cx="95" cy="81" rx="12" ry="7.5" />
+    </g>
+    <ellipse cx="84" cy="76" rx="5" ry="6" fill="#4a3d31" />
+  </g>
+
+  <!-- بوته‌های علف -->
+  <g stroke="#41681f" stroke-width="2" stroke-linecap="round">
+    <path d="M20 134 L18 126" /><path d="M24 134 L25 125" /><path d="M28 134 L31 127" />
+    <path d="M96 128 L94 120" /><path d="M100 128 L101 119" />
+  </g>
+
+  <path d="M0 132 L120 132 L120 168 L0 168 Z" fill="#2b4416" opacity="0.5" />
+
+  <rect x="2" y="2" width="116" height="164" rx="9" fill="none" stroke="#e8d6ae" stroke-width="3" opacity="0.9" />
+</svg>

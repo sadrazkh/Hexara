@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 168" role="img">
+  <defs>
+    <linearGradient id="parch" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f0e0bd" />
+      <stop offset="1" stop-color="#cdb488" />
+    </linearGradient>
+  </defs>
+  <rect width="120" height="168" rx="10" fill="url(#parch)" />
+  <rect x="8" y="8" width="104" height="152" rx="6" fill="none" stroke="#8a6a3f" stroke-width="1.5" opacity="0.7" />
+  <rect x="34" y="86" width="52" height="34" rx="5" fill="#8a6a3f" stroke="#5f4520" stroke-width="2" />
+  <path d="M34 92 Q60 76 86 92 Z" fill="#a5804d" stroke="#5f4520" stroke-width="2" />
+  <rect x="54" y="96" width="12" height="14" rx="2" fill="#d9a72f" />
+  <g stroke="#5f4520" stroke-width="2" fill="none">
+    <path d="M40 104 L80 104" />
+  </g>
+  <g fill="#d9a72f">
+    <circle cx="44" cy="72" r="5" /><circle cx="60" cy="66" r="5" /><circle cx="76" cy="72" r="5" />
+  </g>
+  <path d="M0 132 L120 132 L120 168 L0 168 Z" fill="#6b5327" opacity="0.28" />
+  <rect x="2" y="2" width="116" height="164" rx="9" fill="none" stroke="#8a6a3f" stroke-width="3" opacity="0.95" />
+</svg>

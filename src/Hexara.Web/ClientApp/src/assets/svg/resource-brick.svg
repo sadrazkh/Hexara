@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 168" role="img">
+  <defs>
+    <linearGradient id="clay" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b4643f" />
+      <stop offset="1" stop-color="#7a3a20" />
+    </linearGradient>
+    <linearGradient id="face" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d4785079" />
+      <stop offset="1" stop-color="#00000000" />
+    </linearGradient>
+  </defs>
+
+  <rect width="120" height="168" rx="10" fill="url(#clay)" />
+
+  <!-- گودالِ خاک رس پشت سر -->
+  <path d="M0 104 Q34 84 62 100 Q92 116 120 94 L120 168 L0 168 Z" fill="#602c17" opacity="0.8" />
+
+  <!-- چینه‌ی آجر: سه ردیف، هر ردیف نیم‌آجر جابه‌جا -->
+  <g stroke="#4d2211" stroke-width="1.4">
+    <rect x="26" y="112" width="32" height="15" rx="2.5" fill="#c06a44" />
+    <rect x="62" y="112" width="32" height="15" rx="2.5" fill="#b25f3b" />
+
+    <rect x="18" y="95" width="32" height="15" rx="2.5" fill="#cb7149" />
+    <rect x="54" y="95" width="32" height="15" rx="2.5" fill="#bd6640" />
+
+    <rect x="34" y="78" width="32" height="15" rx="2.5" fill="#d67b52" />
+    <rect x="70" y="78" width="24" height="15" rx="2.5" fill="#c06a44" />
+  </g>
+
+  <!-- برقِ نورِ بالای هر ردیف -->
+  <g fill="url(#face)">
+    <rect x="26" y="112" width="32" height="6" rx="2.5" />
+    <rect x="18" y="95" width="32" height="6" rx="2.5" />
+    <rect x="34" y="78" width="32" height="6" rx="2.5" />
+  </g>
+
+  <path d="M0 132 L120 132 L120 168 L0 168 Z" fill="#3d1a0c" opacity="0.55" />
+
+  <rect x="2" y="2" width="116" height="164" rx="9" fill="none" stroke="#e8d6ae" stroke-width="3" opacity="0.9" />
+</svg>

@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 168" role="img">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2f6b41" />
+      <stop offset="1" stop-color="#1c4429" />
+    </linearGradient>
+    <linearGradient id="bark" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7a5330" />
+      <stop offset="0.55" stop-color="#5d3d22" />
+      <stop offset="1" stop-color="#432b16" />
+    </linearGradient>
+    <radialGradient id="ring" cx="0.4" cy="0.4" r="0.7">
+      <stop offset="0" stop-color="#d8a86a" />
+      <stop offset="1" stop-color="#a5763f" />
+    </radialGradient>
+  </defs>
+
+  <rect width="120" height="168" rx="10" fill="url(#sky)" />
+
+  <!-- تپه‌های دور، تا کارت عمق بگیرد -->
+  <path d="M0 108 Q30 88 58 104 Q88 118 120 96 L120 168 L0 168 Z" fill="#163a23" opacity="0.85" />
+
+  <!-- سوزنی‌برگ‌های پس‌زمینه -->
+  <g fill="#20512f">
+    <path d="M22 96 L31 66 L40 96 Z" />
+    <path d="M26 82 L31 60 L36 82 Z" />
+    <path d="M82 100 L92 72 L102 100 Z" />
+    <path d="M86 86 L92 66 L98 86 Z" />
+  </g>
+
+  <!-- کنده‌های روی هم؛ ردیف پایین دو تا، بالا یکی -->
+  <g>
+    <rect x="24" y="112" width="52" height="22" rx="11" fill="url(#bark)" />
+    <ellipse cx="76" cy="123" rx="9" ry="11" fill="url(#ring)" />
+    <ellipse cx="76" cy="123" rx="5" ry="6.5" fill="none" stroke="#8a5f2f" stroke-width="1.6" />
+
+    <rect x="44" y="112" width="52" height="22" rx="11" fill="url(#bark)" opacity="0.96" />
+    <ellipse cx="96" cy="123" rx="9" ry="11" fill="url(#ring)" />
+    <ellipse cx="96" cy="123" rx="5" ry="6.5" fill="none" stroke="#8a5f2f" stroke-width="1.6" />
+
+    <rect x="34" y="90" width="52" height="22" rx="11" fill="url(#bark)" />
+    <ellipse cx="86" cy="101" rx="9" ry="11" fill="url(#ring)" />
+    <ellipse cx="86" cy="101" rx="5" ry="6.5" fill="none" stroke="#8a5f2f" stroke-width="1.6" />
+  </g>
+
+  <!-- تیرگیِ پایین، تا نامِ روی کارت خوانا بماند -->
+  <path d="M0 132 L120 132 L120 168 L0 168 Z" fill="#0d2416" opacity="0.55" />
+
+  <rect x="2" y="2" width="116" height="164" rx="9" fill="none" stroke="#e8d6ae" stroke-width="3" opacity="0.9" />
+</svg>

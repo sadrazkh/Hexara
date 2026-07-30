@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 168" role="img">
+  <defs>
+    <linearGradient id="cavern" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8b93a4" />
+      <stop offset="1" stop-color="#4a5261" />
+    </linearGradient>
+    <linearGradient id="rockLit" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#cfd6e2" />
+      <stop offset="1" stop-color="#8a93a4" />
+    </linearGradient>
+    <linearGradient id="rockDark" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#8d95a6" />
+      <stop offset="1" stop-color="#525a6a" />
+    </linearGradient>
+  </defs>
+
+  <rect width="120" height="168" rx="10" fill="url(#cavern)" />
+
+  <!-- قله‌های پشتی -->
+  <g fill="#3f4757" opacity="0.9">
+    <path d="M0 100 L26 56 L52 100 Z" />
+    <path d="M40 100 L72 44 L104 100 Z" />
+    <path d="M92 100 L114 62 L120 74 L120 100 Z" />
+  </g>
+  <g fill="#dfe6f0" opacity="0.85">
+    <path d="M26 56 L34 70 L18 70 Z" />
+    <path d="M72 44 L82 62 L62 62 Z" />
+  </g>
+
+  <!-- سنگ‌های زاویه‌دار، جلوی صحنه -->
+  <g stroke="#39404e" stroke-width="1.5" stroke-linejoin="round">
+    <path d="M30 128 L40 104 L58 112 L54 130 Z" fill="url(#rockLit)" />
+    <path d="M54 130 L58 112 L78 108 L86 128 Z" fill="url(#rockDark)" />
+    <path d="M22 130 L30 118 L34 130 Z" fill="url(#rockDark)" />
+    <path d="M84 126 L92 112 L100 128 Z" fill="url(#rockLit)" />
+  </g>
+
+  <!-- رگه‌ی فلزی، تا «معدن» بخواند نه «سنگ» -->
+  <g stroke="#f2cf7a" stroke-width="2" stroke-linecap="round" opacity="0.9">
+    <path d="M40 116 L48 112 L52 120" fill="none" />
+    <path d="M64 118 L72 114" fill="none" />
+  </g>
+
+  <path d="M0 132 L120 132 L120 168 L0 168 Z" fill="#262c37" opacity="0.55" />
+
+  <rect x="2" y="2" width="116" height="164" rx="9" fill="none" stroke="#e8d6ae" stroke-width="3" opacity="0.9" />
+</svg>

@@ -1,3 +1,31 @@
+import artAvatarPlaceholder from './svg/avatar-placeholder.svg';
+import artDevBack from './svg/dev-back.svg';
+import artDevKnight from './svg/dev-knight.svg';
+import artDevMonopoly from './svg/dev-monopoly.svg';
+import artDevRoadbuilding from './svg/dev-roadbuilding.svg';
+import artDevVictorypoint from './svg/dev-victorypoint.svg';
+import artDevYearofplenty from './svg/dev-yearofplenty.svg';
+import artIconBank from './svg/icon-bank.svg';
+import artIconCards from './svg/icon-cards.svg';
+import artIconDice from './svg/icon-dice.svg';
+import artIconTrade from './svg/icon-trade.svg';
+import artIconVictorypoint from './svg/icon-victorypoint.svg';
+import artPieceCity from './svg/piece-city.svg';
+import artPieceRoad from './svg/piece-road.svg';
+import artPieceRobber from './svg/piece-robber.svg';
+import artPieceSettlement from './svg/piece-settlement.svg';
+import artPortBrick from './svg/port-brick.svg';
+import artPortGeneric from './svg/port-generic.svg';
+import artPortGrain from './svg/port-grain.svg';
+import artPortLumber from './svg/port-lumber.svg';
+import artPortOre from './svg/port-ore.svg';
+import artPortWool from './svg/port-wool.svg';
+import artResourceBrick from './svg/resource-brick.svg';
+import artResourceGrain from './svg/resource-grain.svg';
+import artResourceLumber from './svg/resource-lumber.svg';
+import artResourceOre from './svg/resource-ore.svg';
+import artResourceWool from './svg/resource-wool.svg';
+
 /**
  * تنها جایی که می‌داند کدام تصویر در کدام فایل است.
  *
@@ -40,38 +68,38 @@ export interface AssetSpec {
  * روی داده‌ی سرور کلید ساخت.
  */
 export const ASSETS = {
-  'resource.Lumber': { labelKey: 'game.resource.Lumber', shape: 'card', tone: 'var(--hx-res-lumber)' },
-  'resource.Brick': { labelKey: 'game.resource.Brick', shape: 'card', tone: 'var(--hx-res-brick)' },
-  'resource.Wool': { labelKey: 'game.resource.Wool', shape: 'card', tone: 'var(--hx-res-wool)' },
-  'resource.Grain': { labelKey: 'game.resource.Grain', shape: 'card', tone: 'var(--hx-res-grain)' },
-  'resource.Ore': { labelKey: 'game.resource.Ore', shape: 'card', tone: 'var(--hx-res-ore)' },
+  'resource.Lumber': { src: artResourceLumber, labelKey: 'game.resource.Lumber', shape: 'card', tone: 'var(--hx-res-lumber)' },
+  'resource.Brick': { src: artResourceBrick, labelKey: 'game.resource.Brick', shape: 'card', tone: 'var(--hx-res-brick)' },
+  'resource.Wool': { src: artResourceWool, labelKey: 'game.resource.Wool', shape: 'card', tone: 'var(--hx-res-wool)' },
+  'resource.Grain': { src: artResourceGrain, labelKey: 'game.resource.Grain', shape: 'card', tone: 'var(--hx-res-grain)' },
+  'resource.Ore': { src: artResourceOre, labelKey: 'game.resource.Ore', shape: 'card', tone: 'var(--hx-res-ore)' },
 
-  'dev.Knight': { labelKey: 'game.dev.Knight', shape: 'card', tone: 'var(--hx-res-ore)' },
-  'dev.VictoryPoint': { labelKey: 'game.dev.VictoryPoint', shape: 'card', tone: 'var(--hx-accent)' },
-  'dev.RoadBuilding': { labelKey: 'game.dev.RoadBuilding', shape: 'card', tone: 'var(--hx-res-lumber)' },
-  'dev.YearOfPlenty': { labelKey: 'game.dev.YearOfPlenty', shape: 'card', tone: 'var(--hx-res-grain)' },
-  'dev.Monopoly': { labelKey: 'game.dev.Monopoly', shape: 'card', tone: 'var(--hx-res-brick)' },
-  'dev.Back': { labelKey: 'game.dev.Back', shape: 'card', tone: 'var(--hx-surface-2)' },
+  'dev.Knight': { src: artDevKnight, labelKey: 'game.dev.Knight', shape: 'card', tone: 'var(--hx-res-ore)' },
+  'dev.VictoryPoint': { src: artDevVictorypoint, labelKey: 'game.dev.VictoryPoint', shape: 'card', tone: 'var(--hx-accent)' },
+  'dev.RoadBuilding': { src: artDevRoadbuilding, labelKey: 'game.dev.RoadBuilding', shape: 'card', tone: 'var(--hx-res-lumber)' },
+  'dev.YearOfPlenty': { src: artDevYearofplenty, labelKey: 'game.dev.YearOfPlenty', shape: 'card', tone: 'var(--hx-res-grain)' },
+  'dev.Monopoly': { src: artDevMonopoly, labelKey: 'game.dev.Monopoly', shape: 'card', tone: 'var(--hx-res-brick)' },
+  'dev.Back': { src: artDevBack, labelKey: 'game.dev.Back', shape: 'card', tone: 'var(--hx-surface-2)' },
 
-  'piece.Settlement': { labelKey: 'game.buildSettlement', shape: 'square' },
-  'piece.City': { labelKey: 'game.buildCity', shape: 'square' },
-  'piece.Road': { labelKey: 'game.buildRoad', shape: 'square' },
-  'piece.Robber': { labelKey: 'game.robber', shape: 'square' },
+  'piece.Settlement': { src: artPieceSettlement, labelKey: 'game.buildSettlement', shape: 'square' },
+  'piece.City': { src: artPieceCity, labelKey: 'game.buildCity', shape: 'square' },
+  'piece.Road': { src: artPieceRoad, labelKey: 'game.buildRoad', shape: 'square' },
+  'piece.Robber': { src: artPieceRobber, labelKey: 'game.robber', shape: 'square' },
 
-  'icon.Dice': { labelKey: 'game.roll', shape: 'square' },
-  'icon.Trade': { labelKey: 'game.trade', shape: 'square' },
-  'icon.Bank': { labelKey: 'game.tradeWithBank', shape: 'square' },
-  'icon.Cards': { labelKey: 'game.yourHand', shape: 'square' },
-  'icon.VictoryPoint': { labelKey: 'game.victoryPoints', shape: 'square' },
+  'icon.Dice': { src: artIconDice, labelKey: 'game.roll', shape: 'square' },
+  'icon.Trade': { src: artIconTrade, labelKey: 'game.trade', shape: 'square' },
+  'icon.Bank': { src: artIconBank, labelKey: 'game.tradeWithBank', shape: 'square' },
+  'icon.Cards': { src: artIconCards, labelKey: 'game.yourHand', shape: 'square' },
+  'icon.VictoryPoint': { src: artIconVictorypoint, labelKey: 'game.victoryPoints', shape: 'square' },
 
-  'port.Generic': { labelKey: 'board.portGeneric', shape: 'square' },
-  'port.Lumber': { labelKey: 'game.resource.Lumber', shape: 'square', tone: 'var(--hx-res-lumber)' },
-  'port.Brick': { labelKey: 'game.resource.Brick', shape: 'square', tone: 'var(--hx-res-brick)' },
-  'port.Wool': { labelKey: 'game.resource.Wool', shape: 'square', tone: 'var(--hx-res-wool)' },
-  'port.Grain': { labelKey: 'game.resource.Grain', shape: 'square', tone: 'var(--hx-res-grain)' },
-  'port.Ore': { labelKey: 'game.resource.Ore', shape: 'square', tone: 'var(--hx-res-ore)' },
+  'port.Generic': { src: artPortGeneric, labelKey: 'board.portGeneric', shape: 'square' },
+  'port.Lumber': { src: artPortLumber, labelKey: 'game.resource.Lumber', shape: 'square', tone: 'var(--hx-res-lumber)' },
+  'port.Brick': { src: artPortBrick, labelKey: 'game.resource.Brick', shape: 'square', tone: 'var(--hx-res-brick)' },
+  'port.Wool': { src: artPortWool, labelKey: 'game.resource.Wool', shape: 'square', tone: 'var(--hx-res-wool)' },
+  'port.Grain': { src: artPortGrain, labelKey: 'game.resource.Grain', shape: 'square', tone: 'var(--hx-res-grain)' },
+  'port.Ore': { src: artPortOre, labelKey: 'game.resource.Ore', shape: 'square', tone: 'var(--hx-res-ore)' },
 
-  'avatar.Placeholder': { labelKey: 'game.players', shape: 'square' },
+  'avatar.Placeholder': { src: artAvatarPlaceholder, labelKey: 'game.players', shape: 'square' },
 } as const satisfies Record<string, AssetSpec>;
 
 export type AssetName = keyof typeof ASSETS;
@@ -79,9 +107,9 @@ export type AssetName = keyof typeof ASSETS;
 /**
  * نمای تایپ‌دار روی جدول بالا.
  *
- * ‎as const‎ لازم است تا ‎AssetName‎ از روی کلیدها ساخته شود، ولی همان باعث
- * می‌شود تایپِ هر ورودی فقط همان چیزهایی را داشته باشد که نوشته شده‌اند — و
- * ‎src‎ که هنوز هیچ‌کدام ندارند اصلاً وجود نداشته باشد. این نما هر دو را می‌دهد.
+ * ‎as const‎ لازم است تا ‎AssetName‎ از روی کلیدها ساخته شود، ولی همان تایپِ هر
+ * ورودی را به همان چیزهایی محدود می‌کند که در خودش نوشته شده. این نما اجازه
+ * می‌دهد کد با ‎AssetSpec‎ کار کند، حتی برای ورودی‌ای که روزی ‎src‎ نداشته باشد.
  */
 const SPECS: Record<AssetName, AssetSpec> = ASSETS;
 
@@ -98,7 +126,12 @@ export function assetFor(namespace: string, member: string): AssetName | null {
   return key in ASSETS ? (key as AssetName) : null;
 }
 
-/** آیا همه‌ی دارایی‌ها فایل دارند؟ تا وقتی false است، جانشین‌ها دیده می‌شوند. */
+/**
+ * دارایی‌هایی که هنوز فایل ندارند و جانشین نشان می‌دهند.
+ *
+ * الان خالی است، ولی می‌ماند: هر کلیدِ تازه‌ای که اضافه شود پیش از کشیده شدنِ
+ * تصویرش از همین‌جا پیدا می‌شود.
+ */
 export function missingArtwork(): AssetName[] {
   return (Object.keys(SPECS) as AssetName[]).filter((name) => !SPECS[name].src);
 }

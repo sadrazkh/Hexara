@@ -4,6 +4,7 @@ import { t } from '@/i18n';
 import GameBoard from './GameBoard.vue';
 import Fold from './Fold.vue';
 import BuildPanel from './BuildPanel.vue';
+import Hand from './Hand.vue';
 import type { BoardData, Highlights, Pick } from '@/three/board';
 import { vertexHexes, vertexKey } from '@/three/hex';
 import {
@@ -283,14 +284,22 @@ const canPropose = computed(() => {
   );
 });
 
-/** شمارنده‌ی سمتِ «می‌دهم» به دستِ خودم محدود است؛ سمتِ «می‌خواهم» نه. */
-function adjustOffer(side: 'give' | 'take', resource: string, delta: number): void {
+/**
+ * کلیک روی کارت یکی اضافه می‌کند و از سقف که رد شد به صفر برمی‌گردد.
+ *
+ * چرخه‌ای است و نه دو دکمه‌ی جدا، چون روی موبایل کنارِ هر کارت جا برای دکمه‌ی
+ * منفی نبود. متنِ راهنما همین را می‌گوید تا کسی دنبال دکمه نگردد.
+ */
+function cycleOffer(side: 'give' | 'take', resource: string): void {
   const target = side === 'give' ? offerGive : offerTake;
-  const ceiling = side === 'give' ? (hand.value[resource] ?? 0) : 19;
-  const next = (target.value[resource] ?? 0) + delta;
+  const ceiling = side === 'give' ? (hand.value[resource] ?? 0) : 4;
+  const now = target.value[resource] ?? 0;
 
-  target.value = { ...target.value, [resource]: Math.max(0, Math.min(ceiling, next)) };
+  target.value = { ...target.value, [resource]: now >= ceiling ? 0 : now + 1 };
 }
+
+/** سمتِ «می‌خواهم» از دستِ خودت نمی‌آید، پس هر پنج منبع نشان داده می‌شود. */
+const WANTABLE = Object.fromEntries(RESOURCES.map((r) => [r, 1]));
 
 function clearOffer(): void {
   offerGive.value = {};
@@ -828,23 +837,24 @@ onBeforeUnmount(() => {
         <div class="hx-trade__players">
           <p class="hx-muted hx-small">{{ t('game.tradePlayersHint') }}</p>
 
-          <div v-for="side in (['give', 'take'] as const)" :key="side" class="hx-trade__row">
-            <span class="hx-trade__label">
-              {{ side === 'give' ? t('game.tradeGive') : t('game.tradeTake') }}
-            </span>
+          <p class="hx-muted hx-small">{{ t('game.tradePickHint') }}</p>
 
-            <span v-for="resource in RESOURCES" :key="`${side}-${resource}`" class="hx-live__counter">
-              <button type="button" class="hx-btn hx-btn--sm" @click="adjustOffer(side, resource, -1)">
-                −
-              </button>
-              <span>
-                {{ t(`game.resource.${resource}`) }}
-                {{ (side === 'give' ? offerGive : offerTake)[resource] ?? 0 }}
-              </span>
-              <button type="button" class="hx-btn hx-btn--sm" @click="adjustOffer(side, resource, 1)">
-                +
-              </button>
-            </span>
+          <div class="hx-trade__side">
+            <span class="hx-trade__label">{{ t('game.tradeGive') }}</span>
+            <Hand
+              :resources="hand"
+              :selection="offerGive"
+              @pick="cycleOffer('give', $event)"
+            />
+          </div>
+
+          <div class="hx-trade__side">
+            <span class="hx-trade__label">{{ t('game.tradeTake') }}</span>
+            <Hand
+              :resources="WANTABLE"
+              :selection="offerTake"
+              @pick="cycleOffer('take', $event)"
+            />
           </div>
 
           <div class="hx-live__choices">
@@ -872,11 +882,12 @@ onBeforeUnmount(() => {
           :open="folds.hand"
           @update:open="folds.hand = $event"
         >
-          <ul class="hx-facts">
-            <li v-for="resource in RESOURCES" :key="resource">
-              <span>{{ t(`game.resource.${resource}`) }}</span>
-              <strong>{{ view.hand.resources[resource] ?? 0 }}</strong>
-            </li>
+          <Hand
+            :resources="view.hand.resources"
+            :development="{ ...view.hand.developmentCards, ...view.hand.newDevelopmentCards }"
+          />
+
+          <ul class="hx-facts hx-hand__facts">
             <li>
               <span>{{ t('game.victoryPoints') }}</span>
               <strong>{{ view.hand.victoryPoints }}</strong>

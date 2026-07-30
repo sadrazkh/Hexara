@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 168" role="img">
+  <defs>
+    <linearGradient id="field" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e0b23c" />
+      <stop offset="1" stop-color="#9c7314" />
+    </linearGradient>
+    <linearGradient id="stalk" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6d97e" />
+      <stop offset="1" stop-color="#c08f22" />
+    </linearGradient>
+  </defs>
+
+  <rect width="120" height="168" rx="10" fill="url(#field)" />
+
+  <!-- ردیف‌های شخم‌خورده، رو به افق -->
+  <g stroke="#8a6410" stroke-width="1.5" opacity="0.45">
+    <path d="M0 118 Q60 108 120 118" fill="none" />
+    <path d="M0 128 Q60 117 120 128" fill="none" />
+    <path d="M0 139 Q60 127 120 139" fill="none" />
+    <path d="M0 151 Q60 138 120 151" fill="none" />
+  </g>
+
+  <!-- سه ساقه‌ی گندم با خوشه‌های دانه‌دار -->
+  <g>
+    <g transform="translate(40 0) rotate(-7 40 110)">
+      <path d="M40 118 L40 62" stroke="#a97d18" stroke-width="3" fill="none" />
+      <g fill="url(#stalk)" stroke="#9a7115" stroke-width="0.8">
+        <ellipse cx="34" cy="70" rx="5" ry="8" />
+        <ellipse cx="46" cy="70" rx="5" ry="8" />
+        <ellipse cx="34" cy="83" rx="5" ry="8" />
+        <ellipse cx="46" cy="83" rx="5" ry="8" />
+        <ellipse cx="34" cy="96" rx="5" ry="8" />
+        <ellipse cx="46" cy="96" rx="5" ry="8" />
+        <ellipse cx="40" cy="60" rx="5" ry="9" />
+      </g>
+    </g>
+
+    <g transform="translate(-4 6) rotate(9 40 110)">
+      <path d="M40 118 L40 70" stroke="#a97d18" stroke-width="3" fill="none" />
+      <g fill="url(#stalk)" stroke="#9a7115" stroke-width="0.8">
+        <ellipse cx="35" cy="78" rx="4.5" ry="7" />
+        <ellipse cx="45" cy="78" rx="4.5" ry="7" />
+        <ellipse cx="35" cy="90" rx="4.5" ry="7" />
+        <ellipse cx="45" cy="90" rx="4.5" ry="7" />
+        <ellipse cx="40" cy="69" rx="4.5" ry="8" />
+      </g>
+    </g>
+
+    <g transform="translate(38 8) rotate(14 40 110)">
+      <path d="M40 118 L40 74" stroke="#a97d18" stroke-width="3" fill="none" />
+      <g fill="url(#stalk)" stroke="#9a7115" stroke-width="0.8">
+        <ellipse cx="35" cy="82" rx="4.5" ry="7" />
+        <ellipse cx="45" cy="82" rx="4.5" ry="7" />
+        <ellipse cx="35" cy="94" rx="4.5" ry="7" />
+        <ellipse cx="45" cy="94" rx="4.5" ry="7" />
+        <ellipse cx="40" cy="73" rx="4.5" ry="8" />
+      </g>
+    </g>
+  </g>
+
+  <path d="M0 132 L120 132 L120 168 L0 168 Z" fill="#4d3907" opacity="0.5" />
+
+  <rect x="2" y="2" width="116" height="164" rx="9" fill="none" stroke="#e8d6ae" stroke-width="3" opacity="0.9" />
+</svg>

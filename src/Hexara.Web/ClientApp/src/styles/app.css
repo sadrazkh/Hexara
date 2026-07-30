@@ -1322,6 +1322,98 @@ code {
   margin-block-start: var(--hx-sp-3);
 }
 
+/* ── دستِ بازیکن ──────────────────────────────────────────────────────── */
+
+.hx-hand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-3);
+}
+
+.hx-hand__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hx-sp-2) var(--hx-card-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * هر دسته یک ستون است که کارت‌های زیرین با ‎absolute‎ رویش می‌نشینند و کمی
+ * جابه‌جا می‌شوند. ارتفاعِ ستون از کارتِ رویی می‌آید، پس تعدادِ لایه‌ها چیدمان
+ * را عوض نمی‌کند — دسته‌ی ۱ و دسته‌ی ۴ یک اندازه جا می‌گیرند.
+ */
+.hx-hand__pile {
+  position: relative;
+  isolation: isolate;
+
+  /* جا برای جابه‌جاییِ لایه‌ها و برای بالا پریدنِ کارتِ انتخاب‌شده. */
+  padding-block-start: 8px;
+  padding-inline-end: calc((var(--hx-pile-depth, 1) - 1) * 4px);
+}
+
+.hx-hand__shadow {
+  position: absolute;
+  inset-block-start: calc(8px - var(--hx-layer) * 2px);
+  inset-inline-start: calc(var(--hx-layer) * 4px);
+  z-index: 0;
+  filter: brightness(0.72);
+  pointer-events: none;
+}
+
+.hx-hand__top {
+  position: relative;
+  z-index: 1;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+}
+
+button.hx-hand__top {
+  cursor: pointer;
+}
+
+button.hx-hand__top:disabled {
+  cursor: not-allowed;
+}
+
+.hx-hand__pile.is-hovered .hx-hand__top,
+button.hx-hand__top:hover:not(:disabled) {
+  transform: translateY(-4px);
+  transition: transform var(--hx-dur-fast) var(--hx-ease);
+}
+
+.hx-hand__pile.is-empty {
+  opacity: var(--hx-opacity-disabled);
+}
+
+/* چند تا از این کارت را برای معامله برداشته‌ای. */
+.hx-hand__picked {
+  position: absolute;
+  inset-block-end: -6px;
+  inset-inline-start: 50%;
+  translate: -50% 0;
+  min-inline-size: 1.5rem;
+  padding: 0 0.35rem;
+  border-radius: var(--hx-r-pill);
+  background: var(--hx-accent-2);
+  color: var(--hx-on-accent);
+  font-size: var(--hx-text-2xs);
+  font-weight: var(--hx-weight-bold);
+  text-align: center;
+  box-shadow: var(--hx-shadow-sm);
+}
+
+.hx-hand__title {
+  margin: 0;
+  font-size: var(--hx-text-sm);
+  color: var(--hx-text-dim);
+}
+
 /* ── ساخت‌وساز ────────────────────────────────────────────────────────── */
 
 .hx-build {
@@ -1616,4 +1708,18 @@ code {
   .hx-room__meta {
     margin-inline-start: 0;
   }
+}
+
+/* امتیاز و امتیاز تیم، زیر کارت‌ها — عدد است نه کارت، پس فهرست می‌ماند. */
+.hx-hand__facts {
+  margin-block-start: var(--hx-sp-3);
+  padding-block-start: var(--hx-sp-3);
+  border-block-start: 1px solid var(--hx-border);
+}
+
+/* دو سمتِ پیشنهاد، هر کدام با کارت‌های خودش. */
+.hx-trade__side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-2);
 }
