@@ -3,7 +3,36 @@ import en from '@locales/en.json';
 
 type Nested = { [key: string]: string | number | boolean | Nested };
 
-const catalogs: Record<string, Nested> = { fa: fa as Nested, en: en as Nested };
+/**
+ * کاتالوگ را صاف می‌کند: ‎{ game: { phase: { Roll: 'x' } } }‎ می‌شود
+ * ‎'game.phase.Roll'‎.
+ *
+ * دقیقاً همان کاری است که ‎UiTranslator‎ سمت سرور می‌کند، و عمداً همان‌طور نوشته
+ * شده. فایل ترجمه یکی است ولی دو خواننده دارد؛ اگر این دو هم‌قاعده نباشند متنی
+ * که در Razor درست دیده می‌شود در Vue خامِ کلید می‌مانَد. این‌طور هر دو شکلِ
+ * نوشتن — تودرتو و کلیدِ نقطه‌دار — در هر دو طرف یکسان خوانده می‌شود، حتی وقتی
+ * ‎"phase"‎ هم‌زمان یک برچسبِ رشته‌ای و پیشوندِ ‎"phase.Roll"‎ باشد.
+ */
+export function flatten(source: Nested, prefix?: string): Record<string, string> {
+  const sink: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(source)) {
+    const path = prefix === undefined ? key : `${prefix}.${key}`;
+
+    if (typeof value === 'object' && value !== null) {
+      Object.assign(sink, flatten(value, path));
+    } else {
+      sink[path] = String(value);
+    }
+  }
+
+  return sink;
+}
+
+const catalogs: Record<string, Record<string, string>> = {
+  fa: flatten(fa as Nested),
+  en: flatten(en as Nested)
+};
 
 export const DEFAULT_CULTURE = 'fa';
 
@@ -17,25 +46,13 @@ export function isRtl(culture = currentCulture()): boolean {
   return culture === 'fa';
 }
 
-function lookup(catalog: Nested | undefined, key: string): string | undefined {
-  if (!catalog) return undefined;
-
-  let node: Nested | string | number | boolean | undefined = catalog;
-  for (const part of key.split('.')) {
-    if (typeof node !== 'object' || node === null) return undefined;
-    node = (node as Nested)[part];
-  }
-
-  return typeof node === 'string' ? node : undefined;
-}
-
 /**
  * ترجمه با همان کلیدهای سمت سرور. اگر کلید نبود، به فارسی و در نهایت به
  * خودِ کلید برمی‌گردد تا کمبود ترجمه در UI دیده شود.
  */
 export function t(key: string, ...args: unknown[]): string {
   const culture = currentCulture();
-  const value = lookup(catalogs[culture], key) ?? lookup(catalogs[DEFAULT_CULTURE], key) ?? key;
+  const value = catalogs[culture]?.[key] ?? catalogs[DEFAULT_CULTURE]?.[key] ?? key;
 
   return args.length === 0
     ? value
