@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Hexara.Domain.Board;
 
 /// <summary>
@@ -65,5 +67,7 @@ public readonly record struct VertexId
         return a.Corner <= b.Corner ? a : b;
     }
 
-    public override string ToString() => $"V{Hex.Q},{Hex.R},{Corner}";
+    /// <summary>شناسه است نه متنِ نمایشی — با فرهنگ ناوابسته. <see cref="Axial.ToString"/>.</summary>
+    public override string ToString() =>
+        string.Create(CultureInfo.InvariantCulture, $"V{Hex.Q},{Hex.R},{Corner}");
 }

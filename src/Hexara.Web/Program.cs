@@ -121,6 +121,7 @@ builder.Services.AddSingleton<GamePresence>();
 builder.Services.AddSingleton<GameLocks>();
 builder.Services.AddScoped<GameViewBuilder>();
 builder.Services.AddScoped<GameBroadcaster>();
+builder.Services.AddScoped<RoomBroadcaster>();
 
 builder.Services.Configure<AutoPlayOptions>(builder.Configuration.GetSection(AutoPlayOptions.Section));
 builder.Services.AddHostedService<AutoPlayService>();
@@ -210,6 +211,7 @@ app.UseAuthorization();
 
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
 app.MapHub<GameHub>("/hubs/game");
+app.MapHub<RoomHub>("/hubs/room");
 app.MapHealthChecks("/health");
 
 await MigrateAsync(app, hardening);

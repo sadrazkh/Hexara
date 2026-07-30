@@ -1089,6 +1089,155 @@ code {
   }
 }
 
+/* ── اتاق زنده ────────────────────────────────────────────────────────── */
+
+.hx-roomlive {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-4);
+}
+
+/* ── پایان بازی ───────────────────────────────────────────────────────── */
+
+/* نتیجه پیش از برد می‌آید، پس باید همان‌جا خودش را نشان بدهد و بعد کنار برود.
+   قبلاً هیچ اعلانی نبود و کاربر از روی محو شدن دکمه‌ها می‌فهمید بازی تمام شده. */
+.hx-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-3);
+  align-items: flex-start;
+  border-color: color-mix(in srgb, var(--hx-accent-2) 34%, var(--hx-border));
+}
+
+.hx-result--mine {
+  box-shadow: var(--hx-glow), var(--hx-shadow-md);
+}
+
+.hx-result__title {
+  margin: 0;
+  font-size: clamp(1.35rem, 1rem + 1.6vw, 2rem);
+  font-weight: 700;
+  line-height: 1.15;
+  background: var(--hx-accent-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hx-result__team {
+  margin: 0;
+  color: var(--hx-text-dim);
+}
+
+.hx-result__standings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-2);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hx-result__standings li {
+  display: flex;
+  align-items: center;
+  gap: var(--hx-sp-3);
+  padding: var(--hx-sp-2) var(--hx-sp-3);
+  border: 1px solid var(--hx-border);
+  border-radius: var(--hx-r-md);
+  background: var(--hx-glass);
+}
+
+.hx-result__standings li.is-winner {
+  border-color: color-mix(in srgb, var(--hx-accent-2) 50%, transparent);
+  background: var(--hx-glass-2);
+}
+
+.hx-result__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* امتیاز به لبه‌ی مقابل می‌چسبد؛ با margin منطقی تا در راست‌به‌چپ هم درست بنشیند. */
+.hx-result__points {
+  margin-inline-start: auto;
+  color: var(--hx-accent-2);
+  white-space: nowrap;
+}
+
+/* ── معامله ───────────────────────────────────────────────────────────── */
+
+.hx-trade {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-3);
+}
+
+/* دو نیمه‌ی معامله — با بانک و با بازیکن‌ها — با یک خط از هم جدا می‌شوند تا
+   معلوم باشد دو کارِ متفاوت‌اند و دکمه‌هایشان قاطی نشود. */
+.hx-trade__bank,
+.hx-trade__players {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-2);
+}
+
+.hx-trade__players {
+  padding-block-start: var(--hx-sp-3);
+  border-block-start: 1px solid var(--hx-border);
+}
+
+.hx-trade__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--hx-sp-2);
+}
+
+.hx-trade__label {
+  min-width: 5rem;
+  color: var(--hx-text-dim);
+  font-size: 0.85rem;
+}
+
+.hx-trade__offer {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.hx-trade__arrow {
+  margin-inline: var(--hx-sp-2);
+  color: var(--hx-accent-2);
+}
+
+.hx-trade__answers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hx-sp-2) var(--hx-sp-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+
+.hx-trade__answers li {
+  display: flex;
+  gap: var(--hx-sp-2);
+  color: var(--hx-text-dim);
+}
+
+/* پاسخ‌ها رنگ می‌گیرند، ولی متنشان هم نوشته است — رنگ به‌تنهایی حاملِ معنا نیست. */
+.hx-trade__answers [data-answer='Accepted'] {
+  color: var(--hx-ok);
+}
+
+.hx-trade__answers [data-answer='Rejected'] {
+  color: var(--hx-danger);
+}
+
 /* ── واکنش‌گرا ────────────────────────────────────────────────────────── */
 
 @media (max-width: 860px) {

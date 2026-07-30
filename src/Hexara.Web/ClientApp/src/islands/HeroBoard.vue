@@ -3,6 +3,8 @@ import { onBeforeUnmount, onMounted, ref, shallowRef } from 'vue';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { axialToWorld, hexDisc } from '@/three/hex';
+import { TERRAIN_TOKEN, tokenColor } from '@/three/board';
+import { buildScenery } from '@/three/scenery';
 import { THEME_CHANGE, token } from '@/theme';
 
 const props = withDefaults(defineProps<{ radius?: number }>(), { radius: 2 });
@@ -16,19 +18,22 @@ let observer: ResizeObserver | null = null;
 let themeListener: (() => void) | null = null;
 let disposables: { dispose(): void }[] = [];
 
-// رنگ زمین‌ها از همان توکن‌های CSS گرفته می‌شود تا برد و رابط یک‌دست بمانند.
-const TERRAIN_COLORS = [
-  0xc05a3e, // آجر
-  0x2f7d4f, // چوب
-  0x8fc95a, // پشم
-  0xe0b23c, // گندم
-  0x7d8aa3, // سنگ
-  0xcbb187, // بیابان
-];
+/**
+ * زمین‌ها با نامشان نگه داشته می‌شوند نه با عدد رنگ.
+ *
+ * قبلاً این‌جا یک فهرست رنگِ سخت‌کد بود که با ‎tokens.css‎ لغزیده بود — سبزِ
+ * جنگل روی صفحه‌ی اصلی با سبزِ جنگل سرِ بازی یکی نبود. حالا هر دو از یک
+ * منبع می‌آیند و زینتِ زمین هم همان ماژول بازی را می‌سازد.
+ */
+const TERRAINS = ['Hills', 'Forest', 'Pasture', 'Fields', 'Mountains', 'Desert'];
 
 /** توزیع ثابت (بدون تصادف) تا پیش‌نمایش هیرو در هر بار بارگذاری یکسان باشد. */
-function terrainFor(index: number): number {
-  return TERRAIN_COLORS[(index * 5 + 2) % TERRAIN_COLORS.length];
+function terrainFor(index: number): string {
+  return TERRAINS[(index * 5 + 2) % TERRAINS.length]!;
+}
+
+function terrainColor(terrain: string): THREE.Color {
+  return tokenColor(TERRAIN_TOKEN[terrain] ?? TERRAIN_TOKEN.Desert!, 0xd9c18f);
 }
 
 /** رنگ یک توکن نور، با جایگزین در صورت نبودنش. */
@@ -77,7 +82,12 @@ function buildScene(container: HTMLDivElement) {
   const onThemeChange = () => {
     ambient.color.copy(themeLight('--hx-light-ambient', 0x8a6a3f));
     rim.color.copy(themeLight('--hx-light-rim', 0xe0a63a));
+    refreshTerrain();
   };
+
+  // تعویض تم: زمین‌ها جای خودشان رنگ می‌گیرند، ولی زینت رنگ را در نمونه‌ها
+  // دارد و باید از نو ساخته شود.
+  let refreshTerrain = () => {};
 
   document.addEventListener(THEME_CHANGE, onThemeChange);
   themeListener = onThemeChange;
@@ -91,20 +101,48 @@ function buildScene(container: HTMLDivElement) {
   const tileGeometry = new THREE.CylinderGeometry(size * 0.94, size * 0.94, 0.36, 6);
   disposables.push(tileGeometry);
 
-  const materials = new Map<number, THREE.MeshStandardMaterial>();
-  for (const color of TERRAIN_COLORS) {
-    const material = new THREE.MeshStandardMaterial({ color, roughness: 0.72, metalness: 0.06 });
-    materials.set(color, material);
+  const materials = new Map<string, THREE.MeshStandardMaterial>();
+  for (const terrain of TERRAINS) {
+    const material = new THREE.MeshStandardMaterial({
+      color: terrainColor(terrain),
+      roughness: 0.72,
+      metalness: 0.06,
+    });
+    materials.set(terrain, material);
     disposables.push(material);
   }
 
-  cells.forEach((cell, index) => {
-    const { x, z } = axialToWorld(cell.q, cell.r, size);
-    const mesh = new THREE.Mesh(tileGeometry, materials.get(terrainFor(index))!);
+  const tiles = cells.map((cell, index) => ({
+    q: cell.q,
+    r: cell.r,
+    terrain: terrainFor(index),
+  }));
+
+  for (const tile of tiles) {
+    const { x, z } = axialToWorld(tile.q, tile.r, size);
+    const mesh = new THREE.Mesh(tileGeometry, materials.get(tile.terrain)!);
     mesh.position.set(x, 0, z);
-    mesh.userData.phase = index * 0.35;
     board.add(mesh);
-  });
+  }
+
+  // زینتِ زمین، از همان ماژولی که برد بازی استفاده می‌کند. بدون سایه، چون این
+  // صحنه نور سایه‌انداز ندارد و صفحه‌ی اصلی باید سبک بماند.
+  let scenery = buildScenery(tiles, size, terrainColor, tokenColor, false);
+  board.add(scenery.group);
+
+  refreshTerrain = () => {
+    for (const [terrain, material] of materials) {
+      material.color.copy(terrainColor(terrain));
+    }
+
+    board.remove(scenery.group);
+    for (const item of scenery.disposables) item.dispose();
+
+    scenery = buildScenery(tiles, size, terrainColor, tokenColor, false);
+    board.add(scenery.group);
+  };
+
+  disposables.push({ dispose: () => scenery.disposables.forEach((item) => item.dispose()) });
 
   // حلقه‌ی آب دور برد — یک استوانه‌ی کم‌ارتفاع نیمه‌شفاف.
   const seaRadius = (props.radius + 1.15) * size * Math.SQRT2 * 1.28;
@@ -132,10 +170,13 @@ function buildScene(container: HTMLDivElement) {
 
     if (!reduceMotion) {
       board.rotation.y = elapsed * 0.16;
-      for (const child of board.children) {
-        if (child === sea) continue;
-        child.position.y = Math.sin(elapsed * 1.1 + (child.userData.phase as number)) * 0.045;
-      }
+
+      // نفسِ آرام روی کلِ جزیره، نه روی هر خانه.
+      //
+      // قبلاً هر خانه جدا بالا و پایین می‌رفت. حالا که درخت و قله روی خانه‌ها
+      // نشسته‌اند، آن حرکت زینت را از زمینش جدا می‌کرد — چون زینت یک شبکه‌ی
+      // نمونه‌دار برای کل برد است، نه فرزندِ هر خانه.
+      board.position.y = Math.sin(elapsed * 0.9) * 0.06;
     }
 
     gl.render(scene, camera);

@@ -1,6 +1,7 @@
 using Hexara.Application.Common.Interfaces;
 using Hexara.Application.Rooms;
 using Hexara.Web.Infrastructure;
+using Hexara.Web.Realtime;
 using Hexara.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,12 +20,18 @@ public class LobbyController : Controller
     private readonly RoomService _rooms;
     private readonly ICurrentUser _user;
     private readonly UiTranslator _t;
+    private readonly RoomBroadcaster _live;
 
-    public LobbyController(RoomService rooms, ICurrentUser user, UiTranslator translator)
+    public LobbyController(
+        RoomService rooms,
+        ICurrentUser user,
+        UiTranslator translator,
+        RoomBroadcaster live)
     {
         _rooms = rooms;
         _user = user;
         _t = translator;
+        _live = live;
     }
 
     private Guid UserId => _user.UserId ?? throw new InvalidOperationException("کاربر وارد نشده است.");
@@ -68,6 +75,9 @@ public class LobbyController : Controller
             return await IndexWithError(result.Error, cancellationToken);
         }
 
+        // کسانی که همان اتاق را باز دارند باید همین‌جا صندلی تازه را ببینند.
+        await _live.SendAsync(result.Room!, cancellationToken);
+
         return RedirectToAction(nameof(Room), new { code = result.Room!.Code });
     }
 
@@ -93,7 +103,12 @@ public class LobbyController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Leave(Guid roomId, CancellationToken cancellationToken)
     {
-        await _rooms.LeaveAsync(roomId, UserId, cancellationToken);
+        var result = await _rooms.LeaveAsync(roomId, UserId, cancellationToken);
+        if (result.Room is { } room)
+        {
+            await _live.SendAsync(room, cancellationToken);
+        }
+
         return RedirectToAction(nameof(Index));
     }
 
@@ -123,6 +138,10 @@ public class LobbyController : Controller
         {
             TempData["RoomError"] = Describe(result.Error);
         }
+        else if (result.Room is { } updated)
+        {
+            await _live.SendAsync(updated, cancellationToken);
+        }
 
         return await BackToRoom(roomId, cancellationToken);
     }
@@ -136,6 +155,12 @@ public class LobbyController : Controller
         {
             TempData["RoomError"] = Describe(result.Error);
             return await BackToRoom(roomId, cancellationToken);
+        }
+
+        // بقیه با همین پیام خودشان به بازی می‌روند؛ کسی لازم نیست رفرش کند.
+        if (result.Room is { } started)
+        {
+            await _live.SendAsync(started, cancellationToken);
         }
 
         return RedirectToAction("Play", "Game", new { id = result.GameId });

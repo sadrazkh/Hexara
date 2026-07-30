@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Hexara.Domain.Board;
 
 /// <summary>
@@ -60,5 +62,10 @@ public readonly record struct Axial(int Q, int R)
 
     public static Axial operator -(Axial a, Axial b) => new(a.Q - b.Q, a.R - b.R);
 
-    public override string ToString() => $"({Q},{R})";
+    /// <summary>
+    /// شناسه است نه متنِ نمایشی، پس با فرهنگ ناوابسته — در فارسی علامت منفی
+    /// ‎U+2212‎ می‌شد و همین رشته‌ها به لاگ و پیام خطا و کلید می‌روند.
+    /// </summary>
+    public override string ToString() =>
+        string.Create(CultureInfo.InvariantCulture, $"({Q},{R})");
 }

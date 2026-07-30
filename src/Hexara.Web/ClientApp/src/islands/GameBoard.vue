@@ -31,6 +31,17 @@ let board: BoardScene | null = null;
 let observer: ResizeObserver | null = null;
 let frame = 0;
 
+/**
+ * کیفیتِ همین رندرر، تا برد بداند زینتِ زمین سایه بیندازد یا نه. یک‌بار سرِ
+ * ساخت تعیین می‌شود، چون رندرر هم سایه‌ها را همان‌جا روشن یا خاموش می‌کند.
+ */
+let sceneryShadows = true;
+
+/** گزینه‌های برد بعلاوه‌ی چیزی که فقط رندرر می‌داند. */
+function boardOptions(): BoardOptions {
+  return { ...props.options, shadows: sceneryShadows };
+}
+
 /** نورهای تم‌دار — با عوض‌شدن تم رنگشان به‌روز می‌شود. */
 let ambient: THREE.AmbientLight | null = null;
 let rim: THREE.DirectionalLight | null = null;
@@ -88,6 +99,7 @@ function build(container: HTMLDivElement): void {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
   renderer.shadowMap.enabled = settings.shadows;
+  sceneryShadows = settings.shadows;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   container.appendChild(renderer.domElement);
 
@@ -99,7 +111,7 @@ function build(container: HTMLDivElement): void {
 
   board = new BoardScene();
   scene.add(board.root);
-  board.update(props.board, props.highlights, props.options);
+  board.update(props.board, props.highlights, boardOptions());
 
   const reach = board.extent(props.board.tiles);
 
@@ -232,7 +244,7 @@ function onPointerUp(event: PointerEvent): void {
 watch(
   () => [props.board, props.highlights, props.options],
   () => {
-    board?.update(props.board, props.highlights, props.options);
+    board?.update(props.board, props.highlights, boardOptions());
     animateSpawned();
   },
   { deep: true },

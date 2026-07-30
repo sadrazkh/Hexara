@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Hexara.Domain.Board;
 
 /// <summary>
@@ -46,5 +48,7 @@ public readonly record struct EdgeId
         yield return VertexId.Of(Hex, Side - 1);
     }
 
-    public override string ToString() => $"E{Hex.Q},{Hex.R},{Side}";
+    /// <summary>شناسه است نه متنِ نمایشی — با فرهنگ ناوابسته. <see cref="Axial.ToString"/>.</summary>
+    public override string ToString() =>
+        string.Create(CultureInfo.InvariantCulture, $"E{Hex.Q},{Hex.R},{Side}");
 }

@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Hexara.Domain.Board;
 
 /// <summary>دلیل رد شدن یک کد برد.</summary>
@@ -63,6 +65,20 @@ public static class BoardCode
     private static readonly Dictionary<char, Resource> LettersToResource =
         ResourceLetters.ToDictionary(p => p.Value, p => p.Key);
 
+    /// <summary>
+    /// عددها در کد برد داده‌اند نه متنِ نمایشی، پس همیشه با فرهنگ ناوابسته نوشته و
+    /// خوانده می‌شوند.
+    ///
+    /// چرا صریح: علامت منفی در فرهنگ فارسی ‎U+200E U+2212‎ است نه ‎U+002D‎. مختصات
+    /// بندرها روی ساحل‌اند و منفی می‌شوند، پس با فرهنگ جاری یک کدِ ساخته‌شده در
+    /// رابط فارسی در رابط انگلیسی خوانده نمی‌شد — و برعکس. کدِ برد قرار است
+    /// دست‌به‌دست بچرخد، پس باید مستقل از زبانِ سازنده‌اش معنا بدهد.
+    /// </summary>
+    private static string Num(int value) => value.ToString(CultureInfo.InvariantCulture);
+
+    private static bool TryNum(string raw, out int value) =>
+        int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
+
     public static string Encode(BoardLayout board)
     {
         ArgumentNullException.ThrowIfNull(board);
@@ -87,15 +103,15 @@ public static class BoardCode
         var ports = board.Ports.Select(p =>
             string.Join(
                 FieldSeparator,
-                p.Edge.Hex.Q,
-                p.Edge.Hex.R,
-                p.Edge.Side,
+                Num(p.Edge.Hex.Q),
+                Num(p.Edge.Hex.R),
+                Num(p.Edge.Side),
                 p.Resource is { } resource ? ResourceLetters[resource] : GenericPort));
 
         return string.Join(
             Section,
             Version,
-            board.Radius,
+            Num(board.Radius),
             new string(terrains),
             new string([.. numbers]),
             string.Join(PortSeparator, ports));
@@ -124,7 +140,7 @@ public static class BoardCode
             return false;
         }
 
-        if (!int.TryParse(parts[1], out var radius) || radius is < 1 or > 4)
+        if (!TryNum(parts[1], out var radius) || radius is < 1 or > 4)
         {
             error = BoardCodeError.BadRadius;
             return false;
@@ -215,9 +231,9 @@ public static class BoardCode
         {
             var fields = group.Split(FieldSeparator);
             if (fields.Length != 4
-                || !int.TryParse(fields[0], out var q)
-                || !int.TryParse(fields[1], out var r)
-                || !int.TryParse(fields[2], out var side)
+                || !TryNum(fields[0], out var q)
+                || !TryNum(fields[1], out var r)
+                || !TryNum(fields[2], out var side)
                 || side is < 0 or > 5
                 || fields[3].Length != 1)
             {

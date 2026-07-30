@@ -77,6 +77,13 @@
   --d-res-desert: #d9c18f;
   --d-res-sea: #4a90c4;
 
+  /* جنسِ زینتِ زمین: پوستِ درخت، برفِ قله، سنگ و پشم. این‌ها تم‌دارند چون
+     بخشی از حال‌وهوای صحنه‌اند، مثل خودِ زمین — نه مثل مهره‌ها. */
+  --d-scenery-bark: #6b4a2c;
+  --d-scenery-snow: #eef3f8;
+  --d-scenery-stone: #8b8375;
+  --d-scenery-fleece: #f5efe3;
+
   /* نور صحنه‌ی برد. «شب روی تخته» یعنی پُرکننده‌ی گرمِ کم‌جان و لبه‌ی طلایی. */
   --d-light-ambient: #8a6a3f;
   --d-light-rim: #e0a63a;
@@ -133,6 +140,13 @@
   --l-res-desert: #8a7546;
   --l-res-sea: #1f5c85;
 
+  /* در «پارشمنت» زمین‌ها تیره‌تر و سیرترند، پس زینت هم همان‌طور — وگرنه برف و
+     پشمِ روشن روی زمینِ تیره مثل لکه‌ی نور می‌افتادند. */
+  --l-scenery-bark: #4a3119;
+  --l-scenery-snow: #cfd8e2;
+  --l-scenery-stone: #5f5a4f;
+  --l-scenery-fleece: #ddd3c0;
+
   /* «پارشمنت» یعنی روز: پُرکننده‌ی خنکِ آسمان و لبه‌ی کاغذیِ روشن. */
   --l-light-ambient: #c8d4e4;
   --l-light-rim: #fff4dd;
@@ -181,6 +195,10 @@
   --hx-res-ore: var(--d-res-ore);
   --hx-res-desert: var(--d-res-desert);
   --hx-res-sea: var(--d-res-sea);
+  --hx-scenery-bark: var(--d-scenery-bark);
+  --hx-scenery-snow: var(--d-scenery-snow);
+  --hx-scenery-stone: var(--d-scenery-stone);
+  --hx-scenery-fleece: var(--d-scenery-fleece);
   --hx-light-ambient: var(--d-light-ambient);
   --hx-light-rim: var(--d-light-rim);
 
@@ -294,6 +312,10 @@
     --hx-res-ore: var(--l-res-ore);
     --hx-res-desert: var(--l-res-desert);
     --hx-res-sea: var(--l-res-sea);
+    --hx-scenery-bark: var(--l-scenery-bark);
+    --hx-scenery-snow: var(--l-scenery-snow);
+    --hx-scenery-stone: var(--l-scenery-stone);
+    --hx-scenery-fleece: var(--l-scenery-fleece);
     --hx-light-ambient: var(--l-light-ambient);
     --hx-light-rim: var(--l-light-rim);
   }
@@ -342,6 +364,10 @@
   --hx-res-ore: var(--l-res-ore);
   --hx-res-desert: var(--l-res-desert);
   --hx-res-sea: var(--l-res-sea);
+  --hx-scenery-bark: var(--l-scenery-bark);
+  --hx-scenery-snow: var(--l-scenery-snow);
+  --hx-scenery-stone: var(--l-scenery-stone);
+  --hx-scenery-fleece: var(--l-scenery-fleece);
   --hx-light-ambient: var(--l-light-ambient);
   --hx-light-rim: var(--l-light-rim);
 }

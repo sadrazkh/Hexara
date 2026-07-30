@@ -13,6 +13,7 @@ type IslandLoader = () => Promise<{ default: Component }>;
 const islands: Record<string, IslandLoader> = {
   'island-hero-board': () => import('./islands/HeroBoard.vue'),
   'island-game-live': () => import('./islands/GameLive.vue'),
+  'island-room-live': () => import('./islands/RoomLive.vue'),
   'island-board-editor': () => import('./islands/BoardEditor.vue'),
 };
 

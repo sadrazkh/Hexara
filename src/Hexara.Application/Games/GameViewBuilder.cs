@@ -53,7 +53,7 @@ public sealed class GameViewBuilder
             Bank = new Dictionary<Resource, int>(state.Bank),
             DevelopmentDeckCount = state.DevelopmentDeckCount,
             Players = [.. state.Players.Select(p =>
-                ToView(p, game.PlayerIds[p.Index], profiles, onlineUserIds, state.Options.Teams))],
+                ToView(p, game.PlayerIds[p.Index], profiles, onlineUserIds, state.Options.Teams, state.Winner is not null))],
             Seat = viewerSeat,
             Hand = viewerSeat is { } seat ? ToHand(state, seat) : null,
             PendingDiscards = new Dictionary<int, int>(state.PendingDiscards),
@@ -73,7 +73,8 @@ public sealed class GameViewBuilder
         Guid userId,
         IReadOnlyDictionary<Guid, PlayerProfile> profiles,
         IReadOnlySet<Guid>? online,
-        TeamAssignment? teams)
+        TeamAssignment? teams,
+        bool revealHiddenPoints)
     {
         var profile = profiles.GetValueOrDefault(userId);
 
@@ -83,7 +84,12 @@ public sealed class GameViewBuilder
             UserId = userId,
             DisplayName = profile?.DisplayName ?? string.Empty,
             AvatarColor = profile?.AvatarColor ?? AvatarPalette.Default,
-            PublicVictoryPoints = player.PublicVictoryPoints,
+
+            // بعد از تمام شدن بازی رازی نمانده، و اگر کارت‌های پیروزیِ پنهان
+            // شمرده نشوند امتیازِ برنده کمتر از حدِ برد نشان داده می‌شود.
+            PublicVictoryPoints = revealHiddenPoints
+                ? player.VictoryPoints
+                : player.PublicVictoryPoints,
             Team = teams?.TeamOf(player.Index),
             CardCount = player.TotalCards,
             DevelopmentCardCount = player.TotalDevelopmentCards,
@@ -158,9 +164,16 @@ public sealed class GameViewBuilder
             ? state.Board.Tiles.Where(t => t.Position != state.Robber).Select(t => t.Position).ToList()
             : [];
 
+        // نرخ‌ها فقط سرِ ساخت‌وساز معنا دارند، چون معامله همان‌جا ممکن است.
+        var rates = state.Phase == TurnPhase.Main
+            ? Enum.GetValues<Resource>()
+                .ToDictionary(r => r, r => GameEngine.MaritimeRate(state, seat, r))
+            : new Dictionary<Resource, int>();
+
         return new LegalMovesView
         {
             IsMyTurn = true,
+            TradeRates = rates,
             Settlements = [.. settlements.Select(v => new VertexSnapshot(v.Hex.Q, v.Hex.R, v.Corner))],
             Roads = [.. roads.Select(e => new RoadSnapshot(e.Hex.Q, e.Hex.R, e.Side, seat))],
             Cities = [.. cities.Select(v => new VertexSnapshot(v.Hex.Q, v.Hex.R, v.Corner))],

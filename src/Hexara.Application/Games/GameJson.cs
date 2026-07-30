@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
@@ -84,7 +85,18 @@ internal sealed class AxialConverter : JsonConverter<Axial>
     }
 
     public override void Write(Utf8JsonWriter writer, Axial value, JsonSerializerOptions options) =>
-        writer.WriteStringValue($"{value.Q},{value.R}");
+        writer.WriteStringValue(Join(value.Q, value.R));
+
+    /// <summary>
+    /// شناسه‌ی هندسی یک مقدار ماشینی است، پس همیشه با فرهنگ ناوابسته ساخته می‌شود.
+    ///
+    /// چرا صریح: علامت منفی در فرهنگ فارسی ‎ASCII‎ نیست — ‎U+200E U+2212‎ است، نه
+    /// ‎U+002D‎. با فرهنگ جاری، ‎q = -1‎ رشته‌ی ‎«‎−1»‎ می‌شد و همان رشته در دیتابیس و
+    /// در کلاینت می‌نشست، و خواندنش هم استثنا می‌داد. مختصات محوری منفی فراوان است،
+    /// پس این نشتی در زبان فارسی هر ساخت‌وساز روی نیمه‌ی منفی برد را می‌شکست.
+    /// </summary>
+    internal static string Join(params int[] parts) =>
+        string.Join(',', parts.Select(p => p.ToString(CultureInfo.InvariantCulture)));
 
     internal static int[] ReadParts(ref Utf8JsonReader reader, int expected)
     {
@@ -95,7 +107,7 @@ internal sealed class AxialConverter : JsonConverter<Axial>
             throw new JsonException($"مقدار هندسی «{raw}» باید {expected} جزء داشته باشد.");
         }
 
-        return [.. parts.Select(int.Parse)];
+        return [.. parts.Select(p => int.Parse(p, CultureInfo.InvariantCulture))];
     }
 }
 
@@ -108,7 +120,7 @@ internal sealed class VertexIdConverter : JsonConverter<VertexId>
     }
 
     public override void Write(Utf8JsonWriter writer, VertexId value, JsonSerializerOptions options) =>
-        writer.WriteStringValue($"{value.Hex.Q},{value.Hex.R},{value.Corner}");
+        writer.WriteStringValue(AxialConverter.Join(value.Hex.Q, value.Hex.R, value.Corner));
 }
 
 internal sealed class EdgeIdConverter : JsonConverter<EdgeId>
@@ -120,5 +132,5 @@ internal sealed class EdgeIdConverter : JsonConverter<EdgeId>
     }
 
     public override void Write(Utf8JsonWriter writer, EdgeId value, JsonSerializerOptions options) =>
-        writer.WriteStringValue($"{value.Hex.Q},{value.Hex.R},{value.Side}");
+        writer.WriteStringValue(AxialConverter.Join(value.Hex.Q, value.Hex.R, value.Side));
 }

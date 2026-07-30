@@ -155,12 +155,22 @@ public sealed record LegalMovesView
     /// <summary>خانه‌هایی که دزد می‌تواند برود.</summary>
     public required IReadOnlyList<HexSnapshot> RobberTargets { get; init; }
 
+    /// <summary>
+    /// نرخ معامله با بانک برای هر منبع: چند واحد از آن باید بدهی تا یکی بگیری.
+    ///
+    /// سرور حسابش می‌کند نه کلاینت. نرخ به بندرهایی بستگی دارد که بازیکن رویشان
+    /// آبادی دارد (۲ با بندر اختصاصی، ۳ با عمومی، وگرنه ۴)، و پیاده‌کردن دوباره‌ی
+    /// همان قاعده در کلاینت یعنی دو جا که می‌توانند از هم بلغزند.
+    /// </summary>
+    public required IReadOnlyDictionary<Resource, int> TradeRates { get; init; }
+
     public static LegalMovesView None { get; } = new()
     {
         IsMyTurn = false,
         Settlements = [],
         Roads = [],
         Cities = [],
-        RobberTargets = []
+        RobberTargets = [],
+        TradeRates = new Dictionary<Resource, int>()
     };
 }

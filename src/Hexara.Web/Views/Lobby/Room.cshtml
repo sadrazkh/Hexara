@@ -17,6 +17,18 @@
         <p class="hx-alert" role="alert">@error</p>
     }
 
+@*
+    از اینجا تا آخرِ بخش، جزیره‌ی زنده جای این نشانه‌گذاری را می‌گیرد.
+
+    محتوای درونش عمداً کاملِ سرورساخته مانده: با جاوااسکریپت خاموش همان صفحه‌ی
+    قبلی است (فرم‌ها POST می‌شوند و کنترلر همان کار را می‌کند)، و با جاوااسکریپت
+    روشن همین‌ها زنده می‌شوند.
+*@
+<div id="island-room-live"
+     data-code="@Model.Room.Code"
+     data-user-id="@Model.CurrentUserId"
+     data-board-edit-url="@Url.Action("Edit", "Board", new { code = Model.Room.Code })">
+
     <div class="hx-panel">
         <h2 class="hx-panel__title">@T["lobby.seats"]</h2>
 
@@ -170,4 +182,5 @@
             }
         }
     </div>
+</div>
 </section>

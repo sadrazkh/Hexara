@@ -43,7 +43,7 @@ export interface GameView {
   seat: number | null;
   hand: HandView | null;
   pendingDiscards: Record<string, number>;
-  pendingTrade: unknown | null;
+  pendingTrade: TradeOffer | null;
   legal: LegalMoves;
 }
 
@@ -115,6 +115,19 @@ export interface LegalMoves {
   roads: RoadAt[];
   cities: Vertex[];
   robberTargets: Hex[];
+  /** برای هر منبع: چند واحد بدهی تا یکی بگیری. سرور از روی بندرها حسابش می‌کند. */
+  tradeRates: Record<string, number>;
+}
+
+/** پیشنهاد معامله‌ی روی میز. */
+export interface TradeOffer {
+  proposer: number;
+  /** چیزی که پیشنهاددهنده می‌دهد. */
+  give: Record<string, number>;
+  /** چیزی که پیشنهاددهنده می‌خواهد. */
+  take: Record<string, number>;
+  /** پاسخ هر گیرنده: 'Pending' | 'Accepted' | 'Rejected'. */
+  responses: Record<string, string>;
 }
 
 export interface MoveOutcome {
@@ -223,13 +236,25 @@ export class GameConnection {
     this.handlers.onLink('live');
   }
 
-  /** بعد از وصل شدن دوباره: اول عقب‌ماندگی، بعد اعلام زنده بودن. */
+  /** بعد از وصل شدن دوباره: اول پیوستن، بعد عقب‌ماندگی، بعد اعلام زنده بودن. */
   private async resume(): Promise<void> {
+    // نسخه پیش از پیوستن برداشته می‌شود، چون Join خودش یک نمای تازه می‌دهد و
+    // lastVersion را جلو می‌برد — بعدش دیگر نمی‌دانیم از کجا عقب مانده بودیم.
+    const since = this.lastVersion;
+
     try {
+      // اتصالِ تازه شناسه‌ی تازه دارد. عضویت گروه و «حضور» هر دو به شناسه‌ی
+      // اتصال بسته‌اند و با قطع شدن پاک شده‌اند، پس باید دوباره بپیوندیم.
+      //
+      // بی این کار بازیکنی که سرِ جایش نشسته «غایب» حساب می‌شد و بات نوبتش را
+      // می‌زد. دیر لو می‌رفت چون وضعیت بازی به کاربر فرستاده می‌شود نه به گروه،
+      // پس صفحه سالم به نظر می‌رسید و فقط نوبت‌ها از دست می‌رفتند.
+      await this.connection.invoke<JoinResult>('Join', this.gameId);
+
       const caught = await this.connection.invoke<CatchUpResult | null>(
         'CatchUp',
         this.gameId,
-        this.lastVersion,
+        since,
       );
 
       if (caught) {

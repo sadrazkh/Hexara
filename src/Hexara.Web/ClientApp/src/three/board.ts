@@ -11,6 +11,7 @@ import {
   type EdgeId,
   type VertexId,
 } from './hex';
+import { buildScenery } from './scenery';
 
 export const TILE_SIZE = 1;
 
@@ -19,7 +20,7 @@ export const TILE_SIZE = 1;
  * رابط با هم می‌لغزند. زمین و دریا تم‌دارند و با تعویض تم عوض می‌شوند؛
  * قطعه‌ها (مهره، ژتون) نه، چون شیء فیزیکی‌اند. جدول `tokens.css` را ببین.
  */
-const TERRAIN_TOKEN: Record<string, string> = {
+export const TERRAIN_TOKEN: Record<string, string> = {
   Desert: '--hx-res-desert',
   Forest: '--hx-res-lumber',
   Hills: '--hx-res-brick',
@@ -52,7 +53,7 @@ const SEAT_TOKENS = [
  * ممکن است شیوه‌نامه هنوز اعمال نشده باشد و همه‌چیز سیاه دربیاید. رنگ
  * جایگزین هم برای همان حالت است — بردِ بدرنگ بهتر از بردِ نامرئی است.
  */
-function tokenColor(name: string, fallback: number): THREE.Color {
+export function tokenColor(name: string, fallback: number): THREE.Color {
   const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   if (!raw) return new THREE.Color(fallback);
 
@@ -92,6 +93,13 @@ export interface RoadAt extends Axial {
 export interface BoardOptions {
   editable?: boolean;
   selected?: Axial | null;
+  /**
+   * زینتِ زمین (درخت، قله، خرمن…) سایه بیندازد یا نه.
+   *
+   * از بیرون می‌آید چون تصمیمِ کیفیت مالِ رندرر است نه برد؛ روی دستگاه ضعیف
+   * سایه‌ها کلاً خاموش‌اند و اجزاء زینت پرشمارترین سایه‌اندازهای صحنه‌اند.
+   */
+  shadows?: boolean;
 }
 
 export type Pick =
@@ -134,6 +142,9 @@ export class BoardScene {
   /** دریا — یک‌بار ساخته می‌شود و هرگز دوباره چیده نمی‌شود. */
   private readonly backdrop = new THREE.Group();
   private readonly terrain = new THREE.Group();
+
+  /** زینتِ زمین. جدا از ‎terrain‎ است تا بشود مستقل از آن دوباره ساختش. */
+  private readonly scenery = new THREE.Group();
   private readonly pieces = new THREE.Group();
   private readonly markers = new THREE.Group();
 
@@ -183,8 +194,17 @@ export class BoardScene {
   private robberAt = '';
   private built = false;
 
+  /**
+   * زینت رنگش را در هر نمونه پخته دارد (‎instanceColor‎)، پس با عوض شدن تم
+   * نمی‌شود مثل متریال‌ها جای خودش به‌روزش کرد و باید از نو ساخته شود. برای
+   * همین آخرین ورودی‌هایش نگه داشته می‌شوند.
+   */
+  private sceneryDisposables: { dispose(): void }[] = [];
+  private sceneryTiles: Tile[] = [];
+  private sceneryShadows = true;
+
   constructor() {
-    this.root.add(this.backdrop, this.terrain, this.pieces, this.markers);
+    this.root.add(this.backdrop, this.terrain, this.scenery, this.pieces, this.markers);
     this.disposables.push(...Object.values(this.geo), this.highlightMaterial, this.robberMaterial);
   }
 
@@ -216,6 +236,7 @@ export class BoardScene {
     // تغییرِ زمین یا عدد دوباره چیده می‌شود.
     if (options.editable || this.terrain.children.length === 0) {
       this.buildTerrain(data, options.editable === true);
+      this.rebuildScenery(data.tiles, options.shadows !== false);
     }
 
     this.rebuildPieces(data);
@@ -244,13 +265,48 @@ export class BoardScene {
 
     this.seaMaterial?.color.copy(tokenColor('--hx-res-sea', 0x4a90c4));
     this.highlightMaterial.color.copy(tokenColor('--hx-accent-2', 0xf2cf7a));
+
+    // زینت رنگ را در نمونه‌ها دارد نه در متریال، پس از نو ساخته می‌شود. فقط
+    // موقع تعویض تم پیش می‌آید، نه در جریان بازی.
+    this.rebuildScenery(this.sceneryTiles, this.sceneryShadows);
   }
 
   dispose(): void {
     for (const item of this.disposables) item.dispose();
+    for (const item of this.sceneryDisposables) item.dispose();
+
     this.disposables.length = 0;
+    this.sceneryDisposables = [];
     this.hotspots.length = 0;
     this.seaMaterial = null;
+  }
+
+  /**
+   * زینت را از نو می‌سازد و قبلی را آزاد می‌کند.
+   *
+   * رنگِ هر زمین از همان متریالی خوانده می‌شود که خودِ خانه با آن رسم شده، تا
+   * درخت و زمینِ زیرش هرگز دو رنگِ ناهم‌خوان نشوند.
+   */
+  private rebuildScenery(tiles: Tile[], shadows: boolean): void {
+    this.sceneryTiles = tiles;
+    this.sceneryShadows = shadows;
+
+    this.clear(this.scenery);
+    for (const item of this.sceneryDisposables) item.dispose();
+    this.sceneryDisposables = [];
+
+    if (tiles.length === 0) return;
+
+    const built = buildScenery(
+      tiles,
+      TILE_SIZE,
+      (terrain) => this.terrainMaterial(terrain).color,
+      tokenColor,
+      shadows,
+    );
+
+    this.scenery.add(built.group);
+    this.sceneryDisposables = built.disposables;
   }
 
   // ── زمین ثابت ────────────────────────────────────────────────────────

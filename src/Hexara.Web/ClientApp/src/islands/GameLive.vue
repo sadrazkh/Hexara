@@ -23,6 +23,14 @@ const problem = ref<string | null>(null);
 const robberHex = ref<Hex | null>(null);
 const discard = ref<Record<string, number>>({});
 
+/** معامله با بانک: چه می‌دهی و چه می‌خواهی. */
+const bankGive = ref<string | null>(null);
+const bankTake = ref<string | null>(null);
+
+/** پیشنهاد به بازیکن‌ها: دو بسته‌ی منابع. */
+const offerGive = ref<Record<string, number>>({});
+const offerTake = ref<Record<string, number>>({});
+
 /** تاس‌ها قبل از نشستن روی عدد واقعی چند بار می‌چرخند. */
 const tumbling = ref<[number, number] | null>(null);
 
@@ -43,6 +51,39 @@ const phaseLabel = computed(() =>
 );
 
 const mustDiscard = computed(() => view.value?.hand?.mustDiscard ?? 0);
+
+/**
+ * برنده‌ی بازی — در بازی تیمی همه‌ی هم‌تیمی‌ها برنده‌اند، چون امتیاز در تیم مشترک
+ * است. سرور یک صندلی می‌فرستد و بقیه‌ی تیم از روی ‎team‎ درمی‌آید.
+ */
+const champion = computed(() => {
+  const current = view.value;
+  if (!current || current.winner === null) return null;
+
+  return current.players[current.winner] ?? null;
+});
+
+const winners = computed(() => {
+  const current = view.value;
+  const first = champion.value;
+  if (!current || !first) return [];
+
+  return first.team === null ? [first] : current.players.filter((p) => p.team === first.team);
+});
+
+const isOver = computed(() => champion.value !== null);
+
+const iWon = computed(() => {
+  const seatNow = view.value?.seat;
+  return seatNow !== null && seatNow !== undefined && winners.value.some((p) => p.index === seatNow);
+});
+
+/** جدول پایانی: از پُرامتیاز به کم‌امتیاز، چون اول از همه دنبال جای خودت می‌گردی. */
+const standings = computed(() =>
+  [...(view.value?.players ?? [])].sort(
+    (a, b) => b.publicVictoryPoints - a.publicVictoryPoints || a.index - b.index,
+  ),
+);
 
 /** بازیکنی که همه منتظرش هستند. در مرحله‌ی دور ریختن، بدهکارها منتظرند نه نوبت‌دار. */
 const waitingOn = computed(() => {
@@ -74,12 +115,111 @@ const countdown = computed(() => {
   return Math.max(0, Math.ceil(limit - elapsed));
 });
 
-/** آیا کسی که منتظرش هستیم غایب است و بات دارد جایش را می‌گیرد؟ */
-const covered = computed(() => waitingOn.value !== null && !waitingOn.value.isOnline);
+/**
+ * آیا کسی که منتظرش هستیم غایب است و بات دارد جایش را می‌گیرد؟
+ *
+ * بعد از تمام شدن بازی دیگر منتظر کسی نیستیم؛ بی این شرط، صفحه‌ی پایانِ بازی
+ * هم‌زمان «بات جایش بازی می‌کند» و «منتظر بازیکنان دیگر» را نشان می‌داد.
+ */
+const covered = computed(
+  () =>
+    !isOver.value &&
+    // مهلتِ صفر یعنی پوشش خودکار خاموش است، پس هیچ باتی جای کسی را نمی‌گیرد.
+    // بی این شرط، بازی‌ای که بات ندارد هم می‌گفت «بات جایش بازی می‌کند» و
+    // بازیکن بی‌جهت منتظر می‌مانْد.
+    (view.value?.deadlineSeconds ?? 0) > 0 &&
+    waitingOn.value !== null &&
+    !waitingOn.value.isOnline,
+);
 
 const discardTotal = computed(() =>
   Object.values(discard.value).reduce((sum, n) => sum + n, 0),
 );
+
+// ── معامله ──────────────────────────────────────────────────────────────
+
+const hand = computed(() => view.value?.hand?.resources ?? {});
+
+/** نرخ بانک برای این منبع؛ ۴ پیش‌فرضِ بی‌بندر است. */
+function rateOf(resource: string): number {
+  return view.value?.legal.tradeRates?.[resource] ?? 4;
+}
+
+/** معامله با بانک فقط وقتی ممکن است که به‌اندازه‌ی نرخ از آن منبع داشته باشی. */
+const canBankTrade = computed(() => {
+  const give = bankGive.value;
+  const take = bankTake.value;
+
+  return (
+    give !== null && take !== null && give !== take && (hand.value[give] ?? 0) >= rateOf(give)
+  );
+});
+
+const offer = computed(() => view.value?.pendingTrade ?? null);
+
+const iProposed = computed(() => offer.value !== null && offer.value.proposer === view.value?.seat);
+
+/** آیا از من نظر خواسته شده و هنوز جواب نداده‌ام؟ */
+const myResponse = computed(() => {
+  const current = offer.value;
+  const mySeat = view.value?.seat;
+  if (!current || mySeat === null || mySeat === undefined) return null;
+
+  return current.responses[String(mySeat)] ?? null;
+});
+
+/** کسانی که پیشنهاد را پذیرفته‌اند — پیشنهاددهنده با یکی‌شان قطعی می‌کند. */
+const acceptedBy = computed(() => {
+  const current = offer.value;
+  if (!current) return [];
+
+  return Object.entries(current.responses)
+    .filter(([, response]) => response === 'Accepted')
+    .map(([seatIndex]) => view.value?.players[Number(seatIndex)])
+    .filter((player): player is NonNullable<typeof player> => player !== undefined);
+});
+
+function nameOf(seatIndex: number): string {
+  return view.value?.players[seatIndex]?.displayName ?? '';
+}
+
+/** بسته‌ی منابع به شکل خواندنی: «۲ چوب، ۱ گندم». */
+function describeBundle(bundle: Record<string, number>): string {
+  return Object.entries(bundle)
+    .filter(([, amount]) => amount > 0)
+    .map(([resource, amount]) => `${amount} ${t(`game.resource.${resource}`)}`)
+    .join('، ');
+}
+
+const offerGiveTotal = computed(() =>
+  Object.values(offerGive.value).reduce((sum, n) => sum + n, 0),
+);
+const offerTakeTotal = computed(() =>
+  Object.values(offerTake.value).reduce((sum, n) => sum + n, 0),
+);
+
+/** هر دو طرف باید چیزی داشته باشد و آنچه می‌دهی باید در دستت باشد. */
+const canPropose = computed(() => {
+  if (offerGiveTotal.value === 0 || offerTakeTotal.value === 0) return false;
+
+  return Object.entries(offerGive.value).every(
+    ([resource, amount]) => amount <= (hand.value[resource] ?? 0),
+  );
+});
+
+/** شمارنده‌ی سمتِ «می‌دهم» به دستِ خودم محدود است؛ سمتِ «می‌خواهم» نه. */
+function adjustOffer(side: 'give' | 'take', resource: string, delta: number): void {
+  const target = side === 'give' ? offerGive : offerTake;
+  const ceiling = side === 'give' ? (hand.value[resource] ?? 0) : 19;
+  const next = (target.value[resource] ?? 0) + delta;
+
+  target.value = { ...target.value, [resource]: Math.max(0, Math.min(ceiling, next)) };
+}
+
+function clearOffer(): void {
+  offerGive.value = {};
+  offerTake.value = {};
+}
 
 const board = computed<BoardData>(() => ({
   tiles: view.value?.tiles ?? [],
@@ -214,10 +354,44 @@ function onPick(pick: Pick): void {
   void play({ $kind: action, playerIndex: seat(), edge: id });
 }
 
+/** بسته را از صفرها پاک می‌کند؛ موتور بسته‌ی خالی را رد می‌کند. */
+function packed(bundle: Record<string, number>): Record<string, number> {
+  return Object.fromEntries(Object.entries(bundle).filter(([, amount]) => amount > 0));
+}
+
 const actions = {
   roll: () => play({ $kind: 'RollDice', playerIndex: seat() }),
   endTurn: () => play({ $kind: 'EndTurn', playerIndex: seat() }),
   buyCard: () => play({ $kind: 'BuyDevelopmentCard', playerIndex: seat() }),
+
+  bankTrade: () =>
+    play({
+      $kind: 'MaritimeTrade',
+      playerIndex: seat(),
+      give: bankGive.value,
+      take: bankTake.value,
+    }).then(() => {
+      bankGive.value = null;
+      bankTake.value = null;
+    }),
+
+  // گیرندگان خالی یعنی «به همه»؛ موتور خودش بقیه را پر می‌کند.
+  propose: () =>
+    play({
+      $kind: 'ProposeTrade',
+      playerIndex: seat(),
+      give: packed(offerGive.value),
+      take: packed(offerTake.value),
+      recipients: [],
+    }).then(clearOffer),
+
+  respondToTrade: (accept: boolean) =>
+    play({ $kind: 'RespondToTrade', playerIndex: seat(), accept }),
+
+  confirmTrade: (partner: number) =>
+    play({ $kind: 'ConfirmTrade', playerIndex: seat(), partner }),
+
+  cancelTrade: () => play({ $kind: 'CancelTrade', playerIndex: seat() }),
 
   rob: (victim: number | null) =>
     play({
@@ -280,8 +454,8 @@ onBeforeUnmount(() => {
         🎲 {{ tumbling[0] }} + {{ tumbling[1] }}
       </span>
       <span v-else-if="view?.die1" class="hx-live__dice">🎲 {{ view.die1 }} + {{ view.die2 }}</span>
-      <span v-if="view?.winner !== null && view?.winner !== undefined" class="hx-chip hx-chip--live">
-        {{ t('game.event.GameWon') }}
+      <span v-if="champion" class="hx-chip hx-chip--live">
+        {{ iWon ? t('game.youWon') : t('game.wonBy', champion.displayName) }}
       </span>
 
       <span v-if="covered" class="hx-chip hx-chip--muted">{{ t('game.botCovering') }}</span>
@@ -292,6 +466,39 @@ onBeforeUnmount(() => {
     </header>
 
     <p v-if="problem" class="hx-alert" role="alert">{{ problem }}</p>
+
+    <section
+      v-if="champion"
+      class="hx-panel hx-result"
+      :class="{ 'hx-result--mine': iWon }"
+      role="status"
+    >
+      <p class="hx-result__title">
+        {{ iWon ? t('game.youWon') : t('game.wonBy', champion.displayName) }}
+      </p>
+
+      <p v-if="champion.team !== null" class="hx-result__team">
+        {{ t('game.teamWon', champion.team + 1) }}
+      </p>
+
+      <ol class="hx-result__standings">
+        <li
+          v-for="player in standings"
+          :key="player.index"
+          :class="{ 'is-winner': winners.some((w) => w.index === player.index) }"
+        >
+          <span class="hx-avatar hx-avatar--sm" :style="{ '--hx-avatar-color': player.avatarColor }">
+            {{ player.displayName.slice(0, 1).toUpperCase() || '?' }}
+          </span>
+          <span class="hx-result__name">{{ player.displayName }}</span>
+          <strong class="hx-result__points">
+            {{ player.publicVictoryPoints }} {{ t('lobby.pointsShort') }}
+          </strong>
+        </li>
+      </ol>
+
+      <a class="hx-btn hx-btn--primary" href="/Lobby">{{ t('game.backToLobby') }}</a>
+    </section>
 
     <GameBoard v-if="view" :board="board" :highlights="highlights" @pick="onPick">
       <template #fallback>{{ t('game.noWebgl') }}</template>
@@ -371,8 +578,148 @@ onBeforeUnmount(() => {
       </template>
     </section>
 
-    <section v-else-if="view" class="hx-panel">
+    <section v-else-if="view && !isOver" class="hx-panel">
       <p class="hx-muted">{{ t('game.waitingForOthers') }}</p>
+    </section>
+
+    <!--
+      معامله جدا از کنترل‌های نوبت است و این عمدی است: پاسخ دادن به یک پیشنهاد
+      روی نوبتِ پیشنهاددهنده اتفاق می‌افتد، پس این بخش باید وقتی نوبتِ من نیست
+      هم دیده شود.
+    -->
+    <section v-if="view && !isOver && (offer || (isMyTurn && phase === 'Main'))" class="hx-panel hx-trade">
+      <h3 class="hx-panel__title">{{ t('game.trade') }}</h3>
+
+      <!-- ── پیشنهادِ روی میز ─────────────────────────────────────────── -->
+      <template v-if="offer">
+        <p class="hx-trade__offer">
+          <strong>{{ iProposed ? t('game.tradeYouOffer') : t('game.tradeOfferedBy', nameOf(offer.proposer)) }}</strong>
+          {{ describeBundle(offer.give) }}
+          <span class="hx-trade__arrow" aria-hidden="true">⇄</span>
+          {{ describeBundle(offer.take) }}
+        </p>
+
+        <template v-if="iProposed">
+          <ul class="hx-trade__answers">
+            <li v-for="(response, seatIndex) in offer.responses" :key="seatIndex">
+              <span>{{ nameOf(Number(seatIndex)) }}</span>
+              <strong :data-answer="response">{{ t(`game.tradeAnswer.${response}`) }}</strong>
+            </li>
+          </ul>
+
+          <div class="hx-live__choices">
+            <button
+              v-for="partner in acceptedBy"
+              :key="partner.index"
+              type="button"
+              class="hx-btn hx-btn--sm hx-btn--primary"
+              @click="actions.confirmTrade(partner.index)"
+            >
+              {{ t('game.tradeConfirmWith', partner.displayName) }}
+            </button>
+
+            <button type="button" class="hx-btn hx-btn--sm hx-btn--ghost" @click="actions.cancelTrade()">
+              {{ t('game.tradeWithdraw') }}
+            </button>
+          </div>
+        </template>
+
+        <div v-else-if="myResponse === 'Pending'" class="hx-live__choices">
+          <button type="button" class="hx-btn hx-btn--sm hx-btn--primary" @click="actions.respondToTrade(true)">
+            {{ t('game.tradeAccept') }}
+          </button>
+          <button type="button" class="hx-btn hx-btn--sm hx-btn--ghost" @click="actions.respondToTrade(false)">
+            {{ t('game.tradeDecline') }}
+          </button>
+        </div>
+
+        <p v-else-if="myResponse" class="hx-muted hx-small">
+          {{ t(`game.tradeAnswer.${myResponse}`) }}
+        </p>
+      </template>
+
+      <!-- ── ساختنِ معامله؛ فقط سرِ نوبتِ خودم ────────────────────────── -->
+      <template v-else-if="isMyTurn && phase === 'Main'">
+        <div class="hx-trade__bank">
+          <p class="hx-muted hx-small">{{ t('game.tradeBankHint') }}</p>
+
+          <div class="hx-trade__row">
+            <span class="hx-trade__label">{{ t('game.tradeGive') }}</span>
+            <button
+              v-for="resource in RESOURCES"
+              :key="`give-${resource}`"
+              type="button"
+              class="hx-btn hx-btn--sm"
+              :class="{ 'hx-btn--primary': bankGive === resource }"
+              :disabled="(hand[resource] ?? 0) < rateOf(resource)"
+              @click="bankGive = resource"
+            >
+              {{ rateOf(resource) }}× {{ t(`game.resource.${resource}`) }}
+            </button>
+          </div>
+
+          <div class="hx-trade__row">
+            <span class="hx-trade__label">{{ t('game.tradeTake') }}</span>
+            <button
+              v-for="resource in RESOURCES"
+              :key="`take-${resource}`"
+              type="button"
+              class="hx-btn hx-btn--sm"
+              :class="{ 'hx-btn--primary': bankTake === resource }"
+              :disabled="bankGive === resource"
+              @click="bankTake = resource"
+            >
+              {{ t(`game.resource.${resource}`) }}
+            </button>
+          </div>
+
+          <button
+            type="button"
+            class="hx-btn hx-btn--sm hx-btn--primary"
+            :disabled="!canBankTrade"
+            @click="actions.bankTrade()"
+          >
+            {{ t('game.tradeWithBank') }}
+          </button>
+        </div>
+
+        <div class="hx-trade__players">
+          <p class="hx-muted hx-small">{{ t('game.tradePlayersHint') }}</p>
+
+          <div v-for="side in (['give', 'take'] as const)" :key="side" class="hx-trade__row">
+            <span class="hx-trade__label">
+              {{ side === 'give' ? t('game.tradeGive') : t('game.tradeTake') }}
+            </span>
+
+            <span v-for="resource in RESOURCES" :key="`${side}-${resource}`" class="hx-live__counter">
+              <button type="button" class="hx-btn hx-btn--sm" @click="adjustOffer(side, resource, -1)">
+                −
+              </button>
+              <span>
+                {{ t(`game.resource.${resource}`) }}
+                {{ (side === 'give' ? offerGive : offerTake)[resource] ?? 0 }}
+              </span>
+              <button type="button" class="hx-btn hx-btn--sm" @click="adjustOffer(side, resource, 1)">
+                +
+              </button>
+            </span>
+          </div>
+
+          <div class="hx-live__choices">
+            <button
+              type="button"
+              class="hx-btn hx-btn--sm hx-btn--primary"
+              :disabled="!canPropose"
+              @click="actions.propose()"
+            >
+              {{ t('game.tradePropose') }}
+            </button>
+            <button type="button" class="hx-btn hx-btn--sm hx-btn--ghost" @click="clearOffer()">
+              {{ t('common.cancel') }}
+            </button>
+          </div>
+        </div>
+      </template>
     </section>
 
     <div v-if="view" class="hx-live__grid">
