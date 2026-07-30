@@ -38,6 +38,8 @@ export interface GameView {
   buildings: BuildingAt[];
   roads: RoadAt[];
   bank: Record<string, number>;
+  /** هزینه‌ی هر ساخت‌وساز، از سرور — کلاینت جدول هزینه ندارد. */
+  costs: Record<string, Record<string, number>>;
   developmentDeckCount: number;
   players: PlayerView[];
   seat: number | null;

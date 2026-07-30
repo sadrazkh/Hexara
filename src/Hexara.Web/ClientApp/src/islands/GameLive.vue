@@ -2,6 +2,8 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { t } from '@/i18n';
 import GameBoard from './GameBoard.vue';
+import Fold from './Fold.vue';
+import BuildPanel from './BuildPanel.vue';
 import type { BoardData, Highlights, Pick } from '@/three/board';
 import { vertexHexes, vertexKey } from '@/three/hex';
 import {
@@ -36,6 +38,80 @@ const tumbling = ref<[number, number] | null>(null);
 
 /** ساعت دیواری که هر ثانیه تیک می‌زند — فقط برای شمارش معکوس مهلت نوبت. */
 const now = ref(Date.now());
+
+/**
+ * روی صفحه‌ی پهن، ستون کنارِ برد جا دارد و همه‌ی پنل‌ها باز می‌مانند؛ روی باریک
+ * آکاردئون می‌شوند تا برد بالای صفحه بچسبد و هر دو دیده شوند.
+ *
+ * نقطه‌ی شکست با همان ‎@media‎ در ‎app.css‎ یکی است. عمداً از JavaScript خوانده
+ * می‌شود چون ‎<details>‎ را نمی‌شود با CSS باز نگه داشت.
+ */
+const WIDE = '(min-width: 1024px)';
+const wide = ref(false);
+
+/** کدام تاشوها روی موبایل بازند. دستِ خودت و نوبتت از اول باز. */
+const folds = ref<Record<string, boolean>>({
+  turn: true,
+  build: false,
+  trade: true,
+  hand: true,
+  players: false,
+  log: false,
+});
+
+/**
+ * روی موبایل، ریل یک برگه‌ی پایین‌کش است و این می‌گوید بازست یا نه.
+ *
+ * خودِ ریل *یک بار* رندر می‌شود و با CSS جابه‌جا می‌شود؛ دو نسخه‌ی جدا برای
+ * دسکتاپ و موبایل یعنی هر پنلِ تازه باید دو جا اضافه شود و یک روز یکی‌شان
+ * فراموش می‌شود.
+ */
+const sheetOpen = ref(false);
+
+/**
+ * کدام دکمه‌ی نوارِ پایین روشن است.
+ *
+ * جدا از ‎folds‎ نگه داشته می‌شود و این عمدی است: چند پنل از اول بازند، پس اگر
+ * روشنیِ دکمه را از ‎folds‎ می‌خواندیم چهار دکمه هم‌زمان روشن می‌شدند و دیگر
+ * معلوم نبود کجا هستی.
+ */
+const activeTab = ref<string | null>(null);
+
+/** دکمه‌های نوار پایینِ موبایل. ترتیب از روی این‌که چقدر بهشان سر می‌زنی. */
+const TABS = [
+  { key: 'turn', label: 'game.yourTurn' },
+  { key: 'build', label: 'game.build' },
+  { key: 'trade', label: 'game.trade' },
+  { key: 'hand', label: 'game.yourHand' },
+  { key: 'players', label: 'game.players' },
+] as const;
+
+function closeSheet(): void {
+  sheetOpen.value = false;
+  activeTab.value = null;
+}
+
+/** یک برگه را باز می‌کند و همان پنل را هم باز می‌کند و می‌آوردش جلوی چشم. */
+function openPanel(key: string): void {
+  if (sheetOpen.value && activeTab.value === key) {
+    closeSheet();
+    return;
+  }
+
+  folds.value = { ...folds.value, [key]: true };
+  activeTab.value = key;
+  sheetOpen.value = true;
+
+  requestAnimationFrame(() => {
+    document.getElementById(`hx-panel-${key}`)?.scrollIntoView({ block: 'start' });
+  });
+}
+
+let wideQuery: MediaQueryList | null = null;
+
+function onWideChange(event: MediaQueryListEvent | MediaQueryList): void {
+  wide.value = event.matches;
+}
 
 let connection: GameConnection | null = null;
 let tumble = 0;
@@ -436,11 +512,16 @@ onMounted(() => {
 
   void connection.start();
   ticker = window.setInterval(() => (now.value = Date.now()), 1000);
+
+  wideQuery = window.matchMedia(WIDE);
+  onWideChange(wideQuery);
+  wideQuery.addEventListener('change', onWideChange);
 });
 
 onBeforeUnmount(() => {
   clearInterval(tumble);
   clearInterval(ticker);
+  wideQuery?.removeEventListener('change', onWideChange);
   void connection?.stop();
 });
 </script>
@@ -500,12 +581,51 @@ onBeforeUnmount(() => {
       <a class="hx-btn hx-btn--primary" href="/Lobby">{{ t('game.backToLobby') }}</a>
     </section>
 
-    <GameBoard v-if="view" :board="board" :highlights="highlights" @pick="onPick">
-      <template #fallback>{{ t('game.noWebgl') }}</template>
-    </GameBoard>
+    <div class="hx-live__stage">
+      <div class="hx-live__board">
+        <GameBoard
+          v-if="view"
+          class="hx-board--fill"
+          :board="board"
+          :highlights="highlights"
+          @pick="onPick"
+        >
+          <template #fallback>{{ t('game.noWebgl') }}</template>
+        </GameBoard>
 
-    <section v-if="view && isMyTurn" class="hx-panel hx-live__controls">
-      <h3 class="hx-panel__title">{{ t('game.yourTurn') }}</h3>
+        <!--
+          روکشِ سبک روی برد. عمداً کوچک و گوشه‌ای است: چیزی که همیشه لازم داری
+          (نوبتِ که؟ چقدر وقت؟) نباید تو را از نقشه بکَند، ولی نباید نقشه را هم
+          بپوشاند. کلیک از رویش رد می‌شود تا جلوی انتخابِ خانه را نگیرد.
+        -->
+        <div v-if="view && !isOver" class="hx-live__overlay">
+          <span
+            class="hx-avatar hx-avatar--sm"
+            :style="{ '--hx-avatar-color': waitingOn?.avatarColor }"
+          >
+            {{ (waitingOn?.displayName || '?').slice(0, 1).toUpperCase() }}
+          </span>
+
+          <span class="hx-live__overlay-text">
+            <strong>{{ isMyTurn ? t('game.yourTurn') : waitingOn?.displayName }}</strong>
+            <span class="hx-live__overlay-phase">{{ phaseLabel }}</span>
+          </span>
+
+          <span v-if="countdown !== null && countdown <= 60" class="hx-live__overlay-clock">
+            {{ countdown }}
+          </span>
+        </div>
+      </div>
+
+      <aside class="hx-live__rail" :class="{ 'is-open': sheetOpen }">
+        <Fold
+          v-if="view && isMyTurn"
+          :label="t('game.yourTurn')"
+          :always="wide"
+          :id="`hx-panel-turn`"
+          :open="folds.turn"
+          @update:open="folds.turn = $event"
+        >
 
       <template v-if="mustDiscard > 0">
         <p>{{ t('game.discardPrompt', mustDiscard) }}</p>
@@ -576,19 +696,41 @@ onBeforeUnmount(() => {
       <template v-else>
         <p class="hx-muted hx-small">{{ t('game.clickTheBoard') }}</p>
       </template>
-    </section>
+        </Fold>
 
-    <section v-else-if="view && !isOver" class="hx-panel">
-      <p class="hx-muted">{{ t('game.waitingForOthers') }}</p>
-    </section>
+        <p v-else-if="view && !isOver" class="hx-panel hx-panel--rail hx-muted">
+          {{ t('game.waitingForOthers') }}
+        </p>
+
+        <Fold
+          v-if="view && !isOver"
+          id="hx-panel-build"
+          :label="t('game.build')"
+          :always="wide"
+          :open="folds.build"
+          @update:open="folds.build = $event"
+        >
+          <BuildPanel
+            :view="view"
+            :can-act="isMyTurn && phase === 'Main'"
+            @buy-card="actions.buyCard()"
+          />
+        </Fold>
 
     <!--
       معامله جدا از کنترل‌های نوبت است و این عمدی است: پاسخ دادن به یک پیشنهاد
       روی نوبتِ پیشنهاددهنده اتفاق می‌افتد، پس این بخش باید وقتی نوبتِ من نیست
       هم دیده شود.
     -->
-    <section v-if="view && !isOver && (offer || (isMyTurn && phase === 'Main'))" class="hx-panel hx-trade">
-      <h3 class="hx-panel__title">{{ t('game.trade') }}</h3>
+        <Fold
+          v-if="view && !isOver && (offer || (isMyTurn && phase === 'Main'))"
+          class="hx-trade"
+          :label="t('game.trade')"
+          :always="wide"
+          :id="`hx-panel-trade`"
+          :open="folds.trade"
+          @update:open="folds.trade = $event"
+        >
 
       <!-- ── پیشنهادِ روی میز ─────────────────────────────────────────── -->
       <template v-if="offer">
@@ -720,12 +862,41 @@ onBeforeUnmount(() => {
           </div>
         </div>
       </template>
-    </section>
+        </Fold>
 
-    <div v-if="view" class="hx-live__grid">
-      <section class="hx-panel">
-        <h3 class="hx-panel__title">{{ t('game.players') }}</h3>
-        <ol class="hx-seats">
+        <Fold
+          v-if="view && view.hand"
+          :label="t('game.yourHand')"
+          :always="wide"
+          :id="`hx-panel-hand`"
+          :open="folds.hand"
+          @update:open="folds.hand = $event"
+        >
+          <ul class="hx-facts">
+            <li v-for="resource in RESOURCES" :key="resource">
+              <span>{{ t(`game.resource.${resource}`) }}</span>
+              <strong>{{ view.hand.resources[resource] ?? 0 }}</strong>
+            </li>
+            <li>
+              <span>{{ t('game.victoryPoints') }}</span>
+              <strong>{{ view.hand.victoryPoints }}</strong>
+            </li>
+            <li v-if="view.players[view.seat ?? 0]?.team !== null">
+              <span>{{ t('game.teamScore') }}</span>
+              <strong>{{ view.hand.score }}</strong>
+            </li>
+          </ul>
+        </Fold>
+
+        <Fold
+          v-if="view"
+          :label="t('game.players')"
+          :always="wide"
+          :id="`hx-panel-players`"
+          :open="folds.players"
+          @update:open="folds.players = $event"
+        >
+          <ol class="hx-seats">
           <li
             v-for="player in view.players"
             :key="player.index"
@@ -747,34 +918,47 @@ onBeforeUnmount(() => {
             <span v-if="!player.isOnline" class="hx-chip hx-chip--muted">
               {{ t('game.link.offline') }}
             </span>
-          </li>
-        </ol>
-      </section>
+            </li>
+          </ol>
+        </Fold>
 
-      <section v-if="view.hand" class="hx-panel">
-        <h3 class="hx-panel__title">{{ t('game.yourHand') }}</h3>
-        <ul class="hx-facts">
-          <li v-for="resource in RESOURCES" :key="resource">
-            <span>{{ t(`game.resource.${resource}`) }}</span>
-            <strong>{{ view.hand.resources[resource] ?? 0 }}</strong>
-          </li>
-          <li>
-            <span>{{ t('game.victoryPoints') }}</span>
-            <strong>{{ view.hand.victoryPoints }}</strong>
-          </li>
-          <li v-if="view.players[view.seat ?? 0]?.team !== null">
-            <span>{{ t('game.teamScore') }}</span>
-            <strong>{{ view.hand.score }}</strong>
-          </li>
-        </ul>
-      </section>
+        <Fold
+          v-if="log.length > 0"
+          :label="t('game.log')"
+          :always="wide"
+          :id="`hx-panel-log`"
+          :open="folds.log"
+          @update:open="folds.log = $event"
+        >
+          <ul class="hx-live__log">
+            <li v-for="(line, index) in log" :key="index">{{ line }}</li>
+          </ul>
+        </Fold>
+      </aside>
     </div>
 
-    <section v-if="log.length > 0" class="hx-panel">
-      <h3 class="hx-panel__title">{{ t('game.log') }}</h3>
-      <ul class="hx-live__log">
-        <li v-for="(line, index) in log" :key="index">{{ line }}</li>
-      </ul>
-    </section>
+    <!--
+      نوار پایینِ موبایل. روی صفحه‌ی پهن اصلاً رندر نمی‌شود، چون آن‌جا ریل
+      همیشه کنارِ برد باز است و یک نوارِ اضافه فقط جا می‌گیرد.
+
+      دکمه‌ها پایین‌اند تا با شست برسند؛ مهم‌ترین کارها (نوبت و ساخت) اول.
+    -->
+    <template v-if="!wide && view && !isOver">
+      <div v-if="sheetOpen" class="hx-live__scrim" @click="closeSheet()"></div>
+
+      <nav class="hx-live__tabs" :aria-label="t('game.title')">
+        <button
+          v-for="tab in TABS"
+          :key="tab.key"
+          type="button"
+          class="hx-live__tab"
+          :class="{ 'is-active': sheetOpen && activeTab === tab.key }"
+          :aria-expanded="sheetOpen && activeTab === tab.key"
+          @click="openPanel(tab.key)"
+        >
+          {{ t(tab.label) }}
+        </button>
+      </nav>
+    </template>
   </div>
 </template>

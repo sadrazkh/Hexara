@@ -17,6 +17,22 @@ public sealed class GameViewBuilder
         _policy = policy ?? AutoPlayPolicy.Default;
     }
 
+    /// <summary>
+    /// جدول هزینه‌ها؛ یک‌بار ساخته می‌شود چون ثابت است.
+    ///
+    /// کلیدها همان نامی هستند که رابط برای ترجمه به کار می‌برد
+    /// (‎game.buildRoad‎ …)، پس افزودن یک ساخت‌وسازِ تازه همین‌جا و در فایل
+    /// ترجمه دیده می‌شود، نه در دلِ کامپوننت.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<Resource, int>> Prices =
+        new Dictionary<string, IReadOnlyDictionary<Resource, int>>
+        {
+            ["Road"] = BuildCosts.Road,
+            ["Settlement"] = BuildCosts.Settlement,
+            ["City"] = BuildCosts.City,
+            ["DevelopmentCard"] = BuildCosts.DevelopmentCard
+        };
+
     public async Task<GameView> BuildAsync(
         StoredGame game,
         int? viewerSeat,
@@ -51,6 +67,7 @@ public sealed class GameViewBuilder
             Roads = [.. state.Roads.Select(r =>
                 new RoadSnapshot(r.Key.Hex.Q, r.Key.Hex.R, r.Key.Side, r.Value))],
             Bank = new Dictionary<Resource, int>(state.Bank),
+            Costs = Prices,
             DevelopmentDeckCount = state.DevelopmentDeckCount,
             Players = [.. state.Players.Select(p =>
                 ToView(p, game.PlayerIds[p.Index], profiles, onlineUserIds, state.Options.Teams, state.Winner is not null))],

@@ -101,6 +101,23 @@ code {
   max-width: 480px;
 }
 
+/* صفحه‌ی بازی از بقیه پهن‌تر است — برد هرچه بزرگ‌تر، بهتر. */
+.hx-wide {
+  max-width: 1600px;
+}
+
+/* برای چشم نیست، برای صفحه‌خوان است. */
+.hx-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .hx-main {
   flex: 1;
   position: relative;
@@ -185,7 +202,7 @@ code {
   display: flex;
   align-items: center;
   gap: var(--hx-sp-4);
-  min-height: 64px;
+  min-height: var(--hx-header-h);
   padding-top: env(safe-area-inset-top);
 }
 
@@ -195,7 +212,7 @@ code {
   gap: var(--hx-sp-2);
   color: var(--hx-text);
   font-weight: 800;
-  font-size: 1.15rem;
+  font-size: var(--hx-text-xl);
 }
 
 .hx-brand:hover {
@@ -229,7 +246,7 @@ code {
 
 .hx-nav a {
   color: var(--hx-text-dim);
-  font-size: 0.95rem;
+  font-size: var(--hx-text-base);
 }
 
 .hx-nav a:hover {
@@ -245,7 +262,7 @@ code {
 
 .hx-header__name {
   color: var(--hx-text-dim);
-  font-size: 0.9rem;
+  font-size: var(--hx-text-md);
 }
 
 .hx-inline-form {
@@ -260,7 +277,7 @@ code {
   display: grid;
   place-items: center;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: var(--hx-text-sm);
   color: var(--hx-avatar-ink);
   background: var(--hx-avatar-color, var(--hx-accent));
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--hx-text) 14%, transparent);
@@ -283,7 +300,7 @@ code {
   color: var(--hx-btn-fg);
   font: inherit;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: var(--hx-text-base);
   cursor: pointer;
   white-space: nowrap;
   transition:
@@ -335,12 +352,12 @@ code {
 
 .hx-btn--sm {
   padding: 6px 12px;
-  font-size: 0.85rem;
+  font-size: var(--hx-text-sm);
 }
 
 .hx-btn--lg {
   padding: 14px 28px;
-  font-size: 1.02rem;
+  font-size: var(--hx-text-lg);
 }
 
 .hx-btn--block {
@@ -376,13 +393,13 @@ code {
   border-radius: var(--hx-r-pill);
   background: var(--hx-glass);
   color: var(--hx-accent-2);
-  font-size: 0.8rem;
+  font-size: var(--hx-text-xs);
   font-weight: 600;
   letter-spacing: 0.02em;
 }
 
 .hx-hero__title {
-  font-size: clamp(2.1rem, 5vw, 3.5rem);
+  font-size: var(--hx-display-xl);
   font-weight: 800;
   background: linear-gradient(180deg, var(--hx-title-from) 30%, var(--hx-title-to) 100%);
   -webkit-background-clip: text;
@@ -391,7 +408,7 @@ code {
 }
 
 .hx-hero__sub {
-  font-size: clamp(1rem, 1.6vw, 1.15rem);
+  font-size: var(--hx-display-xs);
   color: var(--hx-text-dim);
   max-width: 46ch;
 }
@@ -417,7 +434,7 @@ code {
 }
 
 .hx-section-title {
-  font-size: clamp(1.5rem, 3vw, 2.1rem);
+  font-size: var(--hx-display-md);
   text-align: center;
   margin-bottom: var(--hx-sp-6);
 }
@@ -447,13 +464,13 @@ code {
 }
 
 .hx-card h3 {
-  font-size: 1.05rem;
+  font-size: var(--hx-text-lg);
   margin-bottom: var(--hx-sp-2);
 }
 
 .hx-card p {
   color: var(--hx-text-dim);
-  font-size: 0.92rem;
+  font-size: var(--hx-text-md);
   margin: 0;
 }
 
@@ -490,7 +507,7 @@ code {
 }
 
 .hx-panel__title {
-  font-size: 1.4rem;
+  font-size: var(--hx-text-2xl);
   text-align: center;
   margin-bottom: var(--hx-sp-5);
 }
@@ -498,7 +515,7 @@ code {
 .hx-panel__foot {
   margin: var(--hx-sp-5) 0 0;
   text-align: center;
-  font-size: 0.9rem;
+  font-size: var(--hx-text-md);
   color: var(--hx-text-dim);
 }
 
@@ -513,7 +530,7 @@ code {
 }
 
 .hx-field__label {
-  font-size: 0.85rem;
+  font-size: var(--hx-text-sm);
   color: var(--hx-text-dim);
   font-weight: 600;
 }
@@ -526,7 +543,7 @@ code {
   background: var(--hx-input-bg);
   color: var(--hx-text);
   font: inherit;
-  font-size: 0.95rem;
+  font-size: var(--hx-text-base);
   transition:
     border-color var(--hx-dur) var(--hx-ease),
     box-shadow var(--hx-dur) var(--hx-ease);
@@ -546,7 +563,7 @@ code {
   display: flex;
   align-items: center;
   gap: var(--hx-sp-2);
-  font-size: 0.9rem;
+  font-size: var(--hx-text-md);
   color: var(--hx-text-dim);
   cursor: pointer;
 }
@@ -560,7 +577,7 @@ code {
 .hx-field__error,
 .hx-form__errors {
   color: var(--hx-danger);
-  font-size: 0.85rem;
+  font-size: var(--hx-text-sm);
 }
 
 .hx-form__errors ul {
@@ -578,7 +595,7 @@ code {
   gap: var(--hx-sp-3);
   margin-block: var(--hx-sp-5);
   color: var(--hx-text-faint);
-  font-size: 0.82rem;
+  font-size: var(--hx-text-xs);
 }
 
 .hx-divider::before,
@@ -597,7 +614,7 @@ code {
 
 .hx-section-title--sm {
   margin-top: var(--hx-sp-6);
-  font-size: 1.15rem;
+  font-size: var(--hx-text-xl);
 }
 
 .hx-lobby__top {
@@ -616,7 +633,7 @@ code {
 /* کد اتاق را آدم‌ها می‌خوانند و تایپ می‌کنند؛ تک‌فاصله و درشت. */
 .hx-input--code {
   font-family: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', monospace;
-  font-size: 1.1rem;
+  font-size: var(--hx-text-lg);
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
@@ -638,7 +655,7 @@ code {
   border-radius: var(--hx-r-pill);
   background: var(--hx-glass);
   color: var(--hx-text-dim);
-  font-size: 0.76rem;
+  font-size: var(--hx-text-2xs);
   white-space: nowrap;
 }
 
@@ -679,14 +696,14 @@ code {
 
 .hx-room__code {
   font-family: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', monospace;
-  font-size: 1rem;
+  font-size: var(--hx-text-body);
   letter-spacing: 0.14em;
   color: var(--hx-text);
 }
 
 .hx-room__host {
   color: var(--hx-text-faint);
-  font-size: 0.82rem;
+  font-size: var(--hx-text-xs);
 }
 
 .hx-room__meta {
@@ -708,7 +725,7 @@ code {
 .hx-room-page__code {
   margin: var(--hx-sp-2) 0;
   font-family: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', monospace;
-  font-size: clamp(2rem, 8vw, 3rem);
+  font-size: var(--hx-display-lg);
   letter-spacing: 0.24em;
   background: var(--hx-accent-grad);
   background-clip: text;
@@ -761,7 +778,7 @@ code {
   border-radius: var(--hx-r-pill);
   background: var(--hx-glass-2);
   color: var(--hx-text-dim);
-  font-size: 0.8rem;
+  font-size: var(--hx-text-xs);
 }
 
 .hx-seat__name {
@@ -774,7 +791,7 @@ code {
 .hx-avatar--sm {
   width: 1.6rem;
   height: 1.6rem;
-  font-size: 0.78rem;
+  font-size: var(--hx-text-xs);
 }
 
 .hx-facts {
@@ -811,7 +828,7 @@ code {
   border-radius: var(--hx-r-md);
   background: var(--hx-glass);
   color: var(--hx-text-dim);
-  font-size: 0.88rem;
+  font-size: var(--hx-text-md);
 }
 
 .hx-live__link {
@@ -838,13 +855,6 @@ code {
 
 .hx-live__link[data-link='offline']::before {
   background: var(--hx-danger);
-}
-
-.hx-live__grid {
-  display: grid;
-  grid-template-columns: 1.3fr 1fr;
-  gap: var(--hx-sp-4);
-  align-items: start;
 }
 
 .hx-live__dice {
@@ -892,7 +902,7 @@ code {
   padding: 0;
   list-style: none;
   color: var(--hx-text-dim);
-  font-size: 0.85rem;
+  font-size: var(--hx-text-sm);
 }
 
 /* ── ویرایشگر برد ─────────────────────────────────────────────────────── */
@@ -944,7 +954,7 @@ code {
 
 .hx-editor__code {
   font-family: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', monospace;
-  font-size: 0.8rem;
+  font-size: var(--hx-text-xs);
   line-height: 1.5;
   resize: vertical;
   word-break: break-all;
@@ -992,7 +1002,7 @@ code {
   background: var(--hx-glass-2);
   color: var(--hx-text-dim);
   font-variant-numeric: tabular-nums;
-  font-size: 0.85rem;
+  font-size: var(--hx-text-sm);
 }
 
 .hx-standing__name {
@@ -1041,7 +1051,7 @@ code {
 }
 
 .hx-small {
-  font-size: 0.82rem;
+  font-size: var(--hx-text-xs);
 }
 
 /* ── فوتر ─────────────────────────────────────────────────────────────── */
@@ -1061,7 +1071,7 @@ code {
   gap: var(--hx-sp-3);
   padding-block: var(--hx-sp-5) calc(var(--hx-sp-5) + env(safe-area-inset-bottom));
   color: var(--hx-text-faint);
-  font-size: 0.82rem;
+  font-size: var(--hx-text-xs);
 }
 
 /* ── لمس ──────────────────────────────────────────────────────────────────
@@ -1115,7 +1125,7 @@ code {
 
 .hx-result__title {
   margin: 0;
-  font-size: clamp(1.35rem, 1rem + 1.6vw, 2rem);
+  font-size: var(--hx-display-sm);
   font-weight: 700;
   line-height: 1.15;
   background: var(--hx-accent-grad);
@@ -1168,6 +1178,221 @@ code {
   white-space: nowrap;
 }
 
+/* ── صحنه‌ی بازی: برد بزرگ، پنل‌ها کنارش ──────────────────────────────
+   پیش از این کل صفحه‌ی بازی داخل ‎.hx-narrow‎ بود، یعنی سقف ۴۸۰ پیکسل — برد
+   کوچک می‌ماند و همه‌چیز عمودی روی هم می‌نشست و باید تا آخر دنیا اسکرول
+   می‌کردی. حالا برد سهم اصلی را می‌گیرد و بقیه در یک ستون کنارش. */
+
+.hx-live__stage {
+  /* صحنه از ارتفاع پنجره سهم می‌گیرد، با کف و سقف: روی لپ‌تاپِ کوتاه له نشود
+     و روی مانیتورِ بلند بی‌قواره دراز نشود. */
+  --hx-stage-h: clamp(420px, calc(100dvh - var(--hx-header-h) - 4rem), 820px);
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(19rem, 23rem);
+  gap: var(--hx-sp-4);
+  align-items: stretch;
+  min-height: var(--hx-stage-h);
+
+  /*
+   * سقف، نه فقط کف.
+   *
+   * برد ‎height: 100%‎ است و ‎ResizeObserver‎ رندرر را به اندازه‌ی ظرفش می‌برد؛
+   * اگر ردیفِ گرید بتواند با محتوا رشد کند، این دو به هم غذا می‌دهند و بوم
+   * بی‌نهایت بلند می‌شود. یک بار در عمل دیدمش: ارتفاع به ۱۹۷٬۷۷۸ پیکسل رسید.
+   */
+  max-height: var(--hx-stage-h);
+}
+
+.hx-live__board {
+  display: flex;
+  min-width: 0;
+  position: relative;
+}
+
+/*
+ * روکشِ گوشه‌ی برد: نوبتِ که، کدام مرحله، چقدر وقت.
+ *
+ * ‎pointer-events: none‎ حیاتی است — بی آن، این جعبه گوشه‌ی برد را می‌بلعد و
+ * خانه‌ی زیرش دیگر انتخاب نمی‌شود.
+ */
+.hx-live__overlay {
+  position: absolute;
+  inset-block-start: var(--hx-sp-3);
+  inset-inline-start: var(--hx-sp-3);
+  z-index: var(--hx-z-board-ui);
+  display: flex;
+  align-items: center;
+  gap: var(--hx-sp-2);
+  max-inline-size: min(60%, 20rem);
+  padding: var(--hx-sp-2) var(--hx-sp-3);
+  border: 1px solid var(--hx-border);
+  border-radius: var(--hx-r-pill);
+  background: var(--hx-header-veil);
+  backdrop-filter: blur(12px) saturate(140%);
+  pointer-events: none;
+}
+
+.hx-live__overlay-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: var(--hx-leading-tight);
+}
+
+.hx-live__overlay-text strong {
+  font-size: var(--hx-text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hx-live__overlay-phase {
+  font-size: var(--hx-text-2xs);
+  color: var(--hx-text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hx-live__overlay-clock {
+  font-size: var(--hx-text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--hx-accent-2);
+}
+
+.hx-live__rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-3);
+  min-width: 0;
+  max-height: var(--hx-stage-h);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-inline-end: var(--hx-sp-1);
+}
+
+/* پنل‌های ریل فشرده‌ترند: پنلِ معمولی برای صفحه‌ی تک‌ستونی طراحی شده و
+   حاشیه‌هایش این‌جا نصف ستون را می‌خورد. */
+.hx-panel--rail {
+  margin-block: 0;
+  padding: var(--hx-sp-4);
+}
+
+.hx-panel--rail .hx-panel__title {
+  margin-bottom: var(--hx-sp-3);
+  font-size: var(--hx-text-body);
+  text-align: start;
+}
+
+.hx-fold__head {
+  display: flex;
+  align-items: center;
+  gap: var(--hx-sp-2);
+  cursor: pointer;
+  font-size: var(--hx-text-body);
+  font-weight: 600;
+  list-style: none;
+}
+
+.hx-fold__head::-webkit-details-marker {
+  display: none;
+}
+
+/* پیکانِ باز و بسته. چون چرخیده، جعبه‌اش از مربعِ اصلی بزرگ‌تر می‌شود و بی این
+   حاشیه دو-سه پیکسل از ستون بیرون می‌زد. */
+.hx-fold__head::after {
+  content: '';
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-inline-start: auto;
+  margin-inline-end: 3px;
+  border-inline-end: 2px solid currentcolor;
+  border-block-end: 2px solid currentcolor;
+  rotate: 45deg;
+  transition: rotate 0.18s ease;
+}
+
+.hx-fold[open] > .hx-fold__head::after {
+  rotate: 225deg;
+}
+
+.hx-fold__body {
+  margin-block-start: var(--hx-sp-3);
+}
+
+/* ── ساخت‌وساز ────────────────────────────────────────────────────────── */
+
+.hx-build {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hx-build__row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-1);
+  padding: var(--hx-sp-2) var(--hx-sp-3);
+  border: 1px solid var(--hx-border);
+  border-radius: var(--hx-r-md);
+  background: var(--hx-glass);
+  opacity: var(--hx-opacity-disabled);
+  transition: opacity var(--hx-dur-fast) var(--hx-ease);
+}
+
+/* آنچه همین حالا شدنی است کاملاً روشن است و بقیه کم‌رنگ — از یک نگاه معلوم
+   می‌شود چه کاری از دستت برمی‌آید. */
+.hx-build__row.is-ready {
+  opacity: 1;
+  border-color: color-mix(in srgb, var(--hx-accent-2) 40%, transparent);
+}
+
+.hx-build__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--hx-sp-2);
+}
+
+.hx-build__name {
+  font-weight: var(--hx-weight-medium);
+}
+
+.hx-build__left {
+  margin-inline-start: auto;
+  color: var(--hx-text-faint);
+  font-size: var(--hx-text-2xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.hx-build__cost {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hx-sp-1) var(--hx-sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--hx-text-2xs);
+  color: var(--hx-text-dim);
+}
+
+/* منبعی که کم داری خط می‌خورد — رنگ تنها حاملِ معنا نیست. */
+.hx-build__cost .is-short {
+  color: var(--hx-danger);
+  text-decoration: line-through;
+}
+
+.hx-build__hint,
+.hx-build__why {
+  margin: 0;
+  font-size: var(--hx-text-2xs);
+  color: var(--hx-text-faint);
+}
+
 /* ── معامله ───────────────────────────────────────────────────────────── */
 
 .hx-trade {
@@ -1200,7 +1425,7 @@ code {
 .hx-trade__label {
   min-width: 5rem;
   color: var(--hx-text-dim);
-  font-size: 0.85rem;
+  font-size: var(--hx-text-sm);
 }
 
 .hx-trade__offer {
@@ -1220,7 +1445,7 @@ code {
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 0.85rem;
+  font-size: var(--hx-text-sm);
 }
 
 .hx-trade__answers li {
@@ -1239,6 +1464,131 @@ code {
 }
 
 /* ── واکنش‌گرا ────────────────────────────────────────────────────────── */
+
+/* روی صفحه‌ی باریک ستون کناری زیرِ برد می‌رود و آکاردئون می‌شود، ولی برد بالای
+   صفحه می‌چسبد. این‌طور هم برد دیده می‌شود هم کارت‌ها — بی این کار یا برد را
+   می‌دیدی یا دستت را، نه هر دو. */
+@media (max-width: 1023px) {
+  .hx-live__stage {
+    grid-template-columns: 1fr;
+    min-height: 0;
+    max-height: none;
+  }
+
+  /*
+   * ریل روی موبایل *همان عنصر* است، نه یک نسخه‌ی دوم — فقط جایش عوض می‌شود و
+   * برگه‌ی پایین‌کش می‌شود. دو نشانه‌گذاری جدا یعنی هر پنلِ تازه باید دو جا
+   * اضافه شود و یک روز یکی‌شان جا می‌ماند.
+   *
+   * سقفِ ۶۰dvh عمدی است: بالای برگه همیشه باید تکه‌ای از نقشه دیده شود.
+   */
+  .hx-live__rail {
+    position: fixed;
+    inset-inline: 0;
+    inset-block-end: 0;
+    z-index: var(--hx-z-overlay);
+    max-height: 60dvh;
+    padding: var(--hx-sp-4);
+    padding-block-end: calc(var(--hx-sp-6) + env(safe-area-inset-bottom));
+    border-start-start-radius: var(--hx-r-lg);
+    border-start-end-radius: var(--hx-r-lg);
+    border-block-start: 1px solid var(--hx-border);
+    background: var(--hx-panel-bg);
+    backdrop-filter: blur(18px) saturate(140%);
+    box-shadow: var(--hx-shadow-lg);
+
+    /* بسته که هست نه دیده می‌شود نه فوکوس می‌گیرد؛ ‎transform‎ تنها کافی نیست
+       و کاربرِ کیبورد داخلِ یک برگه‌ی نامرئی گیر می‌کرد. */
+    visibility: hidden;
+    transform: translateY(100%);
+    transition:
+      transform var(--hx-dur) var(--hx-ease),
+      visibility var(--hx-dur) step-end;
+  }
+
+  .hx-live__rail.is-open {
+    visibility: visible;
+    transform: translateY(0);
+    transition-timing-function: var(--hx-ease), step-start;
+  }
+
+  .hx-live__scrim {
+    position: fixed;
+    inset: 0;
+    z-index: var(--hx-z-base);
+    background: rgb(0 0 0 / 35%);
+  }
+
+  .hx-live__tabs {
+    position: fixed;
+    inset-inline: 0;
+    inset-block-end: 0;
+    z-index: var(--hx-z-modal);
+    display: flex;
+    gap: var(--hx-sp-1);
+    padding: var(--hx-sp-2);
+    padding-block-end: calc(var(--hx-sp-2) + env(safe-area-inset-bottom));
+    border-block-start: 1px solid var(--hx-border);
+    background: var(--hx-header-veil);
+    backdrop-filter: blur(16px) saturate(140%);
+  }
+
+  .hx-live__tab {
+    flex: 1;
+    min-inline-size: 0;
+    min-block-size: 44px;
+    padding: var(--hx-sp-2) var(--hx-sp-1);
+    border: 1px solid transparent;
+    border-radius: var(--hx-r-md);
+    background: transparent;
+    color: var(--hx-text-dim);
+    font: inherit;
+    font-size: var(--hx-text-2xs);
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .hx-live__tab.is-active {
+    border-color: color-mix(in srgb, var(--hx-accent-2) 45%, transparent);
+    background: var(--hx-surface-2);
+    color: var(--hx-text);
+  }
+
+  /* آخرین پنلِ داخل برگه نباید زیر نوار پایین گم شود. */
+  .hx-live__rail > :last-child {
+    margin-block-end: var(--hx-sp-6);
+  }
+}
+
+/*
+ * موبایلِ خوابیده: ارتفاع کم است، پس برد و ریل کنار هم می‌نشینند و برگه‌ی
+ * پایین‌کش اصلاً لازم نمی‌شود — یک برگه‌ی ۶۰dvh این‌جا تقریباً تمام صفحه بود.
+ */
+@media (max-width: 1023px) and (orientation: landscape) and (max-height: 560px) {
+  .hx-live__stage {
+    grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem);
+  }
+
+  .hx-live__rail {
+    position: static;
+    max-height: calc(100dvh - var(--hx-header-h) - 3rem);
+    padding: 0;
+    border: 0;
+    background: none;
+    backdrop-filter: none;
+    box-shadow: none;
+    visibility: visible;
+    transform: none;
+    overflow-y: auto;
+  }
+
+  .hx-live__tabs,
+  .hx-live__scrim {
+    display: none;
+  }
+}
 
 @media (max-width: 860px) {
   .hx-hero__inner {
@@ -1265,9 +1615,5 @@ code {
 
   .hx-room__meta {
     margin-inline-start: 0;
-  }
-
-  .hx-live__grid {
-    grid-template-columns: 1fr;
   }
 }

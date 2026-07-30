@@ -104,6 +104,20 @@ public class TranslationCoverageTests : IClassFixture<HexaraApp>
     public void Every_resource_has_a_name(string resource) =>
         AssertTranslated($"game.resource.{resource}");
 
+    public static TheoryData<string> DevelopmentCards()
+    {
+        var data = new TheoryData<string>();
+        foreach (var card in Enum.GetValues<DevelopmentCard>()) data.Add(card.ToString());
+
+        return data;
+    }
+
+    /// <summary>کارت‌های توسعه از فاز صفر به بعد با نام در رابط دیده می‌شوند.</summary>
+    [Theory]
+    [MemberData(nameof(DevelopmentCards))]
+    public void Every_development_card_has_a_name(string card) =>
+        AssertTranslated($"game.dev.{card}");
+
     public static TheoryData<string> Terrains()
     {
         var data = new TheoryData<string>();

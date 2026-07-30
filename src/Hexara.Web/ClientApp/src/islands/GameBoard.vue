@@ -306,6 +306,38 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
+/*
+ * داخل صحنه‌ی بازی، برد به‌جای نسبتِ ثابت ارتفاع ستون را پر می‌کند.
+ *
+ * این‌جا نوشته شده و نه در ‎app.css‎: آن‌جا با ‎.hx-board‎ بالا هم‌وزن می‌شد و چون
+ * CSS کامپوننت دیرتر تزریق می‌شود، ‎aspect-ratio‎ برنده می‌شد و برد باز هم
+ * ۴:۳ می‌ماند. اندازه‌ی برد هم اصلاً دانشِ همین کامپوننت است.
+ */
+.hx-board--fill {
+  flex: 1;
+  height: 100%;
+  aspect-ratio: auto;
+}
+
+/*
+ * روی صفحه‌ی باریک برد تقریباً تمام صفحه را می‌گیرد؛ فقط هدر و نوارِ پایین از
+ * ارتفاع کم می‌شوند. پنل‌ها آن‌جا برگه‌ی پایین‌کش‌اند و روی برد می‌آیند، پس
+ * لازم نیست از ارتفاعش بزنیم.
+ */
+@media (max-width: 1023px) {
+  .hx-board--fill {
+    height: calc(100dvh - var(--hx-header-h) - 8.5rem);
+    min-height: 240px;
+  }
+}
+
+/* موبایلِ خوابیده: ارتفاع کم است و ریل کنارِ برد می‌نشیند، نه زیرش. */
+@media (max-width: 1023px) and (orientation: landscape) and (max-height: 560px) {
+  .hx-board--fill {
+    height: calc(100dvh - var(--hx-header-h) - 3rem);
+  }
+}
+
 .hx-board :deep(canvas) {
   display: block;
   width: 100% !important;

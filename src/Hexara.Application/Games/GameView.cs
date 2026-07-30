@@ -52,6 +52,15 @@ public sealed record GameView
 
     public required IReadOnlyDictionary<Resource, int> Bank { get; init; }
 
+    /// <summary>
+    /// هزینه‌ی هر ساخت‌وساز.
+    ///
+    /// از سرور می‌آید تا کلاینت جدولِ هزینه را دوباره ننویسد؛ همان قاعده‌ای که
+    /// برای نرخ بندرها هم برقرار است. ثابت است و با بازی عوض نمی‌شود، ولی
+    /// فرستادنش ارزان‌تر از دو منبعِ حقیقت است.
+    /// </summary>
+    public required IReadOnlyDictionary<string, IReadOnlyDictionary<Resource, int>> Costs { get; init; }
+
     public required int DevelopmentDeckCount { get; init; }
 
     public required IReadOnlyList<PlayerView> Players { get; init; }
