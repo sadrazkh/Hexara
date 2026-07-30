@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Hexara.Application.Players;
 
 namespace Hexara.Web.Infrastructure;
 
@@ -7,13 +8,9 @@ namespace Hexara.Web.Infrastructure;
 /// </summary>
 public static class GuestIdentity
 {
-    // رنگ‌ها با فاصله‌ی روشنایی/فام کافی انتخاب شده‌اند تا روی تم تیره و برای
-    // کاربران کوررنگ هم قابل تفکیک باشند.
-    private static readonly string[] Palette =
-    [
-        "#e0533d", "#4f9cf9", "#f2b134", "#3fbf7f", "#a06cd5",
-        "#ef7ba8", "#2ec4c4", "#c9a227", "#7f8fa6", "#d95d9a"
-    ];
+    // پالت در Application زندگی می‌کند چون پیش‌فرضِ ستون و جایگزینِ نمای بازی هم
+    // همان را لازم دارند؛ سه نسخه‌ی جدا از یک فهرست رنگ دقیقاً همان چیزی است که
+    // باعث شد رنگ‌های نشانِ قدیمی جا بمانند.
 
     private static readonly string[] Adjectives =
     [
@@ -30,9 +27,10 @@ public static class GuestIdentity
     public static string NewDisplayName() =>
         $"{Pick(Adjectives)} {Pick(Nouns)} {RandomNumberGenerator.GetInt32(10, 100)}";
 
-    public static string NewAvatarColor() => Pick(Palette);
+    public static string NewAvatarColor() => Pick(AvatarPalette.Colors);
 
-    public static string ColorForSeed(int seed) => Palette[Math.Abs(seed) % Palette.Length];
+    public static string ColorForSeed(int seed) =>
+        AvatarPalette.Colors[Math.Abs(seed) % AvatarPalette.Colors.Length];
 
     private static string Pick(string[] source) => source[RandomNumberGenerator.GetInt32(source.Length)];
 }

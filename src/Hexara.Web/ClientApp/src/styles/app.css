@@ -261,7 +261,7 @@ code {
   place-items: center;
   font-weight: 700;
   font-size: 0.85rem;
-  color: var(--hx-on-accent);
+  color: var(--hx-avatar-ink);
   background: var(--hx-avatar-color, var(--hx-accent));
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--hx-text) 14%, transparent);
 }

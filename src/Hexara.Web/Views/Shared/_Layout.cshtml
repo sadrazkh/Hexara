@@ -6,7 +6,7 @@
     var otherCultureLabel = otherCulture == "fa" ? "فارسی" : "English";
     var returnUrl = Context.Request.Path + Context.Request.QueryString;
     var displayName = User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value;
-    var avatarColor = User.FindFirst(AppUserClaimsPrincipalFactory.AvatarColorClaimType)?.Value ?? "#4f9cf9";
+    var avatarColor = User.FindFirst(AppUserClaimsPrincipalFactory.AvatarColorClaimType)?.Value ?? Hexara.Application.Players.AvatarPalette.Default;
 }
 <!DOCTYPE html>
 <html lang="@culture" dir="@dir" data-culture="@culture">

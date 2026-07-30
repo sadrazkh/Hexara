@@ -1,3 +1,4 @@
+using Hexara.Application.Players;
 using Microsoft.AspNetCore.Identity;
 
 namespace Hexara.Infrastructure.Identity;
@@ -14,7 +15,7 @@ public class AppUser : IdentityUser<Guid>
     public bool IsGuest { get; set; }
 
     /// <summary>رنگ آواتار پیش‌فرض به صورت hex — برای نمایش در لابی.</summary>
-    public string AvatarColor { get; set; } = "#4f9cf9";
+    public string AvatarColor { get; set; } = AvatarPalette.Default;
 
     public string PreferredLanguage { get; set; } = "fa";
 

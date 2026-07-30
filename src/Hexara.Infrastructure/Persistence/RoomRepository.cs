@@ -1,4 +1,5 @@
 using Hexara.Application.Common.Interfaces;
+using Hexara.Application.Players;
 using Hexara.Application.Rooms;
 using Hexara.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -216,7 +217,7 @@ public sealed class RoomRepository : IRoomRepository
                 m.Seat,
                 m.UserId,
                 m.User?.DisplayName ?? string.Empty,
-                m.User?.AvatarColor ?? "#4f9cf9",
+                m.User?.AvatarColor ?? AvatarPalette.Default,
                 m.User?.IsGuest ?? false))
             .ToList();
 

@@ -1,4 +1,5 @@
 using Hexara.Application.Common.Interfaces;
+using Hexara.Application.Players;
 using Hexara.Domain.Board;
 using Hexara.Domain.Game;
 
@@ -81,7 +82,7 @@ public sealed class GameViewBuilder
             Index = player.Index,
             UserId = userId,
             DisplayName = profile?.DisplayName ?? string.Empty,
-            AvatarColor = profile?.AvatarColor ?? "#4f9cf9",
+            AvatarColor = profile?.AvatarColor ?? AvatarPalette.Default,
             PublicVictoryPoints = player.PublicVictoryPoints,
             Team = teams?.TeamOf(player.Index),
             CardCount = player.TotalCards,
