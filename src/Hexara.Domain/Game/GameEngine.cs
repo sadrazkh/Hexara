@@ -1,4 +1,4 @@
-using Hexara.Domain.Board;
+﻿using Hexara.Domain.Board;
 
 namespace Hexara.Domain.Game;
 
@@ -10,7 +10,15 @@ namespace Hexara.Domain.Game;
 /// </summary>
 public static class GameEngine
 {
-    public static MoveResult Apply(GameState state, GameAction action)
+    /// <summary>
+    /// یک حرکت را اعمال می‌کند.
+    ///
+    /// ‎now‎ اختیاری است و دامنه هرگز خودش ساعت نمی‌خواند. تنها چیزی که به آن
+    /// نیاز دارد مهلتِ پیشنهاد معامله است، و همان هم باید از بیرون بیاید تا
+    /// بازپخشِ یک بازیِ ذخیره‌شده همان نتیجه را بدهد — همان دلیلی که ‎Rng‎ را
+    /// دست‌ساز نگه داشته. نداشتنش یعنی «بی‌مهلت»، نه «همین حالا».
+    /// </summary>
+    public static MoveResult Apply(GameState state, GameAction action, DateTimeOffset? now = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(action);
@@ -41,8 +49,9 @@ public static class GameEngine
             PlayYearOfPlenty a => UseYearOfPlenty(state, a),
             PlayMonopoly a => UseMonopoly(state, a),
             MaritimeTrade a => TradeWithBank(state, a),
-            ProposeTrade a => OfferTrade(state, a),
-            RespondToTrade a => AnswerTrade(state, a),
+            ProposeTrade a => OfferTrade(state, a, now),
+            RespondToTrade a => AnswerTrade(state, a, now),
+            CounterTrade a => OfferCounter(state, a, now),
             ConfirmTrade a => SettleTrade(state, a),
             CancelTrade a => WithdrawTrade(state, a),
             EndTurn a => FinishTurn(state, a),
@@ -888,7 +897,11 @@ public static class GameEngine
         return rate;
     }
 
-    private static MoveResult OfferTrade(GameState state, ProposeTrade action)
+    /// <summary>مهلتِ تازه از روی تنظیماتِ همین بازی. بی‌زمان یعنی بی‌مهلت. */</summary>
+    private static DateTimeOffset? Deadline(GameState state, DateTimeOffset? now) =>
+        now is { } moment ? moment.AddSeconds(state.Options.TradeWindowSeconds) : null;
+
+    private static MoveResult OfferTrade(GameState state, ProposeTrade action, DateTimeOffset? now)
     {
         if (state.Phase != TurnPhase.Main)
         {
@@ -927,15 +940,33 @@ public static class GameEngine
             return MoveResult.Fail(GameError.InvalidVictim);
         }
 
-        state.PendingTrade = new TradeOffer(action.PlayerIndex, give, take, recipients);
+        state.PendingTrade = new TradeOffer(
+            action.PlayerIndex, give, take, recipients, Deadline(state, now));
+
         return MoveResult.Ok(new TradeProposed(action.PlayerIndex, give, take, recipients));
     }
 
-    private static MoveResult AnswerTrade(GameState state, RespondToTrade action)
+    /// <summary>
+    /// پاسخ به پیشنهاد. **اولین پذیرشِ معتبر همان‌جا معامله را می‌بندد.**
+    ///
+    /// پیش از این پیشنهاددهنده باید بینِ پذیرندگان یکی را انتخاب می‌کرد. حالا
+    /// نه: هر کس زودتر بپذیرد و کالا را داشته باشد، معامله همان لحظه انجام
+    /// می‌شود. یک کلیک کمتر، و مهم‌تر این‌که دیگر پنجره‌ای نیست که در آن دو نفر
+    /// «پذیرفته» باشند و منابعشان بینِ پذیرش و تأیید عوض شود.
+    ///
+    /// ‎ConfirmTrade‎ برای بازی‌های قدیمی سرِ جایش می‌ماند، ولی دیگر تولید
+    /// نمی‌شود — بازپخشِ لاگ‌های قبلی نباید بشکند.
+    /// </summary>
+    private static MoveResult AnswerTrade(GameState state, RespondToTrade action, DateTimeOffset? now)
     {
         if (state.PendingTrade is not { } offer)
         {
             return MoveResult.Fail(GameError.NoTradeOnTheTable);
+        }
+
+        if (offer.HasExpired(now))
+        {
+            return MoveResult.Fail(GameError.TradeExpired);
         }
 
         if (!offer.CanRespond(action.PlayerIndex))
@@ -943,16 +974,101 @@ public static class GameEngine
             return MoveResult.Fail(GameError.NotInvitedToTrade);
         }
 
+        if (!action.Accept)
+        {
+            offer.Respond(action.PlayerIndex, TradeResponse.Rejected);
+            return MoveResult.Ok(new TradeResponded(action.PlayerIndex, false));
+        }
+
         // پذیرش بدون داشتن کالا یعنی پیشنهاددهنده روی چیزی حساب کند که وجود ندارد.
-        if (action.Accept && !state.Player(action.PlayerIndex).CanAfford(offer.Take))
+        if (!state.Player(action.PlayerIndex).CanAfford(offer.Take))
         {
             return MoveResult.Fail(GameError.NotEnoughResources);
         }
 
-        offer.Respond(action.PlayerIndex, action.Accept ? TradeResponse.Accepted : TradeResponse.Rejected);
-        return MoveResult.Ok(new TradeResponded(action.PlayerIndex, action.Accept));
+        // دستِ پیشنهاددهنده هم ممکن است از لحظه‌ی پیشنهاد تا حالا عوض شده باشد.
+        if (!state.Player(offer.Proposer).CanAfford(offer.Give))
+        {
+            return MoveResult.Fail(GameError.NotEnoughResources);
+        }
+
+        offer.Respond(action.PlayerIndex, TradeResponse.Accepted);
+        Exchange(state, offer, action.PlayerIndex);
+        state.PendingTrade = null;
+
+        return MoveResult.Ok(
+            new TradeResponded(action.PlayerIndex, true),
+            new TradeCompleted(offer.Proposer, action.PlayerIndex, offer.Give, offer.Take));
     }
 
+    /// <summary>
+    /// پیشنهاد متقابل: پیشنهادِ روی میز برداشته می‌شود و جایش شرطِ تازه‌ی گیرنده
+    /// می‌نشیند، رو به همان پیشنهاددهنده‌ی قبلی.
+    /// </summary>
+    private static MoveResult OfferCounter(GameState state, CounterTrade action, DateTimeOffset? now)
+    {
+        if (state.PendingTrade is not { } offer)
+        {
+            return MoveResult.Fail(GameError.NoTradeOnTheTable);
+        }
+
+        if (offer.HasExpired(now))
+        {
+            return MoveResult.Fail(GameError.TradeExpired);
+        }
+
+        if (!offer.CanRespond(action.PlayerIndex))
+        {
+            return MoveResult.Fail(GameError.NotInvitedToTrade);
+        }
+
+        var give = Clean(action.Give);
+        var take = Clean(action.Take);
+
+        if (give.Count == 0 || take.Count == 0)
+        {
+            return MoveResult.Fail(GameError.EmptyTrade);
+        }
+
+        if (!state.Player(action.PlayerIndex).CanAfford(give))
+        {
+            return MoveResult.Fail(GameError.NotEnoughResources);
+        }
+
+        state.PendingTrade = new TradeOffer(
+            action.PlayerIndex, give, take, [offer.Proposer], Deadline(state, now));
+
+        return MoveResult.Ok(new TradeCountered(action.PlayerIndex, give, take));
+    }
+
+    /// <summary>
+    /// جابه‌جاییِ دو بسته. یک‌جا نوشته شده تا مسیر پذیرش و مسیر قدیمیِ تأیید
+    /// نتوانند از هم بلغزند.
+    /// </summary>
+    private static void Exchange(GameState state, TradeOffer offer, int partnerIndex)
+    {
+        var proposer = state.Player(offer.Proposer);
+        var partner = state.Player(partnerIndex);
+
+        foreach (var (resource, amount) in offer.Give)
+        {
+            proposer.Remove(resource, amount);
+            partner.Add(resource, amount);
+        }
+
+        foreach (var (resource, amount) in offer.Take)
+        {
+            partner.Remove(resource, amount);
+            proposer.Add(resource, amount);
+        }
+    }
+
+    /// <summary>
+    /// مسیر قدیمیِ «تأیید با یک پذیرنده».
+    ///
+    /// دیگر تولید نمی‌شود چون پذیرش خودش معامله را می‌بندد، ولی می‌مانَد تا
+    /// بازپخشِ لاگ بازی‌هایی که پیش از این تغییر ثبت شده‌اند نشکند.
+    /// </summary>
     private static MoveResult SettleTrade(GameState state, ConfirmTrade action)
     {
         if (state.PendingTrade is not { } offer)
@@ -970,34 +1086,17 @@ public static class GameEngine
             return MoveResult.Fail(GameError.PartnerDidNotAccept);
         }
 
-        var proposer = state.Player(action.PlayerIndex);
-        var partner = state.Player(action.Partner);
-
         // دست‌ها ممکن است از زمان پذیرش عوض شده باشند؛ دوباره بررسی می‌شود.
-        if (!proposer.CanAfford(offer.Give) || !partner.CanAfford(offer.Take))
+        if (!state.Player(action.PlayerIndex).CanAfford(offer.Give)
+            || !state.Player(action.Partner).CanAfford(offer.Take))
         {
             return MoveResult.Fail(GameError.NotEnoughResources);
         }
 
-        foreach (var (resource, amount) in offer.Give)
-        {
-            proposer.Remove(resource, amount);
-            partner.Add(resource, amount);
-        }
-
-        foreach (var (resource, amount) in offer.Take)
-        {
-            partner.Remove(resource, amount);
-            proposer.Add(resource, amount);
-        }
-
-        var events = new List<GameEvent>
-        {
-            new TradeCompleted(action.PlayerIndex, action.Partner, offer.Give, offer.Take)
-        };
-
+        Exchange(state, offer, action.Partner);
         state.PendingTrade = null;
-        return MoveResult.Ok(events);
+
+        return MoveResult.Ok(new TradeCompleted(action.PlayerIndex, action.Partner, offer.Give, offer.Take));
     }
 
     private static MoveResult WithdrawTrade(GameState state, CancelTrade action)

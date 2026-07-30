@@ -1,4 +1,4 @@
-using Hexara.Domain.Board;
+﻿using Hexara.Domain.Board;
 
 namespace Hexara.Domain.Game;
 
@@ -49,6 +49,15 @@ public sealed record GameOptions
 
     /// <summary>نرخ معامله با بانک بدون بندر.</summary>
     public int BankTradeRate { get; init; } = 4;
+
+    /// <summary>
+    /// چند ثانیه پیشنهاد معامله روی میز می‌ماند.
+    ///
+    /// این‌جاست و نه در تنظیمات وب، چون یک *قاعده‌ی بازی* است نه یک جزئیات
+    /// استقرار: مهلتِ متفاوت بازی متفاوتی می‌سازد و باید در عکس وضعیت بماند تا
+    /// بازپخش همان بازی را بدهد.
+    /// </summary>
+    public int TradeWindowSeconds { get; init; } = 30;
 
     public int SettlementsPerPlayer { get; init; } = 5;
 

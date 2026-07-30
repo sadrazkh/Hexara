@@ -1,4 +1,4 @@
-using Hexara.Domain.Board;
+﻿using Hexara.Domain.Board;
 
 namespace Hexara.Domain.Game;
 
@@ -24,11 +24,13 @@ public sealed class TradeOffer
         int proposer,
         IReadOnlyDictionary<Resource, int> give,
         IReadOnlyDictionary<Resource, int> take,
-        IEnumerable<int> recipients)
+        IEnumerable<int> recipients,
+        DateTimeOffset? expiresAt = null)
     {
         Proposer = proposer;
         Give = give;
         Take = take;
+        ExpiresAt = expiresAt;
         _responses = recipients.ToDictionary(r => r, _ => TradeResponse.Pending);
     }
 
@@ -40,7 +42,19 @@ public sealed class TradeOffer
     /// <summary>چیزی که پیشنهاددهنده می‌خواهد.</summary>
     public IReadOnlyDictionary<Resource, int> Take { get; }
 
+    /// <summary>
+    /// لحظه‌ی پایانِ مهلت؛ تهی یعنی بی‌مهلت.
+    ///
+    /// زمان از بیرون می‌آید و دامنه هرگز ساعت نمی‌خواند — همان قاعده‌ای که
+    /// ‎Rng‎ را هم دست‌ساز نگه داشته: بازپخشِ یک بازی باید همان نتیجه را بدهد.
+    /// </summary>
+    public DateTimeOffset? ExpiresAt { get; }
+
     public IReadOnlyDictionary<int, TradeResponse> Responses => _responses;
+
+    /// <summary>مهلت گذشته است؟ بی‌زمان یعنی هرگز.</summary>
+    public bool HasExpired(DateTimeOffset? now) =>
+        ExpiresAt is { } deadline && now is { } moment && moment > deadline;
 
     public IEnumerable<int> AcceptedBy =>
         _responses.Where(r => r.Value == TradeResponse.Accepted).Select(r => r.Key);
@@ -49,7 +63,12 @@ public sealed class TradeOffer
 
     internal static TradeOffer Restore(TradeOfferSnapshot snapshot)
     {
-        var offer = new TradeOffer(snapshot.Proposer, snapshot.Give, snapshot.Take, snapshot.Responses.Keys);
+        var offer = new TradeOffer(
+            snapshot.Proposer,
+            snapshot.Give,
+            snapshot.Take,
+            snapshot.Responses.Keys,
+            snapshot.ExpiresAt);
         foreach (var (playerIndex, response) in snapshot.Responses)
         {
             offer._responses[playerIndex] = response;

@@ -1,4 +1,4 @@
-using Hexara.Domain.Board;
+﻿using Hexara.Domain.Board;
 using Hexara.Domain.Common;
 
 namespace Hexara.Domain.Game;
@@ -161,7 +161,8 @@ public sealed class GameState
                 Proposer = trade.Proposer,
                 Give = new Dictionary<Resource, int>(trade.Give),
                 Take = new Dictionary<Resource, int>(trade.Take),
-                Responses = new Dictionary<int, TradeResponse>(trade.Responses)
+                Responses = new Dictionary<int, TradeResponse>(trade.Responses),
+                ExpiresAt = trade.ExpiresAt
             }
             : null
     };

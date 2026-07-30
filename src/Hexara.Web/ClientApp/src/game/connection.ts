@@ -130,6 +130,8 @@ export interface TradeOffer {
   take: Record<string, number>;
   /** پاسخ هر گیرنده: 'Pending' | 'Accepted' | 'Rejected'. */
   responses: Record<string, string>;
+  /** لحظه‌ی پایان مهلت (ISO)؛ تهی یعنی بی‌مهلت. */
+  expiresAt: string | null;
 }
 
 export interface MoveOutcome {

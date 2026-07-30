@@ -209,6 +209,11 @@
     "tradePropose": "Offer it",
     "tradeYouOffer": "Your offer:",
     "tradeOfferedBy": "{0} offers:",
+    "tradeCounter": "Counter",
+    "tradeExpiresIn": "{0}s left",
+    "tradeOver": "Time is up.",
+    "tradeBankSummary": "You hand over {0} {1} and get 1 {2}.",
+    "tradeBankChoose": "Pick what to give and what to get.",
     "tradeAccept": "Accept",
     "tradeDecline": "Decline",
     "tradeWithdraw": "Withdraw the offer",
@@ -277,6 +282,8 @@
       "TradeProposed": "Trade offered",
       "TradeResponded": "Trade answered",
       "TradeCompleted": "Trade done",
+      "TradeCountered": "Counter-offer made",
+      "TradeExpired": "Offer expired",
       "TradeCancelled": "Trade withdrawn"
     },
     "error": {
@@ -317,6 +324,7 @@
       "NoTradeOnTheTable": "There's no offer on the table.",
       "NotYourTrade": "That offer isn't yours.",
       "NotInvitedToTrade": "That offer isn't for you.",
+      "TradeExpired": "The offer has expired.",
       "PartnerDidNotAccept": "That player never accepted the offer.",
       "NotYourSeat": "That seat isn't yours."
     },

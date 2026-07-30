@@ -1,4 +1,4 @@
-using Hexara.Application.Common.Interfaces;
+﻿using Hexara.Application.Common.Interfaces;
 using Hexara.Domain.Common;
 using Hexara.Domain.Game;
 
@@ -118,6 +118,29 @@ public sealed class GameService
             return null;
         }
 
+        // پیشنهادِ منقضی پیش از هر چیز از روی میز برداشته می‌شود، وگرنه تا نوبت
+        // بعدی همان‌جا می‌ماند و بازیکن‌ها روی چیزی حساب می‌کنند که دیگر نیست.
+        //
+        // با ‎CancelTrade‎ برداشته می‌شود تا از همان مسیرِ سنجیده‌ی موتور رد شود،
+        // ولی رویدادی که ثبت و پخش می‌شود ‎TradeExpired‎ است — «مهلت تمام شد»
+        // خبرِ درستی است، «پس گرفت» نیست.
+        if (game.State.PendingTrade is { } stale && stale.HasExpired(_clock.UtcNow))
+        {
+            var withdraw = new CancelTrade(stale.Proposer);
+
+            if (GameEngine.Apply(game.State, withdraw, _clock.UtcNow).Success)
+            {
+                IReadOnlyList<GameEvent> events = [new Domain.Game.TradeExpired(stale.Proposer)];
+
+                if (!await _games.SaveMoveAsync(game, withdraw, events, cancellationToken))
+                {
+                    return null;
+                }
+
+                return new MoveOutcome(MoveStatus.Applied, GameError.None, events, game.State.Version);
+            }
+        }
+
         var idle = _clock.UtcNow - game.UpdatedAt;
 
         foreach (var seat in BotPlayer.SeatsToAct(game.State))
@@ -133,7 +156,7 @@ public sealed class GameService
                 continue;
             }
 
-            var result = GameEngine.Apply(game.State, action);
+            var result = GameEngine.Apply(game.State, action, _clock.UtcNow);
             if (!result.Success)
             {
                 // نباید پیش بیاید — تست‌های دود بازی‌های کامل را با همین بات می‌برند.
@@ -206,7 +229,7 @@ public sealed class GameService
             return MoveOutcome.Fail(MoveStatus.NotYourSeat);
         }
 
-        var result = GameEngine.Apply(game.State, action);
+        var result = GameEngine.Apply(game.State, action, _clock.UtcNow);
         if (!result.Success)
         {
             return MoveOutcome.Rejected(result.Error);

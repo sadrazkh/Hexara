@@ -1,4 +1,4 @@
-namespace Hexara.Domain.Game;
+﻿namespace Hexara.Domain.Game;
 
 /// <summary>
 /// دلیل رد شدن یک حرکت. کددار است تا لایه‌ی وب بتواند مستقیم به کلید ترجمه
@@ -51,5 +51,8 @@ public enum GameError
     NoTradeOnTheTable,
     NotYourTrade,
     NotInvitedToTrade,
-    PartnerDidNotAccept
+    PartnerDidNotAccept,
+
+    /// <summary>مهلت پیشنهاد تمام شده بود.</summary>
+    TradeExpired
 }

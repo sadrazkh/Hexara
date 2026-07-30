@@ -209,6 +209,11 @@
     "tradePropose": "پیشنهاد بده",
     "tradeYouOffer": "پیشنهاد تو:",
     "tradeOfferedBy": "{0} پیشنهاد می‌دهد:",
+    "tradeCounter": "پیشنهاد متقابل",
+    "tradeExpiresIn": "{0} ثانیه مانده",
+    "tradeOver": "مهلت تمام شد.",
+    "tradeBankSummary": "{0} {1} می‌دهی و ۱ {2} می‌گیری.",
+    "tradeBankChoose": "انتخاب کن چه می‌دهی و چه می‌گیری.",
     "tradeAccept": "می‌پذیرم",
     "tradeDecline": "نه",
     "tradeWithdraw": "پس گرفتن پیشنهاد",
@@ -277,6 +282,8 @@
       "TradeProposed": "پیشنهاد معامله",
       "TradeResponded": "پاسخ به معامله",
       "TradeCompleted": "معامله انجام شد",
+      "TradeCountered": "پیشنهاد متقابل",
+      "TradeExpired": "مهلت پیشنهاد تمام شد",
       "TradeCancelled": "معامله لغو شد"
     },
     "error": {
@@ -317,6 +324,7 @@
       "NoTradeOnTheTable": "پیشنهادی روی میز نیست.",
       "NotYourTrade": "این پیشنهاد مالِ تو نیست.",
       "NotInvitedToTrade": "این پیشنهاد برای تو نیست.",
+      "TradeExpired": "مهلت این پیشنهاد تمام شده.",
       "PartnerDidNotAccept": "آن بازیکن پیشنهاد را نپذیرفته بود.",
       "NotYourSeat": "این صندلی مال شما نیست."
     },

@@ -5,6 +5,7 @@ import GameBoard from './GameBoard.vue';
 import Fold from './Fold.vue';
 import BuildPanel from './BuildPanel.vue';
 import Hand from './Hand.vue';
+import Card from './Card.vue';
 import type { BoardData, Highlights, Pick } from '@/three/board';
 import { vertexHexes, vertexKey } from '@/three/hex';
 import {
@@ -29,6 +30,7 @@ const discard = ref<Record<string, number>>({});
 /** معامله با بانک: چه می‌دهی و چه می‌خواهی. */
 const bankGive = ref<string | null>(null);
 const bankTake = ref<string | null>(null);
+const bankOpen = ref(false);
 
 /** پیشنهاد به بازیکن‌ها: دو بسته‌ی منابع. */
 const offerGive = ref<Record<string, number>>({});
@@ -236,6 +238,28 @@ const offer = computed(() => view.value?.pendingTrade ?? null);
 
 const iProposed = computed(() => offer.value !== null && offer.value.proposer === view.value?.seat);
 
+/**
+ * ثانیه‌های مانده تا مهلتِ پیشنهاد.
+ *
+ * ساعتِ مرجع سرور است: ‎expiresAt‎ یک لحظه‌ی مطلق می‌فرستد، نه «۳۰ ثانیه». اگر
+ * تعداد می‌فرستادیم، هر رفرش شمارش را از نو شروع می‌کرد و کسی که دیر رسیده
+ * فکر می‌کرد وقتِ کامل دارد.
+ */
+const offerLeft = computed(() => {
+  const deadline = offer.value?.expiresAt;
+  if (!deadline) return null;
+
+  return Math.max(0, Math.ceil((Date.parse(deadline) - now.value) / 1000));
+});
+
+/** پیشنهادِ متقابل باز است؟ همان دو بسته‌ی پیشنهاد را قرض می‌گیرد. */
+const countering = ref(false);
+
+function startCounter(): void {
+  countering.value = true;
+  clearOffer();
+}
+
 /** آیا از من نظر خواسته شده و هنوز جواب نداده‌ام؟ */
 const myResponse = computed(() => {
   const current = offer.value;
@@ -243,17 +267,6 @@ const myResponse = computed(() => {
   if (!current || mySeat === null || mySeat === undefined) return null;
 
   return current.responses[String(mySeat)] ?? null;
-});
-
-/** کسانی که پیشنهاد را پذیرفته‌اند — پیشنهاددهنده با یکی‌شان قطعی می‌کند. */
-const acceptedBy = computed(() => {
-  const current = offer.value;
-  if (!current) return [];
-
-  return Object.entries(current.responses)
-    .filter(([, response]) => response === 'Accepted')
-    .map(([seatIndex]) => view.value?.players[Number(seatIndex)])
-    .filter((player): player is NonNullable<typeof player> => player !== undefined);
 });
 
 function nameOf(seatIndex: number): string {
@@ -473,10 +486,18 @@ const actions = {
   respondToTrade: (accept: boolean) =>
     play({ $kind: 'RespondToTrade', playerIndex: seat(), accept }),
 
-  confirmTrade: (partner: number) =>
-    play({ $kind: 'ConfirmTrade', playerIndex: seat(), partner }),
-
   cancelTrade: () => play({ $kind: 'CancelTrade', playerIndex: seat() }),
+
+  counterTrade: () =>
+    play({
+      $kind: 'CounterTrade',
+      playerIndex: seat(),
+      give: packed(offerGive.value),
+      take: packed(offerTake.value),
+    }).then(() => {
+      countering.value = false;
+      clearOffer();
+    }),
 
   rob: (victim: number | null) =>
     play({
@@ -750,6 +771,11 @@ onBeforeUnmount(() => {
           {{ describeBundle(offer.take) }}
         </p>
 
+        <!-- مهلت. ساعتِ مرجع سرور است، پس رفرش‌کردن وقت اضافه نمی‌آورد. -->
+        <p v-if="offerLeft !== null" class="hx-trade__clock" :class="{ 'is-urgent': offerLeft <= 10 }">
+          {{ offerLeft > 0 ? t('game.tradeExpiresIn', offerLeft) : t('game.tradeOver') }}
+        </p>
+
         <template v-if="iProposed">
           <ul class="hx-trade__answers">
             <li v-for="(response, seatIndex) in offer.responses" :key="seatIndex">
@@ -759,30 +785,68 @@ onBeforeUnmount(() => {
           </ul>
 
           <div class="hx-live__choices">
-            <button
-              v-for="partner in acceptedBy"
-              :key="partner.index"
-              type="button"
-              class="hx-btn hx-btn--sm hx-btn--primary"
-              @click="actions.confirmTrade(partner.index)"
-            >
-              {{ t('game.tradeConfirmWith', partner.displayName) }}
-            </button>
-
             <button type="button" class="hx-btn hx-btn--sm hx-btn--ghost" @click="actions.cancelTrade()">
               {{ t('game.tradeWithdraw') }}
             </button>
           </div>
         </template>
 
-        <div v-else-if="myResponse === 'Pending'" class="hx-live__choices">
-          <button type="button" class="hx-btn hx-btn--sm hx-btn--primary" @click="actions.respondToTrade(true)">
-            {{ t('game.tradeAccept') }}
-          </button>
-          <button type="button" class="hx-btn hx-btn--sm hx-btn--ghost" @click="actions.respondToTrade(false)">
-            {{ t('game.tradeDecline') }}
-          </button>
-        </div>
+        <template v-else-if="myResponse === 'Pending'">
+          <div v-if="!countering" class="hx-live__choices">
+            <button
+              type="button"
+              class="hx-btn hx-btn--sm hx-btn--primary"
+              :disabled="offerLeft === 0"
+              @click="actions.respondToTrade(true)"
+            >
+              {{ t('game.tradeAccept') }}
+            </button>
+            <button type="button" class="hx-btn hx-btn--sm hx-btn--ghost" @click="actions.respondToTrade(false)">
+              {{ t('game.tradeDecline') }}
+            </button>
+            <button
+              type="button"
+              class="hx-btn hx-btn--sm hx-btn--outline"
+              :disabled="offerLeft === 0"
+              @click="startCounter()"
+            >
+              {{ t('game.tradeCounter') }}
+            </button>
+          </div>
+
+          <!-- شرطِ خودت، رو به همان کسی که پیشنهاد داد. -->
+          <div v-else class="hx-trade__players">
+            <p class="hx-muted hx-small">{{ t('game.tradePickHint') }}</p>
+
+            <div class="hx-trade__side">
+              <span class="hx-trade__label">{{ t('game.tradeGive') }}</span>
+              <Hand :resources="hand" :selection="offerGive" @pick="cycleOffer('give', $event)" />
+            </div>
+
+            <div class="hx-trade__side">
+              <span class="hx-trade__label">{{ t('game.tradeTake') }}</span>
+              <Hand :resources="WANTABLE" :selection="offerTake" @pick="cycleOffer('take', $event)" />
+            </div>
+
+            <div class="hx-live__choices">
+              <button
+                type="button"
+                class="hx-btn hx-btn--sm hx-btn--primary"
+                :disabled="!canPropose || offerLeft === 0"
+                @click="actions.counterTrade()"
+              >
+                {{ t('game.tradeCounter') }}
+              </button>
+              <button
+                type="button"
+                class="hx-btn hx-btn--sm hx-btn--ghost"
+                @click="countering = false; clearOffer()"
+              >
+                {{ t('common.cancel') }}
+              </button>
+            </div>
+          </div>
+        </template>
 
         <p v-else-if="myResponse" class="hx-muted hx-small">
           {{ t(`game.tradeAnswer.${myResponse}`) }}
@@ -793,43 +857,7 @@ onBeforeUnmount(() => {
       <template v-else-if="isMyTurn && phase === 'Main'">
         <div class="hx-trade__bank">
           <p class="hx-muted hx-small">{{ t('game.tradeBankHint') }}</p>
-
-          <div class="hx-trade__row">
-            <span class="hx-trade__label">{{ t('game.tradeGive') }}</span>
-            <button
-              v-for="resource in RESOURCES"
-              :key="`give-${resource}`"
-              type="button"
-              class="hx-btn hx-btn--sm"
-              :class="{ 'hx-btn--primary': bankGive === resource }"
-              :disabled="(hand[resource] ?? 0) < rateOf(resource)"
-              @click="bankGive = resource"
-            >
-              {{ rateOf(resource) }}× {{ t(`game.resource.${resource}`) }}
-            </button>
-          </div>
-
-          <div class="hx-trade__row">
-            <span class="hx-trade__label">{{ t('game.tradeTake') }}</span>
-            <button
-              v-for="resource in RESOURCES"
-              :key="`take-${resource}`"
-              type="button"
-              class="hx-btn hx-btn--sm"
-              :class="{ 'hx-btn--primary': bankTake === resource }"
-              :disabled="bankGive === resource"
-              @click="bankTake = resource"
-            >
-              {{ t(`game.resource.${resource}`) }}
-            </button>
-          </div>
-
-          <button
-            type="button"
-            class="hx-btn hx-btn--sm hx-btn--primary"
-            :disabled="!canBankTrade"
-            @click="actions.bankTrade()"
-          >
+          <button type="button" class="hx-btn hx-btn--sm" @click="bankOpen = true">
             {{ t('game.tradeWithBank') }}
           </button>
         </div>
@@ -954,6 +982,88 @@ onBeforeUnmount(() => {
 
       دکمه‌ها پایین‌اند تا با شست برسند؛ مهم‌ترین کارها (نوبت و ساخت) اول.
     -->
+    <!--
+      معامله با بانک در مدال، چون پیش از تأیید باید *نتیجه‌ی دقیق* را ببینی:
+      چند کارت می‌دهی و چه می‌گیری. ردیفِ قبلیِ دکمه‌ها نرخ را نشان می‌داد ولی
+      هیچ‌وقت جمعِ معامله را.
+    -->
+    <div v-if="bankOpen && view" class="hx-modal" role="dialog" aria-modal="true">
+      <div class="hx-modal__scrim" @click="bankOpen = false"></div>
+
+      <div class="hx-modal__panel">
+        <header class="hx-modal__head">
+          <h3 class="hx-modal__title">{{ t('game.tradeWithBank') }}</h3>
+          <button
+            type="button"
+            class="hx-btn hx-btn--ghost hx-btn--sm"
+            :aria-label="t('game.closePanel')"
+            @click="bankOpen = false"
+          >
+            ✕
+          </button>
+        </header>
+
+        <p class="hx-muted hx-small">{{ t('game.tradeBankHint') }}</p>
+
+        <div class="hx-trade__side">
+          <span class="hx-trade__label">{{ t('game.tradeGive') }}</span>
+          <div class="hx-bank__row">
+            <button
+              v-for="resource in RESOURCES"
+              :key="`bg-${resource}`"
+              type="button"
+              class="hx-bank__pick"
+              :class="{ 'is-on': bankGive === resource }"
+              :disabled="(hand[resource] ?? 0) < rateOf(resource)"
+              @click="bankGive = resource"
+            >
+              <Card :name="`resource.${resource}`" :count="hand[resource] ?? 0" />
+              <span class="hx-bank__rate">{{ rateOf(resource) }}:1</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="hx-trade__side">
+          <span class="hx-trade__label">{{ t('game.tradeTake') }}</span>
+          <div class="hx-bank__row">
+            <button
+              v-for="resource in RESOURCES"
+              :key="`bt-${resource}`"
+              type="button"
+              class="hx-bank__pick"
+              :class="{ 'is-on': bankTake === resource }"
+              :disabled="bankGive === resource"
+              @click="bankTake = resource"
+            >
+              <Card :name="`resource.${resource}`" />
+            </button>
+          </div>
+        </div>
+
+        <!-- نتیجه‌ی دقیق، پیش از تأیید. -->
+        <p class="hx-bank__summary">
+          <template v-if="canBankTrade">
+            {{ t('game.tradeBankSummary', rateOf(bankGive!), t(`game.resource.${bankGive}`), t(`game.resource.${bankTake}`)) }}
+          </template>
+          <template v-else>{{ t('game.tradeBankChoose') }}</template>
+        </p>
+
+        <div class="hx-live__choices">
+          <button
+            type="button"
+            class="hx-btn hx-btn--primary"
+            :disabled="!canBankTrade"
+            @click="actions.bankTrade().then(() => (bankOpen = false))"
+          >
+            {{ t('game.tradeWithBank') }}
+          </button>
+          <button type="button" class="hx-btn hx-btn--ghost" @click="bankOpen = false">
+            {{ t('common.cancel') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <template v-if="!wide && view && !isOver">
       <div v-if="sheetOpen" class="hx-live__scrim" @click="closeSheet()"></div>
 

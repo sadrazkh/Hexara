@@ -1,4 +1,4 @@
-using Hexara.Domain.Board;
+﻿using Hexara.Domain.Board;
 using Hexara.Domain.Game;
 
 namespace Hexara.Domain.Tests.Game;
@@ -73,18 +73,19 @@ public class SnapshotTests
             new Dictionary<Resource, int> { [Resource.Lumber] = 2 },
             new Dictionary<Resource, int> { [Resource.Ore] = 1 },
             []));
-        GameEngine.Apply(state, new RespondToTrade(1, true));
-
+        // پیشنهاد هنوز بی‌جواب است. عمداً: پذیرش خودش معامله را می‌بندد، پس
+        // پیشنهادِ پذیرفته‌شده اصلاً روی میز نمی‌ماند که ذخیره شود.
         var restored = GameState.Restore(state.ToSnapshot());
 
         Assert.NotNull(restored.PendingTrade);
         Assert.Equal(0, restored.PendingTrade!.Proposer);
-        Assert.Equal([1], restored.PendingTrade.AcceptedBy);
+        Assert.Equal(TradeResponse.Pending, restored.PendingTrade.Responses[1]);
         Assert.Equal(TradeResponse.Pending, restored.PendingTrade.Responses[2]);
 
-        // و معامله روی وضعیت بازیابی‌شده هم قطعی می‌شود.
-        Assert.True(GameEngine.Apply(restored, new ConfirmTrade(0, 1)).Success);
+        // و معامله روی وضعیت بازیابی‌شده هم انجام می‌شود.
+        Assert.True(GameEngine.Apply(restored, new RespondToTrade(1, true)).Success);
         Assert.Equal(1, restored.Player(0)[Resource.Ore]);
+        Assert.Null(restored.PendingTrade);
     }
 
     [Fact]

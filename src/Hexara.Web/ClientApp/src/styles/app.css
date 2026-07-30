@@ -1723,3 +1723,118 @@ button.hx-hand__top:hover:not(:disabled) {
   flex-direction: column;
   gap: var(--hx-sp-2);
 }
+
+/* ── مدال ─────────────────────────────────────────────────────────────── */
+
+.hx-modal {
+  position: fixed;
+  inset: 0;
+  z-index: var(--hx-z-modal);
+  display: grid;
+  place-items: center;
+  padding: var(--hx-sp-4);
+}
+
+.hx-modal__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 45%);
+}
+
+.hx-modal__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-3);
+  inline-size: min(30rem, 100%);
+  max-block-size: 88dvh;
+  overflow-y: auto;
+  padding: var(--hx-sp-5);
+  border: 1px solid var(--hx-border);
+  border-radius: var(--hx-r-lg);
+  background: var(--hx-panel-bg);
+  backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: var(--hx-shadow-lg);
+}
+
+.hx-modal__head {
+  display: flex;
+  align-items: center;
+  gap: var(--hx-sp-3);
+}
+
+.hx-modal__title {
+  margin: 0;
+  font-size: var(--hx-text-xl);
+}
+
+.hx-modal__head .hx-btn {
+  margin-inline-start: auto;
+}
+
+.hx-bank__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hx-card-gap);
+}
+
+.hx-bank__pick {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transition: transform var(--hx-dur-fast) var(--hx-ease);
+}
+
+.hx-bank__pick:disabled {
+  opacity: var(--hx-opacity-disabled);
+  cursor: not-allowed;
+}
+
+.hx-bank__pick.is-on {
+  transform: translateY(-6px);
+}
+
+.hx-bank__pick.is-on::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--hx-card-r);
+  box-shadow: var(--hx-ring-selected);
+}
+
+/* نرخِ همین منبع، روی خودِ کارت — بندرها آن را عوض می‌کنند. */
+.hx-bank__rate {
+  position: absolute;
+  inset-block-start: -6px;
+  inset-inline-start: -6px;
+  padding: 0 0.35rem;
+  border-radius: var(--hx-r-pill);
+  background: var(--hx-surface-2);
+  border: 1px solid var(--hx-border-strong);
+  color: var(--hx-text);
+  font-size: var(--hx-text-2xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.hx-bank__summary {
+  margin: 0;
+  padding: var(--hx-sp-3);
+  border: 1px solid var(--hx-border);
+  border-radius: var(--hx-r-md);
+  background: var(--hx-glass);
+  text-align: center;
+}
+
+.hx-trade__clock {
+  margin: 0;
+  font-size: var(--hx-text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--hx-text-dim);
+}
+
+.hx-trade__clock.is-urgent {
+  color: var(--hx-danger);
+  font-weight: var(--hx-weight-medium);
+}

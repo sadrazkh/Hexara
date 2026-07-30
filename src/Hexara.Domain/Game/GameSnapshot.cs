@@ -1,4 +1,4 @@
-using Hexara.Domain.Board;
+﻿using Hexara.Domain.Board;
 
 namespace Hexara.Domain.Game;
 
@@ -114,4 +114,13 @@ public sealed record TradeOfferSnapshot
     public required IReadOnlyDictionary<Resource, int> Take { get; init; }
 
     public required IReadOnlyDictionary<int, TradeResponse> Responses { get; init; }
+
+    /// <summary>
+    /// لحظه‌ی پایانِ مهلت. تهی یعنی بی‌مهلت — هم برای بازی‌های قدیمی که پیش از
+    /// این قابلیت ذخیره شده‌اند، و هم برای فراخوان‌هایی که زمان نمی‌دهند.
+    ///
+    /// در خودِ عکس وضعیت است و نه یک تایمر در حافظه، به همان دلیلی که برای
+    /// مهلت نوبت نوشته شده: تایمر با ری‌استارت سرور گم می‌شود.
+    /// </summary>
+    public DateTimeOffset? ExpiresAt { get; init; }
 }

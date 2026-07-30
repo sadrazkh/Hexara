@@ -1,4 +1,4 @@
-using Hexara.Domain.Board;
+﻿using Hexara.Domain.Board;
 using Hexara.Domain.Game;
 
 namespace Hexara.Domain.Tests.Game;
@@ -263,8 +263,8 @@ public class TradeTests
     {
         var state = WithOffer();
 
-        Assert.True(GameEngine.Apply(state, new RespondToTrade(1, true)).Success);
-        var result = GameEngine.Apply(state, new ConfirmTrade(0, 1));
+        // پذیرش خودش معامله را می‌بندد؛ دیگر تأییدِ جداگانه‌ای لازم نیست.
+        var result = GameEngine.Apply(state, new RespondToTrade(1, true));
 
         Assert.True(result.Success);
         Assert.Equal(0, state.Player(0)[Resource.Lumber]);
@@ -288,13 +288,12 @@ public class TradeTests
     }
 
     [Fact]
-    public void Only_the_proposer_may_confirm_or_cancel()
+    public void Only_the_proposer_may_cancel()
     {
         var state = WithOffer();
-        GameEngine.Apply(state, new RespondToTrade(1, true));
 
-        Assert.Equal(GameError.NotYourTrade, GameEngine.Apply(state, new ConfirmTrade(1, 1)).Error);
         Assert.Equal(GameError.NotYourTrade, GameEngine.Apply(state, new CancelTrade(1)).Error);
+        Assert.NotNull(state.PendingTrade);
     }
 
     [Fact]
@@ -330,18 +329,219 @@ public class TradeTests
         Assert.Null(state.PendingTrade);
     }
 
-    /// <summary>اگر دست طرف بین پذیرش و قطعی‌شدن خالی شود، معامله انجام نمی‌شود.</summary>
+    /// <summary>
+    /// دستِ پیشنهاددهنده هم بین پیشنهاد و پذیرش عوض می‌شود؛ لحظه‌ی پذیرش هر دو
+    /// طرف دوباره سنجیده می‌شوند، وگرنه پذیرنده چیزی می‌گرفت که وجود ندارد.
+    /// </summary>
     [Fact]
-    public void A_partner_who_lost_the_goods_cannot_be_confirmed()
+    public void A_proposer_who_lost_the_goods_cannot_be_accepted()
     {
         var state = WithOffer();
-        GameEngine.Apply(state, new RespondToTrade(1, true));
 
-        state.Player(1).Remove(Resource.Ore, 1);
+        state.Player(0).Remove(Resource.Lumber, 1);
 
-        var result = GameEngine.Apply(state, new ConfirmTrade(0, 1));
+        var result = GameEngine.Apply(state, new RespondToTrade(1, true));
 
         Assert.False(result.Success);
         Assert.Equal(GameError.NotEnoughResources, result.Error);
+        Assert.NotNull(state.PendingTrade);
+    }
+    // ── مهلت و پیشنهاد متقابل ───────────────────────────────────────────
+
+    private static readonly DateTimeOffset Noon =
+        new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+
+    /// <summary>پیشنهادی با مهلت، ساخته‌شده در ساعتِ ثابتِ بالا.</summary>
+    private static GameState WithTimedOffer()
+    {
+        var state = Games.New(3);
+        Games.StartMainPhase(state, 0);
+        Games.Give(state, 0, (Resource.Lumber, 2));
+        Games.Give(state, 1, (Resource.Ore, 1));
+
+        Assert.True(GameEngine.Apply(
+            state,
+            new ProposeTrade(
+                0,
+                new Dictionary<Resource, int> { [Resource.Lumber] = 2 },
+                new Dictionary<Resource, int> { [Resource.Ore] = 1 },
+                []),
+            Noon).Success);
+
+        return state;
+    }
+
+    [Fact]
+    public void An_offer_gets_a_deadline_from_the_game_options()
+    {
+        var state = WithTimedOffer();
+
+        Assert.Equal(Noon.AddSeconds(state.Options.TradeWindowSeconds), state.PendingTrade!.ExpiresAt);
+    }
+
+    /// <summary>بی‌زمان یعنی بی‌مهلت — بازی‌های قدیمی نباید یک‌شبه منقضی شوند.</summary>
+    [Fact]
+    public void An_offer_made_without_a_clock_never_expires()
+    {
+        var state = WithOffer();
+
+        Assert.Null(state.PendingTrade!.ExpiresAt);
+        Assert.False(state.PendingTrade.HasExpired(Noon.AddYears(5)));
+    }
+
+    [Fact]
+    public void Accepting_after_the_deadline_is_refused()
+    {
+        var state = WithTimedOffer();
+        var late = Noon.AddSeconds(state.Options.TradeWindowSeconds + 1);
+
+        var result = GameEngine.Apply(state, new RespondToTrade(1, true), late);
+
+        Assert.Equal(GameError.TradeExpired, result.Error);
+        Assert.Equal(2, state.Player(0)[Resource.Lumber]);
+    }
+
+    [Fact]
+    public void Accepting_inside_the_window_still_works()
+    {
+        var state = WithTimedOffer();
+
+        var result = GameEngine.Apply(state, new RespondToTrade(1, true), Noon.AddSeconds(29));
+
+        Assert.True(result.Success);
+        Assert.Null(state.PendingTrade);
+    }
+
+    /// <summary>مهلت باید از عکس وضعیت سالم بیرون بیاید، وگرنه با ری‌استارت گم می‌شود.</summary>
+    [Fact]
+    public void The_deadline_survives_a_snapshot()
+    {
+        var state = WithTimedOffer();
+
+        var back = GameState.Restore(state.ToSnapshot());
+
+        Assert.Equal(state.PendingTrade!.ExpiresAt, back.PendingTrade!.ExpiresAt);
+    }
+
+    /// <summary>
+    /// دو نفر می‌پذیرند؛ اولی معامله را می‌بندد و دومی چیزی برای پذیرفتن
+    /// نمی‌یابد. این همان قاعده‌ی «اولین پذیرشِ معتبر» است.
+    /// </summary>
+    [Fact]
+    public void The_first_valid_accept_takes_the_trade()
+    {
+        var state = Games.New(3);
+        Games.StartMainPhase(state, 0);
+        Games.Give(state, 0, (Resource.Lumber, 2));
+        Games.Give(state, 1, (Resource.Ore, 1));
+        Games.Give(state, 2, (Resource.Ore, 1));
+
+        Assert.True(GameEngine.Apply(
+            state,
+            new ProposeTrade(
+                0,
+                new Dictionary<Resource, int> { [Resource.Lumber] = 2 },
+                new Dictionary<Resource, int> { [Resource.Ore] = 1 },
+                []),
+            Noon).Success);
+
+        Assert.True(GameEngine.Apply(state, new RespondToTrade(1, true), Noon).Success);
+
+        var second = GameEngine.Apply(state, new RespondToTrade(2, true), Noon);
+
+        Assert.Equal(GameError.NoTradeOnTheTable, second.Error);
+        Assert.Equal(2, state.Player(1)[Resource.Lumber]);
+        Assert.Equal(1, state.Player(2)[Resource.Ore]);
+    }
+
+    [Fact]
+    public void A_counter_replaces_the_offer_and_turns_it_around()
+    {
+        var state = WithTimedOffer();
+
+        var result = GameEngine.Apply(
+            state,
+            new CounterTrade(
+                1,
+                new Dictionary<Resource, int> { [Resource.Ore] = 1 },
+                new Dictionary<Resource, int> { [Resource.Lumber] = 1 }),
+            Noon);
+
+        Assert.True(result.Success);
+        Assert.Contains(result.Events, e => e is TradeCountered);
+
+        var offer = state.PendingTrade!;
+        Assert.Equal(1, offer.Proposer);
+        Assert.Equal([0], offer.Responses.Keys);
+        Assert.Equal(1, offer.Give[Resource.Ore]);
+        Assert.Equal(Noon.AddSeconds(state.Options.TradeWindowSeconds), offer.ExpiresAt);
+    }
+
+    [Fact]
+    public void The_original_proposer_can_accept_a_counter()
+    {
+        var state = WithTimedOffer();
+
+        Assert.True(GameEngine.Apply(
+            state,
+            new CounterTrade(
+                1,
+                new Dictionary<Resource, int> { [Resource.Ore] = 1 },
+                new Dictionary<Resource, int> { [Resource.Lumber] = 1 }),
+            Noon).Success);
+
+        Assert.True(GameEngine.Apply(state, new RespondToTrade(0, true), Noon).Success);
+
+        Assert.Equal(1, state.Player(0)[Resource.Ore]);
+        Assert.Equal(1, state.Player(1)[Resource.Lumber]);
+        Assert.Null(state.PendingTrade);
+    }
+
+    [Fact]
+    public void Only_someone_the_offer_was_sent_to_can_counter()
+    {
+        var state = WithTimedOffer();
+
+        var result = GameEngine.Apply(
+            state,
+            new CounterTrade(
+                0,
+                new Dictionary<Resource, int> { [Resource.Lumber] = 1 },
+                new Dictionary<Resource, int> { [Resource.Ore] = 1 }),
+            Noon);
+
+        Assert.Equal(GameError.NotInvitedToTrade, result.Error);
+    }
+
+    [Fact]
+    public void You_cannot_counter_with_cards_you_do_not_hold()
+    {
+        var state = WithTimedOffer();
+
+        var result = GameEngine.Apply(
+            state,
+            new CounterTrade(
+                1,
+                new Dictionary<Resource, int> { [Resource.Ore] = 9 },
+                new Dictionary<Resource, int> { [Resource.Lumber] = 1 }),
+            Noon);
+
+        Assert.Equal(GameError.NotEnoughResources, result.Error);
+    }
+
+    [Fact]
+    public void Countering_after_the_deadline_is_refused()
+    {
+        var state = WithTimedOffer();
+
+        var result = GameEngine.Apply(
+            state,
+            new CounterTrade(
+                1,
+                new Dictionary<Resource, int> { [Resource.Ore] = 1 },
+                new Dictionary<Resource, int> { [Resource.Lumber] = 1 }),
+            Noon.AddSeconds(31));
+
+        Assert.Equal(GameError.TradeExpired, result.Error);
     }
 }

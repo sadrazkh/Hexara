@@ -1,4 +1,4 @@
-using Hexara.Domain.Board;
+﻿using Hexara.Domain.Board;
 
 namespace Hexara.Domain.Game;
 
@@ -91,6 +91,15 @@ public sealed record TradeCompleted(
     IReadOnlyDictionary<Resource, int> Take) : GameEvent;
 
 public sealed record TradeCancelled(int PlayerIndex) : GameEvent;
+
+/// <summary>پیشنهاد رد شد و به‌جایش شرطِ تازه‌ای گذاشته شد.</summary>
+public sealed record TradeCountered(
+    int PlayerIndex,
+    IReadOnlyDictionary<Resource, int> Give,
+    IReadOnlyDictionary<Resource, int> Take) : GameEvent;
+
+/// <summary>مهلت پیشنهاد تمام شد و از روی میز برداشته شد.</summary>
+public sealed record TradeExpired(int PlayerIndex) : GameEvent;
 
 /// <summary>نتیجه‌ی اجرای یک حرکت.</summary>
 public sealed record MoveResult(bool Success, GameError Error, IReadOnlyList<GameEvent> Events)

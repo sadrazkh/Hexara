@@ -1,4 +1,4 @@
-using Hexara.Application.Games;
+﻿using Hexara.Application.Games;
 using Hexara.Domain.Board;
 using Hexara.Domain.Game;
 
@@ -201,5 +201,13 @@ public class GameJsonTests
         yield return [new RespondToTrade(1, true)];
         yield return [new ConfirmTrade(0, 1)];
         yield return [new CancelTrade(0)];
+
+        yield return
+        [
+            new CounterTrade(
+                1,
+                new Dictionary<Resource, int> { [Resource.Ore] = 1 },
+                new Dictionary<Resource, int> { [Resource.Lumber] = 2 })
+        ];
     }
 }

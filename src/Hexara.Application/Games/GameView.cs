@@ -1,4 +1,4 @@
-using Hexara.Domain.Board;
+﻿using Hexara.Domain.Board;
 using Hexara.Domain.Game;
 
 namespace Hexara.Application.Games;
@@ -146,7 +146,8 @@ public sealed record TradeOfferView(
     int Proposer,
     IReadOnlyDictionary<Resource, int> Give,
     IReadOnlyDictionary<Resource, int> Take,
-    IReadOnlyDictionary<int, TradeResponse> Responses);
+    IReadOnlyDictionary<int, TradeResponse> Responses,
+    DateTimeOffset? ExpiresAt);
 
 /// <summary>
 /// حرکت‌های قانونی بیننده در همین لحظه. اگر نوبتش نباشد همه خالی‌اند.

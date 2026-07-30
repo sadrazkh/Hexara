@@ -1,4 +1,4 @@
-using Hexara.Application.Common.Interfaces;
+﻿using Hexara.Application.Common.Interfaces;
 using Hexara.Application.Players;
 using Hexara.Domain.Board;
 using Hexara.Domain.Game;
@@ -79,7 +79,8 @@ public sealed class GameViewBuilder
                     trade.Proposer,
                     new Dictionary<Resource, int>(trade.Give),
                     new Dictionary<Resource, int>(trade.Take),
-                    new Dictionary<int, TradeResponse>(trade.Responses))
+                    new Dictionary<int, TradeResponse>(trade.Responses),
+                    trade.ExpiresAt)
                 : null,
             Legal = LegalFor(state, viewerSeat)
         };

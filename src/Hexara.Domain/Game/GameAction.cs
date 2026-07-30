@@ -1,4 +1,4 @@
-using Hexara.Domain.Board;
+﻿using Hexara.Domain.Board;
 
 namespace Hexara.Domain.Game;
 
@@ -62,3 +62,15 @@ public sealed record RespondToTrade(int PlayerIndex, bool Accept) : GameAction(P
 public sealed record ConfirmTrade(int PlayerIndex, int Partner) : GameAction(PlayerIndex);
 
 public sealed record CancelTrade(int PlayerIndex) : GameAction(PlayerIndex);
+
+/// <summary>
+/// پیشنهاد متقابل: گیرنده به‌جای پذیرفتن، شرط خودش را می‌گذارد.
+///
+/// پیشنهاد روی میز را برمی‌دارد و یکی تازه می‌گذارد که پیشنهاددهنده‌اش خودِ
+/// اوست و تنها گیرنده‌اش پیشنهاددهنده‌ی قبلی. پس معامله همچنان بین همان دو نفر
+/// می‌ماند و کسی که نوبتش نیست نمی‌تواند از این راه معامله‌ی تازه‌ای باز کند.
+/// </summary>
+public sealed record CounterTrade(
+    int PlayerIndex,
+    IReadOnlyDictionary<Resource, int> Give,
+    IReadOnlyDictionary<Resource, int> Take) : GameAction(PlayerIndex);
