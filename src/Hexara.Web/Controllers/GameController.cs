@@ -1,5 +1,6 @@
 using Hexara.Application.Common.Interfaces;
 using Hexara.Application.Games;
+using Hexara.Web.Realtime;
 using Hexara.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,11 +18,13 @@ public class GameController : Controller
 {
     private readonly GameService _games;
     private readonly ICurrentUser _user;
+    private readonly GameChat _chat;
 
-    public GameController(GameService games, ICurrentUser user)
+    public GameController(GameService games, ICurrentUser user, GameChat chat)
     {
         _games = games;
         _user = user;
+        _chat = chat;
     }
 
     [HttpGet]
@@ -40,6 +43,6 @@ public class GameController : Controller
             return Forbid();
         }
 
-        return View(new GamePlayViewModel { Game = game, Seat = seat });
+        return View(new GamePlayViewModel { Game = game, Seat = seat, ChatEnabled = _chat.Enabled });
     }
 }

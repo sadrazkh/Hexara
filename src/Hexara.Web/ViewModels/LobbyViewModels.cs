@@ -88,5 +88,13 @@ public class GamePlayViewModel
     /// <summary>صندلی خودِ بیننده.</summary>
     public required int Seat { get; init; }
 
+    /// <summary>
+    /// چت روشن است یا نه.
+    ///
+    /// از سرور می‌آید تا وقتی خاموش است پنلش اصلاً ساخته نشود؛ پنلی که دکمه‌اش
+    /// کار نکند بدتر از نبودنش است.
+    /// </summary>
+    public required bool ChatEnabled { get; init; }
+
     public bool IsMyTurn => Game.State.CurrentPlayer == Seat;
 }

@@ -1507,6 +1507,82 @@ button.hx-hand__top--dev:not(:disabled) .hx-card2 {
   font-variant-numeric: tabular-nums;
 }
 
+/* ── گفت‌وگو ──────────────────────────────────────────────────────────── */
+
+.hx-chat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-2);
+}
+
+/*
+ * ارتفاع سقف دارد و خودش اسکرول می‌گیرد.
+ *
+ * بی این، یک گفت‌وگوی طولانی ریل را می‌کشید و پنل‌های بازی را از دسترس بیرون
+ * می‌برد — یعنی چت جلوی بازی را می‌گرفت، دقیقاً همان چیزی که نباید بشود.
+ */
+.hx-chat__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-2);
+  max-block-size: 15rem;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  overscroll-behavior: contain;
+}
+
+.hx-chat__line {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0 var(--hx-sp-2);
+  padding: var(--hx-sp-2);
+  border-radius: var(--hx-r-md);
+  background: var(--hx-glass);
+  font-size: var(--hx-text-xs);
+}
+
+/* پیام خودت کمی متمایز، تا در یک نگاه بفهمی کجای گفت‌وگویی. */
+.hx-chat__line.is-mine {
+  background: color-mix(in srgb, var(--hx-accent) 10%, var(--hx-glass));
+}
+
+.hx-chat__who {
+  color: var(--hx-avatar-color, var(--hx-accent));
+  font-weight: var(--hx-weight-bold);
+}
+
+/*
+ * متنِ کاربر است، پس هر چیزی می‌تواند باشد: یک «کلمه»ی دویست‌حرفی نباید پنل را
+ * پهن کند.
+ */
+.hx-chat__text {
+  grid-column: 1 / -1;
+  overflow-wrap: anywhere;
+  color: var(--hx-text);
+}
+
+.hx-chat__at {
+  color: var(--hx-text-faint);
+  font-size: var(--hx-text-2xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.hx-chat__empty {
+  padding: var(--hx-sp-2);
+}
+
+.hx-chat__compose {
+  display: flex;
+  gap: var(--hx-sp-2);
+}
+
+.hx-chat__input {
+  flex: 1;
+  min-inline-size: 0;
+}
+
 .hx-awards {
   display: flex;
   flex-direction: column;

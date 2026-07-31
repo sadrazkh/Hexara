@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Hexara.Application.Common.Interfaces;
 using Hexara.Application.Games;
 using Hexara.Domain.Game;
 using Microsoft.AspNetCore.Authorization;
@@ -27,19 +28,25 @@ public sealed class GameHub : Hub
     private readonly GameBroadcaster _broadcaster;
     private readonly GamePresence _presence;
     private readonly GameLocks _locks;
+    private readonly GameChat _chat;
+    private readonly IClock _clock;
 
     public GameHub(
         GameService games,
         GameViewBuilder views,
         GameBroadcaster broadcaster,
         GamePresence presence,
-        GameLocks locks)
+        GameLocks locks,
+        GameChat chat,
+        IClock clock)
     {
         _games = games;
         _views = views;
         _broadcaster = broadcaster;
         _presence = presence;
         _locks = locks;
+        _chat = chat;
+        _clock = clock;
     }
 
     private Guid? UserId =>
@@ -131,6 +138,49 @@ public sealed class GameHub : Hub
         var view = await _views.BuildAsync(game, seat, _presence.OnlineIn(gameId), Context.ConnectionAborted);
 
         return new CatchUpResult(game.State.Version, missed, view);
+    }
+
+    // ── چت ───────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// یک پیام چت.
+    ///
+    /// عمداً چیزی برنمی‌گرداند و هرگز خطا نمی‌دهد: پیامِ ردشده (خالی، یا از حدِ
+    /// سرعت گذشته) فقط فرستاده نمی‌شود. خرابیِ چت نباید به بازی سرایت کند.
+    ///
+    /// نامِ فرستنده فرستاده نمی‌شود، فقط صندلی‌اش — نام را کلاینت از روی همان
+    /// نمای بازی درمی‌آورد، پس کسی نمی‌تواند خودش را جای دیگری جا بزند.
+    /// </summary>
+    public async Task SendChat(Guid gameId, string? text)
+    {
+        if (!_chat.Enabled || UserId is not { } userId)
+        {
+            return;
+        }
+
+        var game = await _games.GetAsync(gameId, Context.ConnectionAborted);
+        if (game?.SeatOf(userId) is not { } seat)
+        {
+            return;
+        }
+
+        if (_chat.Post(gameId, seat, text, _clock.UtcNow) is { } message)
+        {
+            await Clients.Group(GroupOf(gameId)).SendAsync("chat", message, Context.ConnectionAborted);
+        }
+    }
+
+    /// <summary>پیام‌های اخیر، برای کسی که تازه رسیده یا صفحه را نو کرده.</summary>
+    public async Task<IReadOnlyList<ChatMessage>> ChatHistory(Guid gameId)
+    {
+        if (!_chat.Enabled || UserId is not { } userId)
+        {
+            return [];
+        }
+
+        var game = await _games.GetAsync(gameId, Context.ConnectionAborted);
+
+        return game?.SeatOf(userId) is null ? [] : _chat.History(gameId);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)

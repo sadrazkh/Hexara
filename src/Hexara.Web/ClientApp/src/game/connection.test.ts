@@ -72,6 +72,7 @@ function handlers() {
     onEvents: vi.fn(),
     onPresence: vi.fn(),
     onError: vi.fn(),
+    onChat: vi.fn(),
   };
 }
 

@@ -151,6 +151,19 @@ export interface TradeOffer {
   expiresAt: string | null;
 }
 
+/**
+ * یک پیام چت.
+ *
+ * فرستنده با *صندلی* می‌آید نه با نام؛ نام از روی همان نمای بازی درمی‌آید که
+ * کلاینت دارد، پس کسی نمی‌تواند خودش را جای دیگری جا بزند.
+ */
+export interface ChatMessage {
+  id: number;
+  seat: number;
+  text: string;
+  sentAt: string;
+}
+
 export interface MoveOutcome {
   status: string;
   error: string;
@@ -176,6 +189,7 @@ export interface Handlers {
   onEvents(events: GameEvent[]): void;
   onPresence(userId: string, online: boolean): void;
   onError(message: string): void;
+  onChat(message: ChatMessage): void;
 }
 
 /**
@@ -205,6 +219,10 @@ export class GameConnection {
 
     this.connection.on('presence', (userId: string, online: boolean) => {
       this.handlers.onPresence(userId, online);
+    });
+
+    this.connection.on('chat', (message: ChatMessage) => {
+      this.handlers.onChat(message);
     });
 
     this.connection.onreconnecting(() => this.handlers.onLink('reconnecting'));
@@ -242,6 +260,35 @@ export class GameConnection {
     } catch (error) {
       this.handlers.onError(String(error));
       return null;
+    }
+  }
+
+  /**
+   * فرستادن یک پیام چت.
+   *
+   * عمداً هیچ خطایی به بیرون نمی‌دهد و هیچ‌چیز برنمی‌گرداند: سرور پیامِ خالی یا
+   * پیامِ کسی که تندتر از حد می‌فرستد را بی‌صدا رد می‌کند، و **خرابیِ چت نباید
+   * بازی را متوقف کند**. اگر پیام رسیده باشد، از راه رویداد ‎chat‎ برمی‌گردد —
+   * همان مسیری که پیام بقیه هم از آن می‌آید.
+   */
+  async sendChat(text: string): Promise<void> {
+    if (this.connection.state !== HubConnectionState.Connected) return;
+
+    try {
+      await this.connection.invoke('SendChat', this.gameId, text);
+    } catch {
+      // بی‌صدا: بازی ادامه دارد.
+    }
+  }
+
+  /** پیام‌های اخیر — سرِ پیوستن و بعد از هر بار وصل شدنِ دوباره. */
+  async chatHistory(): Promise<ChatMessage[]> {
+    if (this.connection.state !== HubConnectionState.Connected) return [];
+
+    try {
+      return await this.connection.invoke<ChatMessage[]>('ChatHistory', this.gameId);
+    } catch {
+      return [];
     }
   }
 

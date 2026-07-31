@@ -11,7 +11,7 @@
 
     @* جزیره‌ی Vue: از اینجا به بعد وضعیت زنده از هاب می‌آید، نه از سرور رندر.
        متن زیر فقط تا وقتی دیده می‌شود که جزیره سوار شود یا جاوااسکریپت نباشد. *@
-    <div id="island-game-live" data-game-id="@Model.Game.Id">
+    <div id="island-game-live" data-game-id="@Model.Game.Id" data-chat-enabled="@Model.ChatEnabled.ToString().ToLowerInvariant()">
         <p class="hx-muted">@T["common.loading"]</p>
     </div>
 </section>

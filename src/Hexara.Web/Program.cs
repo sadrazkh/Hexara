@@ -123,6 +123,11 @@ builder.Services.AddScoped<GameViewBuilder>();
 builder.Services.AddScoped<GameBroadcaster>();
 builder.Services.AddScoped<RoomBroadcaster>();
 
+// چت در حافظه است و تکی، پس تنظیماتش هم همان‌جا خوانده و تزریق می‌شود.
+builder.Services.AddSingleton(builder.Configuration.GetSection(ChatOptions.Section).Get<ChatOptions>()
+    ?? new ChatOptions());
+builder.Services.AddSingleton<GameChat>();
+
 builder.Services.Configure<AutoPlayOptions>(builder.Configuration.GetSection(AutoPlayOptions.Section));
 builder.Services.AddHostedService<AutoPlayService>();
 

@@ -13,15 +13,33 @@ import type { BoardData, Highlights, Pick } from '@/three/board';
 import { vertexHexes, vertexKey } from '@/three/hex';
 import { edgeKey, freeRoadChoices } from '@/game/cards';
 import { nextFace } from '@/game/dice';
+import Chat from './Chat.vue';
 import {
   GameConnection,
+  type ChatMessage,
   type GameEvent,
   type GameView,
   type Hex,
   type Link,
 } from '@/game/connection';
 
-const props = defineProps<{ gameId: string }>();
+/**
+ * ‎chatEnabled‎ از ‎data-chat-enabled‎ روی عنصر میزبان می‌آید.
+ *
+ * عمداً بدون ‎withDefaults‎ نوشته شده: با آن، استنتاجِ نوعِ قالب در همین فایل
+ * می‌شکند و پارامترهای ‎v-for‎ و کال‌بک‌ها ‎any‎ می‌شوند. نبودنِ صفت یعنی
+ * ‎undefined‎ که همه‌جا مثل «خاموش» رفتار می‌کند.
+ */
+const props = defineProps<{ gameId: string; chatEnabled?: boolean }>();
+
+/**
+ * پیام‌های چت.
+ *
+ * جدا از ‎log‎ نگه داشته می‌شود و این عمدی است: لاگ آنچه *بازی* کرده را می‌گوید و
+ * از رویدادهای سرور ساخته می‌شود، ولی چت حرفِ آدم‌هاست. قاطی‌کردنشان یعنی یک
+ * پیامِ پرحرف، اتفاق‌های بازی را از جلوی چشم می‌برد.
+ */
+const chat = ref<ChatMessage[]>([]);
 
 const link = ref<Link>('connecting');
 const view = ref<GameView | null>(null);
@@ -117,6 +135,7 @@ const folds = ref<Record<string, boolean>>({
   hand: true,
   players: false,
   awards: false,
+  chat: true,
   log: false,
 });
 
@@ -148,6 +167,18 @@ const TABS = [
   { key: 'hand', label: 'game.yourHand', icon: 'icon.Cards' },
   { key: 'players', label: 'game.players', icon: 'avatar.Placeholder' },
 ] as const satisfies readonly { key: string; label: string; icon: AssetName }[];
+
+
+const CHAT_TAB = { key: 'chat', label: 'game.chat', icon: 'icon.Cards' } as const satisfies {
+  key: string;
+  label: string;
+  icon: AssetName;
+};
+
+/** برگه‌های نوار پایین؛ چت فقط وقتی روشن است که سرور روشنش کرده باشد. */
+const tabs = computed<readonly { key: string; label: string; icon: AssetName }[]>(() =>
+  props.chatEnabled ? [...TABS, CHAT_TAB] : TABS,
+);
 
 function closeSheet(): void {
   sheetState.value = 'closed';
@@ -574,6 +605,29 @@ function seat(): number {
   return view.value?.seat ?? 0;
 }
 
+/**
+ * فرستادن یک پیام.
+ *
+ * منتظرِ نتیجه نمی‌ماند و خطایی نشان نمی‌دهد: پیام یا از راه رویداد ‎chat‎
+ * برمی‌گردد یا برنمی‌گردد. **هیچ مسیری از اینجا نباید بازی را متوقف کند.**
+ */
+function sendChat(text: string): void {
+  void connection?.sendChat(text);
+}
+
+/**
+ * تاریخچه‌ی چت را از نو می‌گیرد.
+ *
+ * هر بار که اتصال زنده می‌شود صدا زده می‌شود، نه فقط اولِ کار — بعد از قطعی،
+ * پیام‌هایی که در فاصله رد و بدل شده‌اند فقط از همین راه برمی‌گردند. سرور
+ * پیام‌ها را یکتا و مرتب می‌دهد، پس جایگزینیِ کامل امن‌تر از چسباندن است.
+ */
+async function refreshChat(): Promise<void> {
+  if (!props.chatEnabled) return;
+
+  chat.value = (await connection?.chatHistory()) ?? [];
+}
+
 async function play(action: Record<string, unknown>): Promise<void> {
   problem.value = null;
   const outcome = await connection?.play(action);
@@ -775,7 +829,10 @@ function adjust(resource: string, delta: number): void {
 
 onMounted(() => {
   connection = new GameConnection(props.gameId, {
-    onLink: (value) => (link.value = value),
+    onLink: (value) => {
+      link.value = value;
+      if (value === 'live') void refreshChat();
+    },
     onView: (value) => {
       const before = view.value;
       view.value = value;
@@ -800,6 +857,11 @@ onMounted(() => {
       /* حضور از راه نمای تازه هم می‌رسد؛ این فقط واکنش سریع‌تر است. */
     },
     onError: (message) => (problem.value = message),
+
+    // پیامِ تازه ته فهرست می‌نشیند؛ سرور ترتیب را نگه می‌دارد.
+    onChat: (message) => {
+      chat.value = [...chat.value, message];
+    },
   });
 
   void connection.start();
@@ -1511,6 +1573,27 @@ onBeforeUnmount(() => {
           </div>
         </Fold>
 
+        <!--
+          چت پایینِ ریل می‌نشیند، زیر همه‌ی چیزهایی که برای *بازی‌کردن* لازم‌اند.
+          اگر سرور خاموشش کرده باشد اصلاً ساخته نمی‌شود.
+        -->
+        <Fold
+          v-if="chatEnabled && view && !isOver"
+          :label="t('game.chat')"
+          :always="wide"
+          :id="`hx-panel-chat`"
+          :open="folds.chat"
+          @update:open="folds.chat = $event"
+        >
+          <Chat
+            :messages="chat"
+            :players="view.players"
+            :seat="view.seat"
+            :live="link === 'live'"
+            @send="sendChat($event)"
+          />
+        </Fold>
+
         <Fold
           v-if="log.length > 0"
           :label="t('game.log')"
@@ -1708,7 +1791,7 @@ onBeforeUnmount(() => {
 
       <nav class="hx-live__tabs" :aria-label="t('game.title')">
         <button
-          v-for="tab in TABS"
+          v-for="tab in tabs"
           :key="tab.key"
           type="button"
           class="hx-live__tab"
