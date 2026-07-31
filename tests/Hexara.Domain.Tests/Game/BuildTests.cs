@@ -278,4 +278,102 @@ public class BuildTests
 
         Assert.Equal(0, state.CurrentPlayer);
     }
+
+    // ── گرفتن بندر ───────────────────────────────────────────────────────
+
+    /// <summary>
+    /// بندر روی برد یک نشانِ کوچک است و اثرش (نرخ معامله) جای دیگری دیده می‌شود.
+    /// بدون این اعلام، بازیکن تا وسط یک معامله نمی‌فهمد نرخش عوض شده.
+    /// </summary>
+    [Fact]
+    public void Building_on_a_port_announces_it()
+    {
+        var state = Games.New(players: 2);
+        var port = state.Board.Ports.First(p => !p.IsGeneric);
+        var vertex = port.Vertices().First();
+
+        // آبادی باید به جاده‌ی خودت بچسبد، پس یکی از یال‌های همان گوشه را می‌گیریم.
+        state.PlaceRoad(vertex.TouchingEdges().First(e => state.Board.ContainsEdge(e)), 0);
+        Games.StartMainPhase(state, 0);
+        Games.GiveSettlementCost(state, 0);
+
+        var result = GameEngine.Apply(state, new BuildSettlement(0, vertex));
+
+        Assert.True(result.Success);
+        var taken = result.Events.OfType<PortTaken>().Single();
+        Assert.Equal(0, taken.PlayerIndex);
+        Assert.Equal(port.Resource, taken.Resource);
+        Assert.Equal(2, taken.Rate);
+    }
+
+    [Fact]
+    public void A_generic_port_is_announced_without_a_resource()
+    {
+        var state = Games.New(players: 2);
+        var port = state.Board.Ports.First(p => p.IsGeneric);
+        var vertex = port.Vertices().First();
+
+        state.PlaceRoad(vertex.TouchingEdges().First(e => state.Board.ContainsEdge(e)), 0);
+        Games.StartMainPhase(state, 0);
+        Games.GiveSettlementCost(state, 0);
+
+        var taken = GameEngine.Apply(state, new BuildSettlement(0, vertex))
+            .Events.OfType<PortTaken>().Single();
+
+        Assert.Null(taken.Resource);
+        Assert.Equal(3, taken.Rate);
+    }
+
+    [Fact]
+    public void Building_away_from_every_port_announces_nothing()
+    {
+        var state = Games.New(players: 2);
+        var onAPort = state.Board.Ports.SelectMany(p => p.Vertices()).ToHashSet();
+
+        var vertex = GameEngine.LegalSettlementVertices(state, 0).First(v => !onAPort.Contains(v));
+
+        state.PlaceRoad(vertex.TouchingEdges().First(e => state.Board.ContainsEdge(e)), 0);
+        Games.StartMainPhase(state, 0);
+        Games.GiveSettlementCost(state, 0);
+
+        var result = GameEngine.Apply(state, new BuildSettlement(0, vertex));
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Events.OfType<PortTaken>());
+    }
+
+    /// <summary>چیدمان اولیه هم بندر می‌گیرد — و بیشترِ بندرها همان‌جا گرفته می‌شوند.</summary>
+    [Fact]
+    public void The_setup_settlement_takes_ports_too()
+    {
+        var state = Games.New(players: 2);
+        var port = state.Board.Ports.First(p => !p.IsGeneric);
+        var vertex = port.Vertices().First();
+
+        var result = GameEngine.Apply(state, new PlaceInitialSettlement(0, vertex));
+
+        Assert.True(result.Success);
+        Assert.Single(result.Events.OfType<PortTaken>());
+    }
+
+    /// <summary>
+    /// شهر روی آبادیِ خودت ساخته می‌شود، پس بندری نمی‌آورد که قبلاً نداشته باشی —
+    /// اعلامِ دوباره‌اش یعنی دروغ در لاگ.
+    /// </summary>
+    [Fact]
+    public void Upgrading_to_a_city_does_not_announce_the_port_again()
+    {
+        var state = Games.New(players: 2);
+        var port = state.Board.Ports.First(p => !p.IsGeneric);
+        var vertex = port.Vertices().First();
+
+        state.PlaceBuilding(vertex, new Building(0, BuildingKind.Settlement));
+        Games.StartMainPhase(state, 0);
+        Games.GiveCityCost(state, 0);
+
+        var result = GameEngine.Apply(state, new BuildCity(0, vertex));
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Events.OfType<PortTaken>());
+    }
 }

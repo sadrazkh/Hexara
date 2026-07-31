@@ -323,6 +323,91 @@ public class GameViewTests
         Assert.Empty(view.Legal.FollowUpRoads);
     }
 
+    // ── بندرها و نشان‌ها ─────────────────────────────────────────────────
+
+    /// <summary>
+    /// بندرِ حریف روی برد پیداست و در معامله تعیین‌کننده است، پس عمومی فرستاده
+    /// می‌شود — نه فقط برای بیننده.
+    /// </summary>
+    [Fact]
+    public async Task Each_player_carries_the_ports_they_hold()
+    {
+        var port = NewGame().State.Board.Ports.First(p => !p.IsGeneric);
+        var vertex = port.Vertices().First();
+
+        var view = await NewBuilder().BuildAsync(WithSettlement(1, vertex), 0);
+
+        Assert.Empty(view.Players[0].Ports);
+        Assert.Equal(
+            [new PortSnapshot(port.Edge.Hex.Q, port.Edge.Hex.R, port.Edge.Side, port.Resource)],
+            view.Players[1].Ports);
+    }
+
+    [Fact]
+    public async Task A_dedicated_port_lowers_only_its_own_resource()
+    {
+        var port = NewGame().State.Board.Ports.First(p => !p.IsGeneric);
+        var resource = port.Resource!.Value;
+
+        var view = await NewBuilder().BuildAsync(WithSettlement(0, port.Vertices().First()), 0);
+
+        var rates = view.Players[0].TradeRates;
+
+        Assert.Equal(2, rates[resource]);
+        Assert.All(
+            rates.Where(r => r.Key != resource),
+            r => Assert.Equal(4, r.Value));
+    }
+
+    /// <summary>
+    /// نرخ یک واقعیتِ همیشگی است نه یک «حرکت قانونی». وقتی کنارِ حرکت‌ها بود،
+    /// بیرون از نوبت خالی می‌رسید و رابط ۴:۱ نشان می‌داد — حتی به کسی که بندر داشت.
+    /// </summary>
+    [Fact]
+    public async Task Rates_are_there_even_when_it_is_not_your_turn()
+    {
+        var port = NewGame().State.Board.Ports.First(p => p.IsGeneric);
+
+        var view = await NewBuilder().BuildAsync(WithSettlement(2, port.Vertices().First()), 2);
+
+        Assert.False(view.Legal.IsMyTurn);
+        Assert.All(view.Players[2].TradeRates, r => Assert.Equal(3, r.Value));
+    }
+
+    [Fact]
+    public async Task Someone_without_a_port_trades_at_four_to_one()
+    {
+        var view = await NewBuilder().BuildAsync(NewGame(), 0);
+
+        Assert.Empty(view.Players[0].Ports);
+        Assert.All(view.Players[0].TradeRates, r => Assert.Equal(4, r.Value));
+    }
+
+    /// <summary>حدِ نصاب‌ها قابل تنظیم‌اند، پس رابط نباید عددشان را از بر باشد.</summary>
+    [Fact]
+    public async Task The_view_carries_the_award_thresholds()
+    {
+        var view = await NewBuilder().BuildAsync(NewGame(), 0);
+
+        Assert.Equal(5, view.LongestRoadMinimum);
+        Assert.Equal(3, view.LargestArmyMinimum);
+    }
+
+    /// <summary>
+    /// بازی‌ای با یک آبادی روی همان گوشه.
+    ///
+    /// برد از seed ثابت ساخته می‌شود، پس بندری که آزمون از یک نمونه‌ی دیگر پیدا
+    /// کرده در این یکی هم دقیقاً همان‌جاست.
+    /// </summary>
+    private static StoredGame WithSettlement(int seat, VertexId vertex) =>
+        NewGame(s => s with
+        {
+            Buildings =
+            [
+                new BuildingSnapshot(vertex.Hex.Q, vertex.Hex.R, vertex.Corner, seat, BuildingKind.Settlement)
+            ]
+        });
+
     private static string Key(RoadSnapshot road) => $"{road.Q},{road.R},{road.Side}";
 
     /// <summary>بازی‌ای در بدنه‌ی نوبتِ بازیکن اول، بدون چیدمان اولیه.</summary>

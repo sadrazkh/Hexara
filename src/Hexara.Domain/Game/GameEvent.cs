@@ -69,6 +69,15 @@ public sealed record YearOfPlentyPlayed(int PlayerIndex, Resource First, Resourc
 
 public sealed record MonopolyPlayed(int PlayerIndex, Resource Resource, int Collected) : GameEvent;
 
+/// <summary>
+/// آبادیِ تازه روی یک بندر نشست و نرخ معامله‌ی این بازیکن عوض شد.
+///
+/// از خودِ «آبادی ساخته شد» جدا اعلام می‌شود چون اثرش جداست و دیده نمی‌شود:
+/// بندر روی برد یک نشانِ کوچک است و بی این خط، بازیکن تا وسط یک معامله نمی‌فهمد
+/// نرخش عوض شده. <paramref name="Resource"/> تهی یعنی بندر عمومی (۳:۱).
+/// </summary>
+public sealed record PortTaken(int PlayerIndex, Resource? Resource, int Rate) : GameEvent;
+
 /// <summary>جابه‌جایی کارت «طولانی‌ترین جاده»؛ <paramref name="PlayerIndex"/> تهی یعنی بی‌صاحب شد.</summary>
 public sealed record LongestRoadChanged(int? PlayerIndex, int Length) : GameEvent;
 

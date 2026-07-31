@@ -61,6 +61,18 @@ public sealed record GameView
     /// </summary>
     public required IReadOnlyDictionary<string, IReadOnlyDictionary<Resource, int>> Costs { get; init; }
 
+    /// <summary>
+    /// چند جاده برای گرفتن «طولانی‌ترین جاده» لازم است.
+    ///
+    /// از تنظیمات بازی می‌آید نه از یک عددِ ثابت در کلاینت، چون قابل تغییر است و
+    /// رابط باید بتواند بگوید «۲ تا مانده» — همان دلیلی که جدول هزینه را هم از
+    /// سرور می‌گیریم.
+    /// </summary>
+    public required int LongestRoadMinimum { get; init; }
+
+    /// <summary>چند شوالیه برای گرفتن «بزرگ‌ترین ارتش» لازم است.</summary>
+    public required int LargestArmyMinimum { get; init; }
+
     public required int DevelopmentDeckCount { get; init; }
 
     public required IReadOnlyList<PlayerView> Players { get; init; }
@@ -107,6 +119,24 @@ public sealed record PlayerView
     public required bool HasLargestArmy { get; init; }
 
     public required int LongestRoadLength { get; init; }
+
+    /// <summary>
+    /// بندرهایی که این بازیکن با آبادی‌هایش در اختیار دارد.
+    ///
+    /// عمومی است و باید باشد: بندرِ حریف روی برد پیداست و در معامله تعیین‌کننده
+    /// است — دانستنِ اینکه او سنگ را ۲:۱ می‌دهد بخشی از خودِ بازی است.
+    /// </summary>
+    public required IReadOnlyList<PortSnapshot> Ports { get; init; }
+
+    /// <summary>
+    /// نرخ معامله‌ی این بازیکن با بانک: از هر منبع چند تا بدهد تا یکی بگیرد.
+    ///
+    /// سرور حسابش می‌کند نه کلاینت — نرخ به بندرها بستگی دارد (۲ با بندر
+    /// اختصاصی، ۳ با عمومی، وگرنه ۴) و پیاده‌کردن دوباره‌ی همان قاعده یعنی دو جا
+    /// که می‌توانند از هم بلغزند. کنارِ خودِ بازیکن می‌نشیند نه کنارِ «حرکت‌های
+    /// قانونی»، چون یک واقعیتِ همیشگی است و نه چیزی که فقط سرِ نوبت معنا دارد.
+    /// </summary>
+    public required IReadOnlyDictionary<Resource, int> TradeRates { get; init; }
 
     public required int SettlementsLeft { get; init; }
 
@@ -193,15 +223,6 @@ public sealed record LegalMovesView
     /// <summary>کارت‌های توسعه‌ای که همین حالا می‌شود بازی کرد.</summary>
     public required IReadOnlyList<DevelopmentCard> PlayableCards { get; init; }
 
-    /// <summary>
-    /// نرخ معامله با بانک برای هر منبع: چند واحد از آن باید بدهی تا یکی بگیری.
-    ///
-    /// سرور حسابش می‌کند نه کلاینت. نرخ به بندرهایی بستگی دارد که بازیکن رویشان
-    /// آبادی دارد (۲ با بندر اختصاصی، ۳ با عمومی، وگرنه ۴)، و پیاده‌کردن دوباره‌ی
-    /// همان قاعده در کلاینت یعنی دو جا که می‌توانند از هم بلغزند.
-    /// </summary>
-    public required IReadOnlyDictionary<Resource, int> TradeRates { get; init; }
-
     public static LegalMovesView None { get; } = new()
     {
         IsMyTurn = false,
@@ -211,7 +232,6 @@ public sealed record LegalMovesView
         RobberTargets = [],
         FreeRoads = [],
         FollowUpRoads = new Dictionary<string, IReadOnlyList<RoadSnapshot>>(),
-        PlayableCards = [],
-        TradeRates = new Dictionary<Resource, int>()
+        PlayableCards = []
     };
 }

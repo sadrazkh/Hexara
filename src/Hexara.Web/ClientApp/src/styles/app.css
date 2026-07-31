@@ -668,6 +668,15 @@ code {
   color: var(--hx-text-faint);
 }
 
+/* نشانِ «طولانی‌ترین جاده» و «بزرگ‌ترین ارتش» — دو امتیازِ گران، پس طلایی. */
+.hx-chip--award {
+  gap: 0.25rem;
+  border-color: color-mix(in srgb, var(--hx-accent) 46%, transparent);
+  background: color-mix(in srgb, var(--hx-accent) 12%, var(--hx-glass));
+  color: var(--hx-text);
+  font-weight: var(--hx-weight-bold);
+}
+
 .hx-rooms {
   display: flex;
   flex-direction: column;
@@ -1457,6 +1466,92 @@ button.hx-hand__top--dev:not(:disabled) .hx-card2 {
   margin: 0;
   font-size: var(--hx-text-sm);
   color: var(--hx-text-dim);
+}
+
+/* ── بندرها و نشان‌ها ─────────────────────────────────────────────────── */
+
+.hx-ports {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-2);
+  margin-block-start: var(--hx-sp-3);
+  padding-block-start: var(--hx-sp-3);
+  border-block-start: 1px solid var(--hx-border);
+}
+
+.hx-ports__label {
+  font-size: var(--hx-text-xs);
+  font-weight: var(--hx-weight-bold);
+  color: var(--hx-text-dim);
+}
+
+.hx-ports__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hx-sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hx-ports__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--hx-border);
+  border-radius: var(--hx-r-pill);
+  background: var(--hx-glass);
+  font-size: var(--hx-text-2xs);
+}
+
+/* نرخ مهم‌ترین عدد این نوار است؛ ۲:۱ باید از دور از ۳:۱ فرق کند. */
+.hx-ports__rate {
+  color: var(--hx-accent-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.hx-awards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hx-award {
+  display: flex;
+  align-items: center;
+  gap: var(--hx-sp-3);
+  padding: var(--hx-sp-2);
+  border: 1px solid var(--hx-border);
+  border-radius: var(--hx-r-md);
+  background: var(--hx-glass);
+}
+
+.hx-award__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.hx-award__body small,
+.hx-award__score small {
+  color: var(--hx-text-dim);
+  font-size: var(--hx-text-2xs);
+}
+
+.hx-award__score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.hx-award__score strong {
+  font-size: var(--hx-text-lg);
 }
 
 /* ── ساخت‌وساز ────────────────────────────────────────────────────────── */

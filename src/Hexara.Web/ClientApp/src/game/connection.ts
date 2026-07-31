@@ -40,6 +40,10 @@ export interface GameView {
   bank: Record<string, number>;
   /** هزینه‌ی هر ساخت‌وساز، از سرور — کلاینت جدول هزینه ندارد. */
   costs: Record<string, Record<string, number>>;
+  /** چند جاده برای «طولانی‌ترین جاده» لازم است؛ از تنظیمات بازی می‌آید. */
+  longestRoadMinimum: number;
+  /** چند شوالیه برای «بزرگ‌ترین ارتش» لازم است. */
+  largestArmyMinimum: number;
   developmentDeckCount: number;
   players: PlayerView[];
   seat: number | null;
@@ -94,6 +98,10 @@ export interface PlayerView {
   hasLongestRoad: boolean;
   hasLargestArmy: boolean;
   longestRoadLength: number;
+  /** بندرهایی که این بازیکن در اختیار دارد — عمومی، چون روی برد پیداست. */
+  ports: Port[];
+  /** نرخ بانکِ این بازیکن: از هر منبع چند تا بدهد تا یکی بگیرد. */
+  tradeRates: Record<string, number>;
   settlementsLeft: number;
   citiesLeft: number;
   roadsLeft: number;
@@ -128,8 +136,6 @@ export interface LegalMoves {
   followUpRoads: Record<string, RoadAt[]>;
   /** کارت‌های توسعه‌ای که همین حالا می‌شود بازی کرد. */
   playableCards: string[];
-  /** برای هر منبع: چند واحد بدهی تا یکی بگیری. سرور از روی بندرها حسابش می‌کند. */
-  tradeRates: Record<string, number>;
 }
 
 /** پیشنهاد معامله‌ی روی میز. */

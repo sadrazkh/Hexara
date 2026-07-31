@@ -92,6 +92,7 @@ public static class GameEngine
         player.BuildingPoints++;
 
         var events = new List<GameEvent> { new SetupSettlementPlaced(action.PlayerIndex, action.Vertex) };
+        AnnouncePorts(state, action.PlayerIndex, action.Vertex, events);
 
         // آبادی دور دوم منابع خانه‌های مجاورش را همان لحظه می‌دهد.
         if (state.SetupStep >= state.Options.PlayerCount)
@@ -160,6 +161,20 @@ public static class GameEngine
 
         RecomputeLongestRoad(state, events);
         return MoveResult.Ok(events);
+    }
+
+    /// <summary>
+    /// اگر این گوشه روی بندری باشد، گرفتنش را اعلام می‌کند.
+    ///
+    /// فقط برای آبادی صدا زده می‌شود نه شهر: شهر روی آبادیِ خودت ساخته می‌شود، پس
+    /// بندری که با شهر می‌آید همان لحظه‌ی ساختِ آبادی اعلام شده بود.
+    /// </summary>
+    private static void AnnouncePorts(GameState state, int playerIndex, VertexId vertex, List<GameEvent> events)
+    {
+        foreach (var port in state.Board.Ports.Where(p => p.Vertices().Contains(vertex)))
+        {
+            events.Add(new PortTaken(playerIndex, port.Resource, port.Rate));
+        }
     }
 
     private static List<ResourceGrant> GrantStartingResources(GameState state, int playerIndex, VertexId vertex)
@@ -551,6 +566,7 @@ public static class GameEngine
         player.BuildingPoints++;
 
         var events = new List<GameEvent> { new SettlementBuilt(action.PlayerIndex, action.Vertex) };
+        AnnouncePorts(state, action.PlayerIndex, action.Vertex, events);
 
         // آبادی تازه ممکن است جاده‌ی حریف را از وسط قطع کند.
         RecomputeLongestRoad(state, events);

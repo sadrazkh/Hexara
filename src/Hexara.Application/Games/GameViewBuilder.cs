@@ -69,9 +69,11 @@ public sealed class GameViewBuilder
                 new RoadSnapshot(r.Key.Hex.Q, r.Key.Hex.R, r.Key.Side, r.Value))],
             Bank = new Dictionary<Resource, int>(state.Bank),
             Costs = Prices,
+            LongestRoadMinimum = state.Options.LongestRoadMinimum,
+            LargestArmyMinimum = state.Options.LargestArmyMinimum,
             DevelopmentDeckCount = state.DevelopmentDeckCount,
             Players = [.. state.Players.Select(p =>
-                ToView(p, game.PlayerIds[p.Index], profiles, onlineUserIds, state.Options.Teams, state.Winner is not null))],
+                ToView(p, game.PlayerIds[p.Index], profiles, onlineUserIds, state, state.Winner is not null))],
             Seat = viewerSeat,
             Hand = viewerSeat is { } seat ? ToHand(state, seat) : null,
             PendingDiscards = new Dictionary<int, int>(state.PendingDiscards),
@@ -92,7 +94,7 @@ public sealed class GameViewBuilder
         Guid userId,
         IReadOnlyDictionary<Guid, PlayerProfile> profiles,
         IReadOnlySet<Guid>? online,
-        TeamAssignment? teams,
+        GameState state,
         bool revealHiddenPoints)
     {
         var profile = profiles.GetValueOrDefault(userId);
@@ -109,13 +111,21 @@ public sealed class GameViewBuilder
             PublicVictoryPoints = revealHiddenPoints
                 ? player.VictoryPoints
                 : player.PublicVictoryPoints,
-            Team = teams?.TeamOf(player.Index),
+            Team = state.Options.Teams?.TeamOf(player.Index),
             CardCount = player.TotalCards,
             DevelopmentCardCount = player.TotalDevelopmentCards,
             KnightsPlayed = player.KnightsPlayed,
             HasLongestRoad = player.HasLongestRoad,
             HasLargestArmy = player.HasLargestArmy,
             LongestRoadLength = player.LongestRoadLength,
+
+            // بندر و نرخ هر دو عمومی‌اند: بندرِ حریف روی برد پیداست و نرخش در
+            // معامله تعیین‌کننده است. نرخ از موتور می‌آید تا قاعده‌اش یک جا بماند.
+            Ports = [.. GameEngine.PortsOf(state, player.Index)
+                .Select(p => new PortSnapshot(p.Edge.Hex.Q, p.Edge.Hex.R, p.Edge.Side, p.Resource))],
+            TradeRates = Enum.GetValues<Resource>()
+                .ToDictionary(r => r, r => GameEngine.MaritimeRate(state, player.Index, r)),
+
             SettlementsLeft = player.SettlementsLeft,
             CitiesLeft = player.CitiesLeft,
             RoadsLeft = player.RoadsLeft,
@@ -215,16 +225,9 @@ public sealed class GameViewBuilder
             ],
             StringComparer.Ordinal);
 
-        // نرخ‌ها فقط سرِ ساخت‌وساز معنا دارند، چون معامله همان‌جا ممکن است.
-        var rates = state.Phase == TurnPhase.Main
-            ? Enum.GetValues<Resource>()
-                .ToDictionary(r => r, r => GameEngine.MaritimeRate(state, seat, r))
-            : new Dictionary<Resource, int>();
-
         return new LegalMovesView
         {
             IsMyTurn = true,
-            TradeRates = rates,
             FreeRoads = [.. freeRoads.Select(e => new RoadSnapshot(e.Hex.Q, e.Hex.R, e.Side, seat))],
             FollowUpRoads = followUps,
             PlayableCards = playable,

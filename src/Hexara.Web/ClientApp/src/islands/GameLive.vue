@@ -84,6 +84,7 @@ const folds = ref<Record<string, boolean>>({
   trade: true,
   hand: true,
   players: false,
+  awards: false,
   log: false,
 });
 
@@ -251,10 +252,72 @@ const discardTotal = computed(() =>
 
 const hand = computed(() => view.value?.hand?.resources ?? {});
 
-/** نرخ بانک برای این منبع؛ ۴ پیش‌فرضِ بی‌بندر است. */
+/** صندلیِ خودت، برای هر چیزی که «مالِ من» است: بندر، نرخ، نشان‌ها. */
+const me = computed(() => {
+  const current = view.value;
+  if (!current || current.seat === null) return null;
+
+  return current.players[current.seat] ?? null;
+});
+
+/**
+ * نرخ بانک برای این منبع؛ ۴ پیش‌فرضِ بی‌بندر است.
+ *
+ * از خودِ بازیکن خوانده می‌شود نه از «حرکت‌های قانونی»: نرخ یک واقعیتِ همیشگی
+ * است و باید بیرون از نوبت هم درست باشد، وگرنه کسی که بندر دارد در نوبت حریف
+ * ۴:۱ می‌دید.
+ */
 function rateOf(resource: string): number {
-  return view.value?.legal.tradeRates?.[resource] ?? 4;
+  return me.value?.tradeRates?.[resource] ?? 4;
 }
+
+/**
+ * بندرهای خودت، مرتب‌شده از ارزان به گران.
+ *
+ * بندرِ عمومی (۳:۱) روی هر پنج منبع کار می‌کند، پس منبعِ تهی یعنی «همه».
+ */
+const myPorts = computed(() =>
+  [...(me.value?.ports ?? [])].sort(
+    (a, b) => portRate(a) - portRate(b) || String(a.resource).localeCompare(String(b.resource)),
+  ),
+);
+
+function portRate(port: { resource: string | null }): number {
+  return port.resource === null ? 3 : 2;
+}
+
+/**
+ * نشان‌های «طولانی‌ترین جاده» و «بزرگ‌ترین ارتش».
+ *
+ * هر کدام ۲ امتیاز دارند و بی این جدول، بازیکن نمی‌فهمد چرا امتیاز حریف پرید —
+ * و نمی‌داند چقدر تا گرفتنشان مانده. حدِ نصاب از سرور می‌آید چون قابل تنظیم است.
+ */
+const awards = computed(() => {
+  const current = view.value;
+  if (!current) return [];
+
+  const road = current.players.find((p) => p.hasLongestRoad) ?? null;
+  const army = current.players.find((p) => p.hasLargestArmy) ?? null;
+
+  return [
+    {
+      key: 'longestRoad',
+      icon: 'piece.Road' as AssetName,
+      holder: road,
+      best: Math.max(0, ...current.players.map((p) => p.longestRoadLength)),
+      mine: me.value?.longestRoadLength ?? 0,
+      minimum: current.longestRoadMinimum,
+    },
+    {
+      key: 'largestArmy',
+      icon: 'dev.Knight' as AssetName,
+      holder: army,
+      best: Math.max(0, ...current.players.map((p) => p.knightsPlayed)),
+      mine: me.value?.knightsPlayed ?? 0,
+      minimum: current.largestArmyMinimum,
+    },
+  ];
+});
 
 /** معامله با بانک فقط وقتی ممکن است که به‌اندازه‌ی نرخ از آن منبع داشته باشی. */
 const canBankTrade = computed(() => {
@@ -798,6 +861,8 @@ onBeforeUnmount(() => {
               <strong>{{ player.displayName }}</strong>
               <small>
                 {{ player.publicVictoryPoints }} ★ · {{ player.cardCount }} {{ t('game.cardsShort') }}
+                <template v-if="player.hasLongestRoad"> · 🛣 {{ player.longestRoadLength }}</template>
+                <template v-if="player.hasLargestArmy"> · ⚔ {{ player.knightsPlayed }}</template>
               </small>
             </span>
             <span class="hx-live__presence" :class="{ 'is-offline': !player.isOnline }"></span>
@@ -1283,11 +1348,95 @@ onBeforeUnmount(() => {
             </span>
             <span class="hx-chip">{{ player.publicVictoryPoints }} ★</span>
             <span class="hx-chip">{{ player.cardCount }} 🂠</span>
+
+            <!--
+              نشان‌ها دو امتیاز می‌ارزند، پس باید کنارِ خودِ امتیاز دیده شوند؛
+              وگرنه امتیازِ حریف بی‌دلیل جلو می‌زند.
+            -->
+            <span
+              v-if="player.hasLongestRoad"
+              class="hx-chip hx-chip--award"
+              :title="t('game.longestRoadHeld', player.longestRoadLength)"
+            >
+              <Asset name="piece.Road" width="0.95rem" decorative />
+              {{ player.longestRoadLength }}
+            </span>
+            <span
+              v-if="player.hasLargestArmy"
+              class="hx-chip hx-chip--award"
+              :title="t('game.largestArmyHeld', player.knightsPlayed)"
+            >
+              <Asset name="dev.Knight" width="0.95rem" decorative />
+              {{ player.knightsPlayed }}
+            </span>
             <span v-if="!player.isOnline" class="hx-chip hx-chip--muted">
               {{ t('game.link.offline') }}
             </span>
             </li>
           </ol>
+        </Fold>
+
+        <!--
+          نشان‌ها جدا از فهرست بازیکن‌ها، چون سؤالی که این پنل جواب می‌دهد فرق
+          دارد: «چقدر تا گرفتنش مانده؟» — و جواب بدون حدِ نصاب و بدون بهترینِ
+          فعلی معنا ندارد.
+        -->
+        <Fold
+          v-if="view && !isOver"
+          :label="t('game.awardsAndPorts')"
+          :always="wide"
+          :id="`hx-panel-awards`"
+          :open="folds.awards"
+          @update:open="folds.awards = $event"
+        >
+          <ul class="hx-awards">
+            <li v-for="award in awards" :key="award.key" class="hx-award">
+              <Asset :name="award.icon" width="2rem" decorative />
+
+              <span class="hx-award__body">
+                <strong>{{ t(`game.${award.key}`) }}</strong>
+
+                <small v-if="award.holder">
+                  {{ t('game.awardHeldBy', award.holder.displayName) }}
+                </small>
+                <small v-else>{{ t('game.awardFree', award.minimum) }}</small>
+              </span>
+
+              <!-- عددِ خودت کنارِ بهترینِ میز: همان مقایسه‌ای که واقعاً می‌خواهی. -->
+              <span class="hx-award__score">
+                <strong>{{ award.mine }}</strong>
+                <small>{{ t('game.awardBest', award.best) }}</small>
+              </span>
+            </li>
+          </ul>
+
+          <!--
+            بندرهای خودت.
+
+            اینجا می‌نشیند نه در پنل معامله، چون آن پنل فقط سرِ نوبتِ خودت باز
+            است و بندر یک دارایی‌ست که همیشه باید دیده شود — همان دلیلی که نرخ
+            را از «حرکت‌های قانونی» بیرون آوردیم. اگر هیچ بندری نداری هم گفته
+            می‌شود، چون «چیزی ننوشته» با «۴:۱» یکی نیست.
+          -->
+          <div class="hx-ports" :aria-label="t('game.yourPorts')">
+            <span class="hx-ports__label">{{ t('game.yourPorts') }}</span>
+
+            <ul v-if="myPorts.length > 0" class="hx-ports__list">
+              <li v-for="(port, index) in myPorts" :key="`port-${index}`" class="hx-ports__item">
+                <Asset
+                  :name="port.resource ? (`resource.${port.resource}` as AssetName) : 'port.Generic'"
+                  width="1.5rem"
+                  decorative
+                />
+                <span>
+                  {{ port.resource ? t(`game.resource.${port.resource}`) : t('game.portAny') }}
+                </span>
+                <strong class="hx-ports__rate">{{ portRate(port) }}:1</strong>
+              </li>
+            </ul>
+
+            <p v-else class="hx-muted hx-small">{{ t('game.noPorts') }}</p>
+          </div>
         </Fold>
 
         <Fold

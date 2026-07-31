@@ -16,7 +16,6 @@ function legal(free: RoadAt[], followUps: Record<string, RoadAt[]> = {}): LegalM
     freeRoads: free,
     followUpRoads: followUps,
     playableCards: [],
-    tradeRates: {},
   };
 }
 
