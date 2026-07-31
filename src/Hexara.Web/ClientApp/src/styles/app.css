@@ -1507,6 +1507,91 @@ button.hx-hand__top--dev:not(:disabled) .hx-card2 {
   font-variant-numeric: tabular-nums;
 }
 
+/* ── صدا و تصویر ─────────────────────────────────────────────────────── */
+
+.hx-voice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hx-sp-2);
+}
+
+.hx-voice__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hx-sp-2);
+}
+
+.hx-voice__people {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+  gap: var(--hx-sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hx-voice__person {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: var(--hx-sp-2);
+  border: 1px solid var(--hx-border);
+  border-radius: var(--hx-r-md);
+  background: var(--hx-glass);
+  font-size: var(--hx-text-2xs);
+
+  /*
+   * حلقه‌ی «دارد حرف می‌زند» با ‎outline‎ کشیده می‌شود نه ‎border‎، تا با روشن و
+   * خاموش شدنش اندازه‌ی کادر تکان نخورد — وگرنه کل شبکه با هر کلمه می‌لرزید.
+   */
+  outline: 2px solid transparent;
+  outline-offset: -1px;
+  transition: outline-color var(--hx-dur-fast) var(--hx-ease);
+}
+
+.hx-voice__person.is-speaking {
+  outline-color: var(--hx-avatar-color, var(--hx-accent));
+}
+
+.hx-voice__person.is-muted {
+  opacity: var(--hx-opacity-disabled);
+}
+
+.hx-voice__name {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--hx-avatar-color, var(--hx-text));
+  font-weight: var(--hx-weight-bold);
+}
+
+/* تصویر پشتِ نام می‌نشیند و نام رویش خوانا می‌ماند. */
+.hx-voice__video {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  border-radius: var(--hx-r-md);
+  object-fit: cover;
+}
+
+.hx-voice__person:has(.hx-voice__video) .hx-voice__name,
+.hx-voice__person:has(.hx-voice__video) .hx-voice__mic {
+  position: relative;
+  z-index: 1;
+  color: #fff;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 80%);
+}
+
+.hx-voice__person:has(.hx-voice__video) {
+  min-block-size: 5.5rem;
+  align-items: flex-end;
+}
+
 /* ── گفت‌وگو ──────────────────────────────────────────────────────────── */
 
 .hx-chat {

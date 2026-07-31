@@ -128,6 +128,12 @@ builder.Services.AddSingleton(builder.Configuration.GetSection(ChatOptions.Secti
     ?? new ChatOptions());
 builder.Services.AddSingleton<GameChat>();
 
+// صدا و تصویر. کلید و رمز از متغیر محیطی می‌آیند نه از فایلِ کامیت‌شده؛ نبودنشان
+// یعنی خاموش، و بازی هیچ فرقی نمی‌کند.
+builder.Services.AddSingleton(builder.Configuration.GetSection(LiveKitOptions.Section).Get<LiveKitOptions>()
+    ?? new LiveKitOptions());
+builder.Services.AddSingleton<LiveKitTokens>();
+
 builder.Services.Configure<AutoPlayOptions>(builder.Configuration.GetSection(AutoPlayOptions.Section));
 builder.Services.AddHostedService<AutoPlayService>();
 
@@ -191,7 +197,14 @@ else
 app.UseSerilogRequestLogging();
 
 var vite = app.Services.GetRequiredService<IOptions<ViteOptions>>().Value;
-app.UseHexaraSecurityHeaders(vite.UseDevServer, vite.DevServerUrl);
+// ریشه‌ی سرور صدا و تصویر باید در CSP و Permissions-Policy باز شود، وگرنه
+// ‎getUserMedia‎ پیش از رسیدن به هر کدی رد می‌شود.
+var liveKit = app.Services.GetRequiredService<LiveKitOptions>();
+
+app.UseHexaraSecurityHeaders(
+    vite.UseDevServer,
+    vite.DevServerUrl,
+    liveKit.IsConfigured ? liveKit.Url : string.Empty);
 
 app.UseHttpsRedirection();
 app.UseStaticFiles(new StaticFileOptions

@@ -63,3 +63,30 @@ describe('version', () => {
     expect(versionOf(['/a'])).toHaveLength(12);
   });
 });
+
+describe('چیزهایی که پیش‌کش نمی‌شوند', () => {
+  /**
+   * تکه‌ی صدا و تصویر عمداً تنبل بارگذاری می‌شود. اگر سرویس‌ورکر پیش‌کشش کند،
+   * همان نیم مگابایت را به هر بازدیدکننده می‌دهد — فقط در پس‌زمینه.
+   */
+  it('تکه‌ی livekit در فهرست پیش‌کش نمی‌آید', () => {
+    const list = buildPrecache({
+      'src/main.ts': { file: 'assets/main-abc.js' },
+      'livekit-client.esm': { file: 'assets/livekit-client.esm-xyz.js' },
+    });
+
+    expect(list).toContain('/dist/assets/main-abc.js');
+    expect(list.some((item) => item.includes('livekit'))).toBe(false);
+  });
+
+  it('فایلی که فقط اسمش شبیه است ولی جای دیگری است هم نمی‌آید', () => {
+    const list = buildPrecache({
+      a: { file: 'assets/livekit-client.esm-1.js' },
+      b: { file: 'assets/my-livekit-client-helper.js' },
+    });
+
+    expect(list.filter((item) => item.includes('livekit'))).toEqual([
+      '/dist/assets/my-livekit-client-helper.js',
+    ]);
+  });
+});

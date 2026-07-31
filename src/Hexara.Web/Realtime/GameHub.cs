@@ -30,6 +30,8 @@ public sealed class GameHub : Hub
     private readonly GameLocks _locks;
     private readonly GameChat _chat;
     private readonly IClock _clock;
+    private readonly LiveKitTokens _voice;
+    private readonly IPlayerDirectory _directory;
 
     public GameHub(
         GameService games,
@@ -38,7 +40,9 @@ public sealed class GameHub : Hub
         GamePresence presence,
         GameLocks locks,
         GameChat chat,
-        IClock clock)
+        IClock clock,
+        LiveKitTokens voice,
+        IPlayerDirectory directory)
     {
         _games = games;
         _views = views;
@@ -47,6 +51,8 @@ public sealed class GameHub : Hub
         _locks = locks;
         _chat = chat;
         _clock = clock;
+        _voice = voice;
+        _directory = directory;
     }
 
     private Guid? UserId =>
@@ -181,6 +187,36 @@ public sealed class GameHub : Hub
         var game = await _games.GetAsync(gameId, Context.ConnectionAborted);
 
         return game?.SeatOf(userId) is null ? [] : _chat.History(gameId);
+    }
+
+    // ── صدا و تصویر ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// بلیت ورود به اتاق صوتیِ این بازی.
+    ///
+    /// تهی یعنی یا صدا و تصویر پیکربندی نشده یا این کاربر سرِ این بازی نیست —
+    /// و در هر دو حال کلاینت فقط دکمه‌اش را نشان نمی‌دهد. **نامِ اتاق را همین‌جا
+    /// سرور می‌سازد؛** اگر کلاینت آن را می‌فرستاد، هر کسی می‌توانست بلیتِ اتاقِ
+    /// یک بازی دیگر بگیرد.
+    ///
+    /// بلیت کوتاه‌عمر است، پس کلاینت باید هر بار پیش از وصل شدن یکی تازه بگیرد.
+    /// </summary>
+    public async Task<VoiceTicket?> VoiceTicket(Guid gameId)
+    {
+        if (!_voice.IsConfigured || UserId is not { } userId)
+        {
+            return null;
+        }
+
+        var game = await _games.GetAsync(gameId, Context.ConnectionAborted);
+        if (game?.SeatOf(userId) is null)
+        {
+            return null;
+        }
+
+        var profile = (await _directory.GetAsync([userId], Context.ConnectionAborted)).FirstOrDefault();
+
+        return _voice.Issue(gameId, userId, profile?.DisplayName ?? string.Empty);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)

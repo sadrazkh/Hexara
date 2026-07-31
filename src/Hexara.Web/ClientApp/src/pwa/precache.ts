@@ -16,6 +16,16 @@ export interface ViteManifestEntry {
 export const SHELL = ['/offline', '/favicon.svg', '/icons/icon-192.png'];
 
 /**
+ * چیزهایی که عمداً پیش‌کش **نمی‌شوند**.
+ *
+ * تکه‌ی ‎livekit-client‎ نیم مگابایت است و فقط لحظه‌ای لازم می‌شود که کاربر
+ * «پیوستن به صدا» را بزند. پیش‌کش‌کردنش یعنی همان چیزی که با تنبل‌کردنِ
+ * بارگذاری از آن فرار کردیم: هر بازدیدکننده، حتی کسی که هرگز صدا نمی‌خواهد،
+ * آن را دانلود می‌کند — فقط این بار در پس‌زمینه و بی‌آنکه بفهمد.
+ */
+const NEVER_PRECACHE = [/(^|\/)livekit-client/];
+
+/**
  * فهرست پیش‌کش از manifest ویت ساخته می‌شود نه دستی: نام فایل‌ها هش دارند و هر
  * build عوض می‌شوند، پس فهرست دستی محکوم به کهنه‌شدن است.
  */
@@ -23,7 +33,9 @@ export function buildPrecache(manifest: Record<string, ViteManifestEntry>): stri
   const assets = new Set<string>(SHELL);
 
   for (const entry of Object.values(manifest)) {
-    assets.add(`/dist/${entry.file}`);
+    if (!NEVER_PRECACHE.some((skip) => skip.test(entry.file))) {
+      assets.add(`/dist/${entry.file}`);
+    }
 
     for (const css of entry.css ?? []) {
       assets.add(`/dist/${css}`);

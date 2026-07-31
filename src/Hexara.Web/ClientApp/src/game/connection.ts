@@ -1,3 +1,4 @@
+import type { VoiceTicket } from '@/voice/session';
 import {
   HubConnection,
   HubConnectionBuilder,
@@ -278,6 +279,23 @@ export class GameConnection {
       await this.connection.invoke('SendChat', this.gameId, text);
     } catch {
       // بی‌صدا: بازی ادامه دارد.
+    }
+  }
+
+  /**
+   * بلیت ورود به اتاق صوتی.
+   *
+   * تهی یعنی صدا و تصویر پیکربندی نشده یا این کاربر سرِ این بازی نیست. بلیت
+   * کوتاه‌عمر است، پس هر بار پیش از وصل شدن یکی تازه گرفته می‌شود؛ نگه‌داشتنش
+   * فقط یعنی یک چیزِ حساسِ کهنه در حافظه.
+   */
+  async voiceTicket(): Promise<VoiceTicket | null> {
+    if (this.connection.state !== HubConnectionState.Connected) return null;
+
+    try {
+      return await this.connection.invoke<VoiceTicket | null>('VoiceTicket', this.gameId);
+    } catch {
+      return null;
     }
   }
 

@@ -19,10 +19,17 @@ public static class SecurityHeaders
     public static string CspNonce(this HttpContext context) =>
         context.Items.TryGetValue(NonceKey, out var value) && value is string nonce ? nonce : string.Empty;
 
+    /// <param name="voiceOrigin">
+    /// ریشه‌ی سرور صدا و تصویر، یا رشته‌ی خالی اگر خاموش است.
+    ///
+    /// دسترسیِ میکروفون و دوربین **فقط** وقتی باز می‌شود که واقعاً سروری در کار
+    /// باشد؛ در حالت عادی هر دو بسته می‌مانند.
+    /// </param>
     public static IApplicationBuilder UseHexaraSecurityHeaders(
         this IApplicationBuilder app,
         bool allowViteDevServer,
-        string devServerUrl)
+        string devServerUrl,
+        string voiceOrigin = "")
     {
         return app.Use(async (context, next) =>
         {
@@ -34,26 +41,39 @@ public static class SecurityHeaders
             context.Items[NonceKey] = nonce;
 
             var headers = context.Response.Headers;
-            headers["Content-Security-Policy"] = BuildPolicy(nonce, allowViteDevServer, devServerUrl);
+            headers["Content-Security-Policy"] =
+                BuildPolicy(nonce, allowViteDevServer, devServerUrl, voiceOrigin);
             headers["X-Content-Type-Options"] = "nosniff";
             headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
 
             // همراهِ قدیمیِ frame-ancestors برای مرورگرهایی که CSP سطح ۲ ندارند.
             headers["X-Frame-Options"] = "DENY";
 
-            // هیچ‌کدام از این‌ها در بازی لازم نیست؛ بستنشان سطح حمله را کم می‌کند.
+            // بقیه‌ی این‌ها در بازی لازم نیستند و بسته می‌مانند. میکروفون و دوربین
+            // فقط وقتی به خودِ سایت باز می‌شوند که صدا و تصویر پیکربندی شده باشد —
+            // وگرنه ‎getUserMedia‎ همین‌جا و پیش از هر کدی رد می‌شود.
+            var media = voiceOrigin.Length > 0 ? "camera=(self), microphone=(self)" : "camera=(), microphone=()";
+
             headers["Permissions-Policy"] =
-                "accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()";
+                $"accelerometer=(), {media}, geolocation=(), gyroscope=(), payment=(), usb=()";
 
             await next();
         });
     }
 
-    private static string BuildPolicy(string nonce, bool allowViteDevServer, string devServerUrl)
+    private static string BuildPolicy(
+        string nonce,
+        bool allowViteDevServer,
+        string devServerUrl,
+        string voiceOrigin)
     {
         // در حالت dev، دارایی‌ها و سوکت HMR از سرور ویت می‌آیند و باید مجاز شوند.
         var dev = allowViteDevServer ? $" {devServerUrl}" : string.Empty;
         var devSocket = allowViteDevServer ? $" {devServerUrl.Replace("http", "ws")}" : string.Empty;
+
+        var voice = voiceOrigin.Length > 0
+            ? $" {voiceOrigin} {voiceOrigin.Replace("wss://", "https://").Replace("ws://", "http://")}"
+            : string.Empty;
 
         return string.Join(
             "; ",
@@ -67,7 +87,13 @@ public static class SecurityHeaders
             $"font-src 'self'{dev}",
 
             // SignalR روی همین ریشه وب‌سوکت می‌زند و 'self' آن را می‌پوشاند.
-            $"connect-src 'self'{dev}{devSocket}",
+            // سرور صدا و تصویر جای دیگری است، پس ریشه‌اش جدا اضافه می‌شود — هم
+            // ‎wss‎ برای سیگنالینگ و هم ‎https‎ برای بقیه‌ی درخواست‌هایش.
+            $"connect-src 'self'{dev}{devSocket}{voice}",
+
+            // جریانِ صدا و تصویرِ طرف مقابل با ‎srcObject‎ وصل می‌شود، ولی بعضی
+            // مسیرهای بازگشتی هنوز از ‎blob:‎ استفاده می‌کنند.
+            "media-src 'self' blob:",
             "worker-src 'self'",
             "manifest-src 'self'",
             "object-src 'none'",

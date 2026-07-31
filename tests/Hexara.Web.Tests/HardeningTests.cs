@@ -28,7 +28,43 @@ public class HardeningTests : IClassFixture<HexaraApp>
         Assert.Equal("nosniff", Header(response, "X-Content-Type-Options"));
         Assert.Equal("DENY", Header(response, "X-Frame-Options"));
         Assert.Equal("strict-origin-when-cross-origin", Header(response, "Referrer-Policy"));
-        Assert.Contains("camera=()", Header(response, "Permissions-Policy"));
+    }
+
+    /// <summary>
+    /// میکروفون و دوربین **به‌طور پیش‌فرض بسته‌اند**.
+    ///
+    /// این تا وقتی صدا و تصویر پیکربندی نشده باید همین‌طور بماند: با بسته بودنِ
+    /// این دو، مرورگر ‎getUserMedia‎ را پیش از رسیدن به هر کدی رد می‌کند، و
+    /// همین یک خط یعنی یک استقرارِ بی‌LiveKit اصلاً سطحِ حمله‌ی رسانه ندارد.
+    /// </summary>
+    [Fact]
+    public async Task The_microphone_and_camera_are_shut_unless_voice_is_configured()
+    {
+        using var client = _app.NewClient();
+        using var response = await client.GetAsync("/");
+
+        var policy = Header(response, "Permissions-Policy");
+
+        Assert.Contains("camera=()", policy);
+        Assert.Contains("microphone=()", policy);
+        Assert.DoesNotContain("camera=(self)", policy);
+        Assert.DoesNotContain("microphone=(self)", policy);
+    }
+
+    /// <summary>
+    /// سرور صدا و تصویر جای دیگری است، پس تا وقتی نشانی‌اش در ‎connect-src‎
+    /// نیامده، هیچ اتصالی به آن ممکن نیست — و پیش‌فرض هم همین است.
+    /// </summary>
+    [Fact]
+    public async Task No_outside_origin_is_reachable_by_default()
+    {
+        using var client = _app.NewClient();
+        using var response = await client.GetAsync("/");
+
+        var csp = Header(response, "Content-Security-Policy");
+
+        Assert.Contains("connect-src 'self'", csp);
+        Assert.DoesNotContain("wss://", csp);
     }
 
     [Fact]

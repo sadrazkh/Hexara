@@ -19,12 +19,14 @@ public class GameController : Controller
     private readonly GameService _games;
     private readonly ICurrentUser _user;
     private readonly GameChat _chat;
+    private readonly LiveKitTokens _voice;
 
-    public GameController(GameService games, ICurrentUser user, GameChat chat)
+    public GameController(GameService games, ICurrentUser user, GameChat chat, LiveKitTokens voice)
     {
         _games = games;
         _user = user;
         _chat = chat;
+        _voice = voice;
     }
 
     [HttpGet]
@@ -43,6 +45,6 @@ public class GameController : Controller
             return Forbid();
         }
 
-        return View(new GamePlayViewModel { Game = game, Seat = seat, ChatEnabled = _chat.Enabled });
+        return View(new GamePlayViewModel { Game = game, Seat = seat, ChatEnabled = _chat.Enabled, VoiceEnabled = _voice.IsConfigured });
     }
 }

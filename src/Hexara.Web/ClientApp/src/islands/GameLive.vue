@@ -14,6 +14,7 @@ import { vertexHexes, vertexKey } from '@/three/hex';
 import { edgeKey, freeRoadChoices } from '@/game/cards';
 import { nextFace } from '@/game/dice';
 import Chat from './Chat.vue';
+import Voice from './Voice.vue';
 import {
   GameConnection,
   type ChatMessage,
@@ -30,7 +31,7 @@ import {
  * می‌شکند و پارامترهای ‎v-for‎ و کال‌بک‌ها ‎any‎ می‌شوند. نبودنِ صفت یعنی
  * ‎undefined‎ که همه‌جا مثل «خاموش» رفتار می‌کند.
  */
-const props = defineProps<{ gameId: string; chatEnabled?: boolean }>();
+const props = defineProps<{ gameId: string; chatEnabled?: boolean; voiceEnabled?: boolean }>();
 
 /**
  * پیام‌های چت.
@@ -135,6 +136,7 @@ const folds = ref<Record<string, boolean>>({
   hand: true,
   players: false,
   awards: false,
+  voice: false,
   chat: true,
   log: false,
 });
@@ -611,6 +613,16 @@ function seat(): number {
  * منتظرِ نتیجه نمی‌ماند و خطایی نشان نمی‌دهد: پیام یا از راه رویداد ‎chat‎
  * برمی‌گردد یا برنمی‌گردد. **هیچ مسیری از اینجا نباید بازی را متوقف کند.**
  */
+/**
+ * بلیت ورود به اتاق صوتی.
+ *
+ * به پنل صدا *تابع* داده می‌شود نه بلیت، تا هر بار یکی تازه گرفته شود؛ بلیت
+ * کوتاه‌عمر است و نگه‌داشتنش یعنی یک چیزِ حساسِ کهنه در حافظه.
+ */
+function voiceTicket() {
+  return connection?.voiceTicket() ?? Promise.resolve(null);
+}
+
 function sendChat(text: string): void {
   void connection?.sendChat(text);
 }
@@ -1571,6 +1583,22 @@ onBeforeUnmount(() => {
 
             <p v-else class="hx-muted hx-small">{{ t('game.noPorts') }}</p>
           </div>
+        </Fold>
+
+        <!--
+          صدا و تصویر. اگر سرورش پیکربندی نشده باشد اصلاً ساخته نمی‌شود — نه
+          دکمه‌ای، نه پیامی. پیوستن دستی است: کسی که وارد بازی می‌شود نباید
+          ناگهان میکروفونش باز شود.
+        -->
+        <Fold
+          v-if="voiceEnabled && view && !isOver"
+          :label="t('game.voice')"
+          :always="wide"
+          :id="`hx-panel-voice`"
+          :open="folds.voice"
+          @update:open="folds.voice = $event"
+        >
+          <Voice :players="view.players" :ticket="voiceTicket" />
         </Fold>
 
         <!--

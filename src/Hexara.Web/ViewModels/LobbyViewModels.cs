@@ -96,5 +96,8 @@ public class GamePlayViewModel
     /// </summary>
     public required bool ChatEnabled { get; init; }
 
+    /// <summary>صدا و تصویر پیکربندی شده است یا نه — همان منطقِ چت.</summary>
+    public required bool VoiceEnabled { get; init; }
+
     public bool IsMyTurn => Game.State.CurrentPlayer == Seat;
 }
