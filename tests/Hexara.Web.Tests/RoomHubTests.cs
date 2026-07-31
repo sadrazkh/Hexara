@@ -176,4 +176,94 @@ public class RoomHubTests : IClassFixture<HexaraApp>
             Hexara.Web.Realtime.LiveKitTokens.LobbyOf(id),
             Hexara.Web.Realtime.LiveKitTokens.RoomOf(id));
     }
+
+    // ── قواعد خانگی ──────────────────────────────────────────────────────
+
+    /// <summary>قواعد باید از دیتابیس سالم برگردند، وگرنه با هر رفرش پاک می‌شوند.</summary>
+    [Fact]
+    public async Task House_rules_survive_a_round_trip()
+    {
+        await using var host = HubHarness.For(_app, Host);
+        var code = await NewRoomAsync(host);
+
+        var wanted = new HouseRules { DiscardLimit = 9, BankTradeRate = 3, TradeWindowSeconds = 60 };
+
+        var saved = await host.Room.UpdateSettings(
+            code,
+            new RoomSettingsInput(4, 10, 2, false, false, wanted));
+
+        Assert.True(saved.Success);
+
+        // از نو خوانده می‌شود، نه از پاسخِ همان فراخوانی.
+        var again = await host.Room.Join(code);
+
+        Assert.Equal(wanted, again.Room!.Rules);
+        Assert.True(again.Room.CustomRules);
+    }
+
+    /// <summary>
+    /// **کران‌ها سرورند.** فرم فقط راهنماست و یک کلاینتِ دستکاری‌شده هر عددی
+    /// می‌تواند بفرستد.
+    /// </summary>
+    [Fact]
+    public async Task Rules_outside_the_range_are_refused()
+    {
+        await using var host = HubHarness.For(_app, Host);
+        var code = await NewRoomAsync(host);
+
+        var absurd = new HouseRules { RoadsPerPlayer = int.MaxValue };
+
+        var result = await host.Room.UpdateSettings(
+            code,
+            new RoomSettingsInput(4, 10, 2, false, false, absurd));
+
+        Assert.False(result.Success);
+
+        // و اتاق دست‌نخورده مانده.
+        var again = await host.Room.Join(code);
+        Assert.True(again.Room!.Rules.IsClassic);
+    }
+
+    /// <summary>
+    /// نفرستادنِ بخشِ قواعد یعنی «دست نزن»، نه «برگرد به کلاسیک» — وگرنه هر بار
+    /// که میزبان فقط تعداد بازیکن را عوض می‌کرد، قواعدش بی‌صدا پاک می‌شد.
+    /// </summary>
+    [Fact]
+    public async Task Leaving_the_rules_out_keeps_them()
+    {
+        await using var host = HubHarness.For(_app, Host);
+        var code = await NewRoomAsync(host);
+
+        await host.Room.UpdateSettings(
+            code,
+            new RoomSettingsInput(4, 10, 2, false, false, new HouseRules { DiscardLimit = 9 }));
+
+        // این بار بدون قواعد، فقط تعداد بازیکن عوض می‌شود.
+        await host.Room.UpdateSettings(code, new RoomSettingsInput(5, 10, 2, false, false));
+
+        var again = await host.Room.Join(code);
+
+        Assert.Equal(9, again.Room!.Rules.DiscardLimit);
+        Assert.Equal(5, again.Room.MaxPlayers);
+    }
+
+    /// <summary>قواعدِ اتاق باید به خودِ بازی برسند، نه اینکه سرِ شروع گم شوند.</summary>
+    [Fact]
+    public async Task The_rules_reach_the_game_that_starts()
+    {
+        await using var host = HubHarness.For(_app, Host);
+        var code = await NewRoomAsync(host);
+
+        await host.Room.UpdateSettings(
+            code,
+            new RoomSettingsInput(4, 10, 2, false, false, new HouseRules { DiscardLimit = 9, BankTradeRate = 3 }));
+
+        var started = await host.Room.Start(code);
+        Assert.True(started.Success);
+
+        var view = (await host.Hub.Join(started.Room!.GameId!.Value)).View;
+
+        Assert.NotNull(view);
+        Assert.Equal(3, view.Players[0].TradeRates.Values.Max());
+    }
 }

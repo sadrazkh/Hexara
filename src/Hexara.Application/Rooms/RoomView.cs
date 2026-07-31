@@ -31,6 +31,12 @@ public sealed record RoomView
 
     public required bool Teams { get; init; }
 
+    /// <summary>قواعد خانگی — همیشه پر است، حتی وقتی همان کلاسیک باشد.</summary>
+    public required HouseRules Rules { get; init; }
+
+    /// <summary>آیا چیزی از حالت کلاسیک عوض شده؟ رابط با همین نشان می‌دهد.</summary>
+    public bool CustomRules => !Rules.IsClassic;
+
     public string? BoardCode { get; init; }
 
     public required IReadOnlyList<RoomSeatView> Seats { get; init; }
@@ -54,6 +60,7 @@ public sealed record RoomView
             BoardRadius = room.Settings.BoardRadius,
             FriendlyRobber = room.Settings.FriendlyRobber,
             Teams = room.Settings.Teams,
+            Rules = room.Settings.Rules,
             BoardCode = room.Settings.BoardCode,
             Seats =
             [
@@ -85,4 +92,11 @@ public sealed record RoomSettingsInput(
     int VictoryPoints,
     int BoardRadius,
     bool FriendlyRobber,
-    bool Teams);
+    bool Teams,
+    /// <summary>
+    /// قواعد خانگی؛ تهی یعنی «دست نزن».
+    ///
+    /// اختیاری است تا کلاینتی که این بخش را نمی‌فرستد قواعد اتاق را بی‌صدا به
+    /// کلاسیک برنگرداند.
+    /// </summary>
+    HouseRules? Rules = null);

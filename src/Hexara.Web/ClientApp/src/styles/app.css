@@ -1602,6 +1602,56 @@ button.hx-hand__top--dev:not(:disabled) .hx-card2 {
   }
 }
 
+/* ── قوانین خانگی ────────────────────────────────────────────────────── */
+
+.hx-rules-form {
+  margin-block-start: var(--hx-sp-3);
+  padding-block-start: var(--hx-sp-3);
+  border-block-start: 1px solid var(--hx-border);
+}
+
+.hx-rules-form > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--hx-sp-2);
+  cursor: pointer;
+  font-weight: var(--hx-weight-bold);
+  color: var(--hx-text-dim);
+}
+
+.hx-rules-form[open] > summary {
+  margin-block-end: var(--hx-sp-2);
+  color: var(--hx-text);
+}
+
+/*
+ * ستون‌ها خودشان جا باز می‌کنند: ده قانون روی صفحه‌ی پهن سه‌ستونه می‌شود و روی
+ * موبایل تک‌ستون، بی اینکه هیچ نقطه‌ی شکستی دستی نوشته شود.
+ */
+.hx-rules-form__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--hx-sp-2) var(--hx-sp-3);
+  margin-block: var(--hx-sp-2);
+}
+
+.hx-rules-form__grid .hx-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.hx-rules-form__grid .hx-field > span {
+  font-size: var(--hx-text-2xs);
+  color: var(--hx-text-dim);
+}
+
+.hx-rules-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hx-sp-2);
+}
+
 /* ── صدا و تصویر ─────────────────────────────────────────────────────── */
 
 .hx-voice {

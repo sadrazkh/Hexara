@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Hexara.Application.Common.Interfaces;
 using Hexara.Application.Players;
 using Hexara.Application.Rooms;
@@ -43,6 +44,7 @@ public sealed class RoomRepository : IRoomRepository
             Teams = settings.Teams,
             Seed = settings.Seed is { } seed ? unchecked((long)seed) : null,
             BoardCode = settings.BoardCode,
+            HouseRules = Encode(settings.Rules),
             CreatedAt = now,
 
             // میزبان خودش اولین کسی است که می‌نشیند.
@@ -107,7 +109,8 @@ public sealed class RoomRepository : IRoomRepository
                     .SetProperty(r => r.FriendlyRobber, settings.FriendlyRobber)
                     .SetProperty(r => r.Teams, settings.Teams)
                     .SetProperty(r => r.Seed, settings.Seed is { } seed ? unchecked((long)seed) : null)
-                    .SetProperty(r => r.BoardCode, settings.BoardCode),
+                    .SetProperty(r => r.BoardCode, settings.BoardCode)
+                    .SetProperty(r => r.HouseRules, Encode(settings.Rules)),
                 cancellationToken);
     }
 
@@ -193,6 +196,36 @@ public sealed class RoomRepository : IRoomRepository
             .Include(r => r.Members)
             .ThenInclude(m => m.User);
 
+    /// <summary>
+    /// قواعد کلاسیک اصلاً نوشته نمی‌شوند.
+    ///
+    /// ستون تهی یعنی «کلاسیک»، و اتاق‌های ساخته‌شده پیش از این قابلیت هم دقیقاً
+    /// همان‌اند — پس مهاجرت هیچ داده‌ای را پر نمی‌کند و هیچ اتاقی عوض نمی‌شود.
+    /// </summary>
+    private static string? Encode(HouseRules rules) =>
+        rules.IsClassic ? null : JsonSerializer.Serialize(rules);
+
+    /// <summary>
+    /// ‎JSON‎ خرابِ ستون نباید اتاق را از دسترس خارج کند؛ بدترین حالت این است که
+    /// اتاق کلاسیک شود، نه اینکه صفحه‌اش باز نشود.
+    /// </summary>
+    private static HouseRules Decode(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return HouseRules.Classic;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<HouseRules>(json) ?? HouseRules.Classic;
+        }
+        catch (JsonException)
+        {
+            return HouseRules.Classic;
+        }
+    }
+
     private static Room? Map(RoomRecord? record)
     {
         if (record is null)
@@ -208,7 +241,8 @@ public sealed class RoomRepository : IRoomRepository
             FriendlyRobber = record.FriendlyRobber,
             Teams = record.Teams,
             Seed = record.Seed is { } seed ? unchecked((ulong)seed) : null,
-            BoardCode = record.BoardCode
+            BoardCode = record.BoardCode,
+            Rules = Decode(record.HouseRules)
         };
 
         var members = record.Members

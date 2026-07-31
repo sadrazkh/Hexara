@@ -43,6 +43,14 @@ public class RoomRecord
     /// </summary>
     public string? BoardCode { get; set; }
 
+    /// <summary>
+    /// قواعد خانگی، به‌صورت ‎JSON‎.
+    ///
+    /// یک ستون به‌جای ده‌تا: بازکردنِ قانونِ بعدی آن‌وقت مهاجرتِ تازه نمی‌خواهد.
+    /// تهی یعنی همان بازیِ کلاسیک — و اتاق‌های قدیمی هم دقیقاً همین‌اند.
+    /// </summary>
+    public string? HouseRules { get; set; }
+
     public Guid? GameId { get; set; }
 
     public DateTime CreatedAt { get; set; }

@@ -2,7 +2,12 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { t } from '@/i18n';
 import type { ChatMessage, Link } from '@/game/connection';
-import { RoomConnection, type RoomSettingsInput, type RoomView } from '@/room/connection';
+import {
+  RoomConnection,
+  type HouseRules,
+  type RoomSettingsInput,
+  type RoomView,
+} from '@/room/connection';
 import Chat from './Chat.vue';
 import Voice from './Voice.vue';
 
@@ -104,8 +109,54 @@ function fillForm(view: RoomView): void {
     boardRadius: view.boardRadius,
     friendlyRobber: view.friendlyRobber,
     teams: view.teams,
+    rules: { ...view.rules },
   };
 }
+
+/**
+ * قواعد خانگی که در فرم دیده می‌شوند.
+ *
+ * برچسب و **بازه** از اینجا می‌آید تا هر قانونِ تازه یک جا اضافه شود. بازه‌ها
+ * همان‌هایی هستند که سرور می‌سنجد؛ اینجا فقط راهنمای ورودی‌اند و تکیه‌گاه
+ * نیستند — سرور هر عددِ بیرون از محدوده را رد می‌کند.
+ */
+const HOUSE_RULES = [
+  { key: 'discardLimit', min: 2, max: 30 },
+  { key: 'bankTradeRate', min: 2, max: 6 },
+  { key: 'longestRoadMinimum', min: 2, max: 15 },
+  { key: 'largestArmyMinimum', min: 1, max: 10 },
+  { key: 'tradeWindowSeconds', min: 5, max: 300 },
+  { key: 'roadsPerPlayer', min: 2, max: 30 },
+  { key: 'settlementsPerPlayer', min: 2, max: 10 },
+  { key: 'citiesPerPlayer', min: 1, max: 10 },
+  { key: 'bankPerResource', min: 5, max: 60 },
+  { key: 'friendlyRobberThreshold', min: 0, max: 10 },
+] as const satisfies readonly { key: keyof HouseRules; min: number; max: number }[];
+
+/** بخشِ قواعد بسته می‌ماند مگر اینکه اتاق قواعد سفارشی داشته باشد. */
+const rulesOpen = ref(false);
+
+/** برگرداندنِ همه‌چیز به بازیِ کلاسیک — یک دکمه، نه ده بار پاک‌کردن. */
+function resetRules(): void {
+  form.value = { ...form.value, rules: { ...CLASSIC } };
+}
+
+/**
+ * قواعد کلاسیک از **اولین نمایی** که سرور می‌دهد گرفته می‌شوند نه از عددهای
+ * تایپ‌شده اینجا: اتاقِ تازه همیشه کلاسیک است، پس همان یک منبعِ حقیقت می‌ماند.
+ */
+let CLASSIC: HouseRules = {
+  discardLimit: 7,
+  bankPerResource: 19,
+  friendlyRobberThreshold: 2,
+  longestRoadMinimum: 5,
+  largestArmyMinimum: 3,
+  bankTradeRate: 4,
+  tradeWindowSeconds: 30,
+  settlementsPerPlayer: 5,
+  citiesPerPlayer: 4,
+  roadsPerPlayer: 15,
+};
 
 /**
  * وقتی بازی شروع شد همه می‌روند — همین چیزی است که قبلاً نبود و هر کس باید
@@ -197,6 +248,9 @@ onMounted(() => {
       // فرم فقط وقتی پر می‌شود که میزبان مشغول تایپ نباشد؛ بار اول و هر بار که
       // تنظیمات از جای دیگری عوض شده باشد.
       if (first || !saving.value) fillForm(value);
+
+      // بخشِ قواعد فقط وقتی خودش باز می‌شود که اتاق واقعاً قاعده‌ی سفارشی دارد.
+      if (first && value.customRules) rulesOpen.value = true;
     },
     onClosed: () => window.location.assign('/Lobby'),
     onError: (message) => (problem.value = message),
@@ -304,6 +358,50 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
+        <!--
+          قواعد خانگی بسته می‌مانند مگر اتاق واقعاً سفارشی باشد.
+
+          ده عددِ باز، پنلِ تنظیمات را از کار می‌اندازد؛ کسی که کلاسیک بازی
+          می‌کند — یعنی تقریباً همه — نباید با آن‌ها روبه‌رو شود.
+        -->
+        <details class="hx-rules-form" :open="rulesOpen">
+          <summary>
+            {{ t('lobby.houseRules') }}
+            <span v-if="room.customRules" class="hx-chip hx-chip--award">
+              {{ t('lobby.customRules') }}
+            </span>
+          </summary>
+
+          <p class="hx-muted hx-small">{{ t('lobby.houseRulesHint') }}</p>
+
+          <div class="hx-rules-form__grid">
+            <label v-for="rule in HOUSE_RULES" :key="rule.key" class="hx-field">
+              <span>{{ t(`lobby.rule.${rule.key}`) }}</span>
+              <input
+                v-model.number="form.rules![rule.key]"
+                class="hx-input"
+                type="number"
+                :min="rule.min"
+                :max="rule.max"
+              />
+            </label>
+          </div>
+
+          <div class="hx-rules-form__actions">
+            <button type="button" class="hx-btn hx-btn--ghost hx-btn--sm" @click="resetRules()">
+              {{ t('lobby.resetRules') }}
+            </button>
+            <button
+              type="button"
+              class="hx-btn hx-btn--sm"
+              :disabled="saving"
+              @click="save()"
+            >
+              {{ t('common.save') }}
+            </button>
+          </div>
+        </details>
+
         <div class="hx-room-page__actions">
           <a class="hx-btn hx-btn--outline hx-btn--sm" :href="boardEditUrl">
             {{ t('board.edit') }}
@@ -337,6 +435,14 @@ onBeforeUnmount(() => {
           <span>{{ t('lobby.teams') }}</span>
           <strong>{{ room.teams ? t('common.yes') : t('common.no') }}</strong>
         </li>
+
+        <!-- بقیه هم باید بدانند با چه قواعدی بازی می‌کنند، حتی اگر نتوانند عوضش کنند. -->
+        <template v-if="room.customRules">
+          <li v-for="rule in HOUSE_RULES" :key="rule.key">
+            <span>{{ t(`lobby.rule.${rule.key}`) }}</span>
+            <strong>{{ room.rules[rule.key] }}</strong>
+          </li>
+        </template>
       </ul>
     </div>
 

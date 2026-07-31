@@ -114,6 +114,10 @@ public sealed class RoomHub : Hub
             VictoryPoints = settings.VictoryPoints,
             BoardRadius = settings.BoardRadius,
             FriendlyRobber = settings.FriendlyRobber,
+
+            // تهی یعنی «دست نزن» نه «برگرد به کلاسیک»: کلاینتی که این بخش را
+            // نمی‌فرستد نباید بی‌صدا قواعد اتاق را پاک کند.
+            Rules = settings.Rules ?? room.Settings.Rules,
             Teams = settings.Teams
         };
 

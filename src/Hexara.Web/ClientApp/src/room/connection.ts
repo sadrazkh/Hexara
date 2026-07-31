@@ -16,6 +16,25 @@ export interface RoomSeat {
   isHost: boolean;
 }
 
+/**
+ * قواعدی که میزبان می‌تواند دست بزند.
+ *
+ * کران‌هایشان **سرور** است؛ اینجا فقط راهنمای فرم‌اند و سرور هر عددِ بیرون از
+ * محدوده را رد می‌کند.
+ */
+export interface HouseRules {
+  discardLimit: number;
+  bankPerResource: number;
+  friendlyRobberThreshold: number;
+  longestRoadMinimum: number;
+  largestArmyMinimum: number;
+  bankTradeRate: number;
+  tradeWindowSeconds: number;
+  settlementsPerPlayer: number;
+  citiesPerPlayer: number;
+  roadsPerPlayer: number;
+}
+
 export interface RoomView {
   id: string;
   code: string;
@@ -28,6 +47,9 @@ export interface RoomView {
   boardRadius: number;
   friendlyRobber: boolean;
   teams: boolean;
+  rules: HouseRules;
+  /** آیا چیزی از حالت کلاسیک عوض شده؟ */
+  customRules: boolean;
   boardCode: string | null;
   seats: RoomSeat[];
   canStart: boolean;
@@ -39,6 +61,8 @@ export interface RoomSettingsInput {
   boardRadius: number;
   friendlyRobber: boolean;
   teams: boolean;
+  /** نیامدنش یعنی «دست نزن»، نه «برگرد به کلاسیک». */
+  rules?: HouseRules;
 }
 
 export interface RoomActionResult {
