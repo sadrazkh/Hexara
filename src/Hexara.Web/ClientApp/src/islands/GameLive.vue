@@ -10,6 +10,7 @@ import Asset from '@/assets/Asset.vue';
 import type { AssetName } from '@/assets/registry';
 import type { BoardData, Highlights, Pick } from '@/three/board';
 import { vertexHexes, vertexKey } from '@/three/hex';
+import { edgeKey, freeRoadChoices } from '@/game/cards';
 import {
   GameConnection,
   type GameEvent,
@@ -28,6 +29,28 @@ const problem = ref<string | null>(null);
 /** وقتی خانه‌ی دزد انتخاب شد، هنوز باید قربانی معلوم شود. */
 const robberHex = ref<Hex | null>(null);
 const discard = ref<Record<string, number>>({});
+
+/**
+ * کارتِ توسعه‌ای که در حالِ بازی‌کردنش هستیم.
+ *
+ * شوالیه و جاده‌سازی روی *برد* انتخاب می‌خواهند، پس نمی‌شود همان لحظه‌ی کلیک
+ * فرستادشان؛ کارت اول یک «حالت» می‌سازد و بعد کلیک‌های برد معنایش را پر می‌کنند.
+ * سال فراوانی و انحصار مدال دارند و برد را دست نمی‌زنند.
+ */
+const playing = ref<string | null>(null);
+
+/** یال‌هایی که کارت جاده‌سازی تا حالا گرفته — حداکثر دو تا. */
+const freeRoadPicks = ref<string[]>([]);
+
+/** انتخاب‌های سال فراوانی و انحصار. */
+const bonusPicks = ref<string[]>([]);
+
+function cancelPlay(): void {
+  playing.value = null;
+  freeRoadPicks.value = [];
+  bonusPicks.value = [];
+  robberHex.value = null;
+}
 
 /** معامله با بانک: چه می‌دهی و چه می‌خواهی. */
 const bankGive = ref<string | null>(null);
@@ -348,8 +371,14 @@ const highlights = computed<Highlights>(() => {
     return { vertices: [], edges: [], hexes: [] };
   }
 
-  if (current.phase === 'MoveRobber') {
+  // شوالیه هم دزد را جابه‌جا می‌کند، پس همان انتخابِ دومرحله‌ای را می‌خواهد.
+  if (current.phase === 'MoveRobber' || playing.value === 'Knight') {
     return { vertices: [], edges: [], hexes: robberHex.value ? [] : current.legal.robberTargets };
+  }
+
+  // در حالتِ جاده‌سازی فقط یال‌ها روشن‌اند تا کلیک روی گوشه به‌اشتباه آبادی نسازد.
+  if (playing.value === 'RoadBuilding') {
+    return { vertices: [], edges: remainingFreeRoads.value, hexes: [] };
   }
 
   return {
@@ -358,6 +387,11 @@ const highlights = computed<Highlights>(() => {
     hexes: [],
   };
 });
+
+/** یال‌هایی که کارت جاده‌سازی در این لحظه می‌پذیرد — قاعده‌اش در ‎game/cards‎ است. */
+const remainingFreeRoads = computed(() =>
+  view.value ? freeRoadChoices(view.value.legal, freeRoadPicks.value) : [],
+);
 
 /** بازیکنانی که می‌شود از آن‌ها دزدید: ساختمانی کنار خانه‌ی دزد دارند و کارت دارند. */
 const robberVictims = computed(() => {
@@ -429,10 +463,29 @@ function onPick(pick: Pick): void {
   const current = view.value;
   if (!current || !current.legal.isMyTurn) return;
 
+  // خانه فقط وقتی معنا دارد که دزد در کار باشد — چه از راه تاس ۷ و چه با شوالیه.
   if (pick.kind === 'hex') {
-    robberHex.value = pick.id;
+    if (current.phase === 'MoveRobber' || playing.value === 'Knight') {
+      robberHex.value = pick.id;
+    }
+
     return;
   }
+
+  // در حالت جاده‌سازی، کلیک روی یال به‌جای «ساختن»، انتخاب می‌کند: کارت تا دو
+  // جاده می‌دهد و هر دو با یک کنش فرستاده می‌شوند.
+  if (playing.value === 'RoadBuilding') {
+    if (pick.kind !== 'edge') return;
+
+    const key = edgeKey(pick.id);
+    if (freeRoadPicks.value.includes(key) || freeRoadPicks.value.length >= 2) return;
+
+    freeRoadPicks.value = [...freeRoadPicks.value, key];
+    return;
+  }
+
+  // بقیه‌ی حالت‌های کارت روی برد انتخاب نمی‌خواهند؛ کلیک نباید ساخت‌وساز کند.
+  if (playing.value !== null) return;
 
   if (pick.kind === 'vertex') {
     const key = vertexKey(pick.id);
@@ -522,7 +575,69 @@ const actions = {
     play({ $kind: 'DiscardCards', playerIndex: seat(), cards: { ...discard.value } }).then(() => {
       discard.value = {};
     }),
+
+  playKnight: (victim: number | null) =>
+    play({
+      $kind: 'PlayKnight',
+      playerIndex: seat(),
+      hex: `${robberHex.value!.q},${robberHex.value!.r}`,
+      victim,
+    }).then(cancelPlay),
+
+  // جاده‌ی دوم اختیاری است: ممکن است فقط یک جای قانونی مانده باشد.
+  playRoadBuilding: () =>
+    play({
+      $kind: 'PlayRoadBuilding',
+      playerIndex: seat(),
+      first: freeRoadPicks.value[0],
+      second: freeRoadPicks.value[1] ?? null,
+    }).then(cancelPlay),
+
+  playYearOfPlenty: () =>
+    play({
+      $kind: 'PlayYearOfPlenty',
+      playerIndex: seat(),
+      first: bonusPicks.value[0],
+      second: bonusPicks.value[1],
+    }).then(cancelPlay),
+
+  playMonopoly: () =>
+    play({
+      $kind: 'PlayMonopoly',
+      playerIndex: seat(),
+      resource: bonusPicks.value[0],
+    }).then(cancelPlay),
 };
+
+/**
+ * کلیک روی یک کارت توسعه.
+ *
+ * انحصار و سال فراوانی همان‌جا تمام می‌شوند و بقیه یک انتخابِ روی برد می‌خواهند،
+ * پس همه‌شان اول یک «حالت» می‌سازند و پنلِ نوبت بقیه‌اش را می‌پرسد. هیچ‌کدام
+ * اینجا اعتبارسنجی نمی‌شوند؛ فهرستِ قابل‌بازی از سرور آمده و سرور دوباره هم
+ * بررسی می‌کند.
+ */
+function startPlay(kind: string): void {
+  cancelPlay();
+  playing.value = kind;
+
+  // روی موبایل پنلِ نوبت پایینِ صفحه بسته است و بی این کار، کارت زده می‌شد و
+  // هیچ‌چیز عوض نمی‌شد. روی صفحه‌ی پهن پنل همیشه باز است و کاری لازم نیست.
+  if (!wide.value) openPanel('turn');
+}
+
+/** انتخاب منبع برای سال فراوانی (دو تا، تکراری هم مجاز) یا انحصار (یکی). */
+function pickBonus(resource: string): void {
+  const limit = playing.value === 'YearOfPlenty' ? 2 : 1;
+  bonusPicks.value = bonusPicks.value.length >= limit ? [resource] : [...bonusPicks.value, resource];
+}
+
+/** برای ‎Hand‎: چند تا از هر منبع در سبدِ کارت انتخاب شده. */
+const bonusSelection = computed(() => {
+  const counts: Record<string, number> = {};
+  for (const resource of bonusPicks.value) counts[resource] = (counts[resource] ?? 0) + 1;
+  return counts;
+});
 
 function adjust(resource: string, delta: number): void {
   const owned = view.value?.hand?.resources[resource] ?? 0;
@@ -534,10 +649,20 @@ onMounted(() => {
   connection = new GameConnection(props.gameId, {
     onLink: (value) => (link.value = value),
     onView: (value) => {
+      const before = view.value;
       view.value = value;
 
-      // اگر مرحله عوض شد، انتخاب نیمه‌کاره‌ی دزد دیگر معنا ندارد.
-      if (value.phase !== 'MoveRobber') robberHex.value = null;
+      // انتخابِ نیمه‌کاره فقط تا وقتی معنا دارد که همان وضعیت برقرار باشد. حالتِ
+      // کارت استثناست: شوالیه در مرحله‌ی Main بازی می‌شود و خانه‌ی انتخاب‌شده باید
+      // تا فرستادن کنش سرِ جایش بماند — با نوبت بعدی یا پایانِ حالت پاک می‌شود.
+      if (playing.value === null && value.phase !== 'MoveRobber') {
+        robberHex.value = null;
+      }
+
+      // نوبت که عوض شد، هر کارتی که نیمه‌کاره مانده لغو است.
+      if (before && (before.turnNumber !== value.turnNumber || before.currentPlayer !== value.currentPlayer)) {
+        cancelPlay();
+      }
     },
     onEvents: (events) => {
       if (events.some((e) => e.$kind === 'DiceRolled')) rollDice();
@@ -766,6 +891,105 @@ onBeforeUnmount(() => {
         >
           {{ t('game.discard') }}
         </button>
+      </template>
+
+      <!--
+        بازی‌کردن یک کارت توسعه، جلوتر از هر چیز دیگری.
+
+        وقتی کارتی روی میز است، دکمه‌های عادیِ نوبت باید کنار بروند: کاربر یک
+        کارِ نیمه‌تمام دارد و «پایان نوبت» کنارِ آن فقط تله است.
+      -->
+      <template v-else-if="playing !== null">
+        <p class="hx-live__playing">
+          {{ t(`game.dev.${playing}`) }}
+        </p>
+
+        <template v-if="playing === 'Knight'">
+          <p v-if="!robberHex">{{ t('game.pickRobberHex') }}</p>
+          <template v-else>
+            <p>{{ t('game.pickVictim') }}</p>
+            <div class="hx-live__choices">
+              <button
+                v-for="victim in robberVictims"
+                :key="victim.index"
+                type="button"
+                class="hx-btn hx-btn--sm hx-btn--outline"
+                @click="actions.playKnight(victim.index)"
+              >
+                {{ victim.displayName }}
+              </button>
+              <button
+                v-if="robberVictims.length === 0"
+                type="button"
+                class="hx-btn hx-btn--sm hx-btn--primary"
+                @click="actions.playKnight(null)"
+              >
+                {{ t('common.confirm') }}
+              </button>
+              <button
+                type="button"
+                class="hx-btn hx-btn--sm hx-btn--ghost"
+                @click="robberHex = null"
+              >
+                {{ t('common.back') }}
+              </button>
+            </div>
+          </template>
+        </template>
+
+        <template v-else-if="playing === 'RoadBuilding'">
+          <p>{{ t('game.pickFreeRoads', freeRoadPicks.length) }}</p>
+          <div class="hx-live__choices">
+            <button
+              type="button"
+              class="hx-btn hx-btn--sm hx-btn--primary"
+              :disabled="freeRoadPicks.length === 0"
+              @click="actions.playRoadBuilding()"
+            >
+              {{ t('common.confirm') }}
+            </button>
+
+            <!-- یالِ انتخاب‌شده روی برد خاموش می‌شود، پس راهِ برگشت لازم است. -->
+            <button
+              v-if="freeRoadPicks.length > 0"
+              type="button"
+              class="hx-btn hx-btn--sm hx-btn--outline"
+              @click="freeRoadPicks = freeRoadPicks.slice(0, -1)"
+            >
+              {{ t('common.back') }}
+            </button>
+          </div>
+        </template>
+
+        <template v-else>
+          <p>
+            {{ playing === 'Monopoly' ? t('game.pickMonopoly') : t('game.pickYearOfPlenty') }}
+          </p>
+
+          <!-- انتخاب منبع با همان کارت‌هایی که همه‌جای بازی دیده می‌شوند. -->
+          <Hand
+            :resources="WANTABLE"
+            :selection="bonusSelection"
+            @pick="pickBonus($event)"
+          />
+
+          <div class="hx-live__choices">
+            <button
+              type="button"
+              class="hx-btn hx-btn--sm hx-btn--primary"
+              :disabled="bonusPicks.length < (playing === 'YearOfPlenty' ? 2 : 1)"
+              @click="playing === 'Monopoly' ? actions.playMonopoly() : actions.playYearOfPlenty()"
+            >
+              {{ t('common.confirm') }}
+            </button>
+          </div>
+        </template>
+
+        <div class="hx-live__choices">
+          <button type="button" class="hx-btn hx-btn--sm hx-btn--ghost" @click="cancelPlay()">
+            {{ t('common.cancel') }}
+          </button>
+        </div>
       </template>
 
       <template v-else-if="phase === 'MoveRobber'">
@@ -1006,9 +1230,17 @@ onBeforeUnmount(() => {
           :open="folds.hand"
           @update:open="folds.hand = $event"
         >
+          <!--
+            دو دسته‌ی کارت جدا فرستاده می‌شوند، نه یکی: کارتِ همین نوبت هنوز
+            بازی نمی‌شود و کاربر باید *ببیند* چرا. فهرست قابل‌بازی هم از سرور
+            می‌آید — اگر نوبتِ کسی دیگر است تهی است و کارت‌ها فقط دیدنی‌اند.
+          -->
           <Hand
             :resources="view.hand.resources"
-            :development="{ ...view.hand.developmentCards, ...view.hand.newDevelopmentCards }"
+            :development="view.hand.developmentCards"
+            :fresh="view.hand.newDevelopmentCards"
+            :playable="isMyTurn ? view.legal.playableCards : null"
+            @play="startPlay($event)"
           />
 
           <ul class="hx-facts hx-hand__facts">
@@ -1087,9 +1319,13 @@ onBeforeUnmount(() => {
           <span class="hx-chip">{{ view.players[view.seat ?? 0]?.cardCount ?? 0 }}</span>
         </header>
 
+        <!-- همان دستِ پنل، ولی این نوار همیشه جلوی چشم است؛ کارت باید از اینجا هم بازی شود. -->
         <Hand
           :resources="view.hand.resources"
-          :development="{ ...view.hand.developmentCards, ...view.hand.newDevelopmentCards }"
+          :development="view.hand.developmentCards"
+          :fresh="view.hand.newDevelopmentCards"
+          :playable="isMyTurn ? view.legal.playableCards : null"
+          @play="startPlay($event)"
         />
       </article>
 

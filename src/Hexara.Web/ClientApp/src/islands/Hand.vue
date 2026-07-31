@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { t } from '@/i18n';
 import Card from './Card.vue';
 import { assetFor, type AssetName } from '@/assets/registry';
+import { developmentPiles } from '@/game/cards';
 
 /**
  * دستِ بازیکن: کارت‌های واقعی روی هم، نه یک فهرستِ عدد.
@@ -22,13 +23,22 @@ const props = withDefaults(
     resources: Record<string, number>;
     /** نام کارت توسعه ⇐ تعداد؛ تهی یعنی اصلاً نشان نده. */
     development?: Record<string, number> | null;
+    /** کارت‌های خریداری‌شده در همین نوبت — جدا شمرده می‌شوند چون هنوز بازی نمی‌شوند. */
+    fresh?: Record<string, number> | null;
     /** اگر داده شود، کارت‌ها قابل انتخاب می‌شوند و این‌ها انتخاب‌شده‌اند. */
     selection?: Record<string, number> | null;
+    /**
+     * کارت‌های توسعه‌ای که همین حالا می‌شود بازی کرد — مستقیم از سرور.
+     *
+     * تهی یعنی «کارت‌ها فقط برای دیدن‌اند». اینجا هیچ قاعده‌ای بازنویسی نمی‌شود؛
+     * قابل‌بازی‌بودن یک قانون بازی است و جایش موتور است.
+     */
+    playable?: string[] | null;
   }>(),
-  { development: null, selection: null },
+  { development: null, fresh: null, selection: null, playable: null },
 );
 
-const emit = defineEmits<{ pick: [resource: string] }>();
+const emit = defineEmits<{ pick: [resource: string]; play: [kind: string] }>();
 
 const ORDER = ['Lumber', 'Brick', 'Wool', 'Grain', 'Ore'] as const;
 
@@ -44,14 +54,21 @@ const piles = computed(() =>
   })).filter((pile) => pile.count > 0 || props.selection !== null),
 );
 
-const devPiles = computed(() => {
-  if (!props.development) return [];
-
-  return Object.entries(props.development)
-    .filter(([, count]) => count > 0)
-    .map(([kind, count]) => ({ kind, asset: assetFor('dev', kind), count }))
-    .filter((pile): pile is { kind: string; asset: AssetName; count: number } => pile.asset !== null);
-});
+/**
+ * دسته‌های کارت توسعه.
+ *
+ * جمع‌کردن دو دسته‌ی سرور و تشخیصِ «تازه» بیرون از این کامپوننت است تا تست
+ * داشته باشد؛ اینجا فقط تصویر و قابل‌بازی‌بودن به آن وصل می‌شود.
+ */
+const devPiles = computed(() =>
+  developmentPiles(props.development, props.fresh)
+    .map((pile) => ({
+      ...pile,
+      asset: assetFor('dev', pile.kind),
+      playable: props.playable?.includes(pile.kind) ?? false,
+    }))
+    .filter((pile): pile is typeof pile & { asset: AssetName } => pile.asset !== null),
+);
 
 const empty = computed(() => piles.value.every((p) => p.count === 0) && devPiles.value.length === 0);
 
@@ -114,7 +131,23 @@ const hovered = ref<string | null>(null);
       <h4 class="hx-hand__title">{{ t('game.devCards') }}</h4>
       <ul class="hx-hand__row">
         <li v-for="pile in devPiles" :key="pile.kind" class="hx-hand__pile">
-          <Card :name="pile.asset" :count="pile.count" />
+          <!--
+            وقتی فهرستِ قابل‌بازی نیامده، کارت یک ‎span‎ ساده می‌ماند؛ دکمه‌ای که
+            هیچ‌وقت کاری نمی‌کند بدتر از نبودنش است.
+          -->
+          <component
+            :is="playable ? 'button' : 'span'"
+            class="hx-hand__top hx-hand__top--dev"
+            :type="playable ? 'button' : undefined"
+            :disabled="playable ? !pile.playable : undefined"
+            :title="playable && !pile.playable ? t('game.cardNotPlayable') : undefined"
+            @click="pile.playable && emit('play', pile.kind)"
+          >
+            <Card :name="pile.asset" :count="pile.count" :disabled="!!playable && !pile.playable" />
+
+            <!-- کارتِ همین نوبت: تا نوبت بعد قفل است و باید بشود دید چرا. -->
+            <span v-if="pile.fresh > 0" class="hx-hand__fresh">{{ t('game.freshCard') }}</span>
+          </component>
         </li>
       </ul>
     </template>

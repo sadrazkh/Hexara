@@ -337,4 +337,130 @@ public class DevelopmentCardTests
         Assert.True(result.Success);
         Assert.Equal(14, state.Player(0).RoadsLeft);
     }
+
+    // ── فهرستی که رابط از آن می‌خواند ────────────────────────────────────
+
+    /// <summary>
+    /// رابط از همین فهرست تصمیم می‌گیرد کدام کارت کلیک‌شدنی باشد، پس اگر با
+    /// خودِ اعتبارسنجی یکی نباشد کاربر کارتی می‌بیند که سرور ردش می‌کند.
+    /// </summary>
+    [Fact]
+    public void Playable_cards_match_what_the_engine_accepts()
+    {
+        var state = Games.New(players: 2);
+        Games.StartMainPhase(state, 0);
+        Games.GiveDevelopmentCard(state, 0, DevelopmentCard.Monopoly);
+        Games.GiveDevelopmentCard(state, 0, DevelopmentCard.YearOfPlenty);
+
+        var playable = GameEngine.PlayableDevelopmentCards(state, 0);
+
+        Assert.Equal(
+            [DevelopmentCard.Monopoly, DevelopmentCard.YearOfPlenty],
+            playable.OrderBy(c => c.ToString(), StringComparer.Ordinal).ToList());
+    }
+
+    [Fact]
+    public void A_victory_point_card_is_never_playable()
+    {
+        var state = Games.New(players: 2);
+        Games.StartMainPhase(state, 0);
+        Games.GiveDevelopmentCard(state, 0, DevelopmentCard.VictoryPoint);
+
+        Assert.Empty(GameEngine.PlayableDevelopmentCards(state, 0));
+    }
+
+    [Fact]
+    public void A_card_bought_this_turn_is_not_in_the_playable_list()
+    {
+        var state = Games.New(players: 2);
+        Games.StartMainPhase(state, 0);
+        state.Player(0).AddNewDevelopmentCard(DevelopmentCard.Knight);
+
+        Assert.Empty(GameEngine.PlayableDevelopmentCards(state, 0));
+    }
+
+    /// <summary>شوالیه پیش از تاس هم بازی می‌شود — قاعده‌ی آشنای بازی.</summary>
+    [Fact]
+    public void Cards_are_playable_before_rolling()
+    {
+        var state = Games.New(players: 2);
+        state.Phase = TurnPhase.Roll;
+        state.CurrentPlayer = 0;
+        Games.GiveDevelopmentCard(state, 0, DevelopmentCard.Knight);
+
+        Assert.Contains(DevelopmentCard.Knight, GameEngine.PlayableDevelopmentCards(state, 0));
+    }
+
+    [Fact]
+    public void Nothing_is_playable_after_one_card_this_turn()
+    {
+        var state = Games.New(players: 2);
+        Games.StartMainPhase(state, 0);
+        Games.GiveDevelopmentCard(state, 0, DevelopmentCard.Monopoly);
+        Games.GiveDevelopmentCard(state, 0, DevelopmentCard.YearOfPlenty);
+
+        Assert.True(GameEngine.Apply(state, new PlayMonopoly(0, Resource.Ore)).Success);
+
+        Assert.Empty(GameEngine.PlayableDevelopmentCards(state, 0));
+    }
+
+    [Fact]
+    public void Another_players_cards_are_not_playable_on_your_turn()
+    {
+        var state = Games.New(players: 2);
+        Games.StartMainPhase(state, 0);
+        Games.GiveDevelopmentCard(state, 1, DevelopmentCard.Monopoly);
+
+        Assert.Empty(GameEngine.PlayableDevelopmentCards(state, 1));
+    }
+
+    // ── جاده‌ی دومِ کارت جاده‌سازی ────────────────────────────────────────
+
+    /// <summary>
+    /// جاده‌ی دوم روی وضعیتِ بعد از اولی سنجیده می‌شود. اگر رابط فقط فهرستِ
+    /// «الان قانونی» را روشن کند، زنجیره‌ساختن با این کارت ممکن نیست.
+    /// </summary>
+    [Fact]
+    public void Placing_a_road_opens_spots_the_current_list_does_not_have()
+    {
+        var state = Games.New(players: 2);
+        state.PlaceRoad(EdgeId.Of(Center, 0), 0);
+
+        var first = EdgeId.Of(Center, 1);
+        var before = GameEngine.LegalRoadEdges(state, 0).ToHashSet();
+        var after = GameEngine.LegalRoadEdgesAfter(state, 0, first);
+
+        Assert.Contains(first, before);
+        Assert.Contains(after, e => !before.Contains(e));
+    }
+
+    /// <summary>
+    /// حساب‌کردنِ جاده‌ی دوم نباید ردی بگذارد؛ این تابع سرِ ساختنِ *نما* صدا زده
+    /// می‌شود، جایی که هیچ‌چیز نباید عوض شود.
+    /// </summary>
+    [Fact]
+    public void Looking_ahead_leaves_the_game_untouched()
+    {
+        var state = Games.New(players: 2);
+        state.PlaceRoad(EdgeId.Of(Center, 0), 0);
+
+        var roads = state.Roads.ToDictionary(r => r.Key, r => r.Value);
+        var version = state.Version;
+
+        GameEngine.LegalRoadEdgesAfter(state, 0, EdgeId.Of(Center, 1));
+
+        Assert.Equal(roads, state.Roads);
+        Assert.Equal(version, state.Version);
+    }
+
+    [Fact]
+    public void Looking_ahead_past_an_occupied_edge_gives_nothing()
+    {
+        var state = Games.New(players: 2);
+        var taken = EdgeId.Of(Center, 0);
+        state.PlaceRoad(taken, 1);
+
+        Assert.Empty(GameEngine.LegalRoadEdgesAfter(state, 0, taken));
+        Assert.Equal(1, state.RoadAt(taken));
+    }
 }

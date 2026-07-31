@@ -196,6 +196,143 @@ public class GameViewTests
         Assert.False(view.Legal.IsMyTurn);
     }
 
+    // ── کارت‌های توسعه ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// رابط از همین فهرست تصمیم می‌گیرد کدام کارت کلیک‌شدنی باشد، و کارتی که
+    /// همین نوبت خریده شده نباید در آن باشد.
+    /// </summary>
+    [Fact]
+    public async Task The_view_says_which_development_cards_are_playable()
+    {
+        var game = MainPhaseGame(s => s with
+        {
+            Players =
+            [
+                s.Players[0] with
+                {
+                    DevelopmentCards = new Dictionary<DevelopmentCard, int> { [DevelopmentCard.Monopoly] = 1 },
+                    NewDevelopmentCards = new Dictionary<DevelopmentCard, int> { [DevelopmentCard.Knight] = 1 }
+                },
+                s.Players[1],
+                s.Players[2]
+            ]
+        });
+
+        var view = await NewBuilder().BuildAsync(game, 0);
+
+        Assert.Equal([DevelopmentCard.Monopoly], view.Legal.PlayableCards);
+    }
+
+    /// <summary>
+    /// شوالیه دزد را جابه‌جا می‌کند، پس خانه‌های هدف باید بیایند حتی وقتی مرحله
+    /// «بردن دزد» نیست — وگرنه کارت زده می‌شود و برد جایی برای کلیک ندارد.
+    /// </summary>
+    [Fact]
+    public async Task Robber_targets_come_along_when_the_knight_is_playable()
+    {
+        var game = MainPhaseGame(s => s with
+        {
+            Players =
+            [
+                s.Players[0] with
+                {
+                    DevelopmentCards = new Dictionary<DevelopmentCard, int> { [DevelopmentCard.Knight] = 1 }
+                },
+                s.Players[1],
+                s.Players[2]
+            ]
+        });
+
+        var view = await NewBuilder().BuildAsync(game, 0);
+
+        Assert.Equal(TurnPhase.Main, view.Phase);
+        Assert.Equal(18, view.Legal.RobberTargets.Count);
+    }
+
+    /// <summary>
+    /// جاده‌ی رایگان با جاده‌ی خریدنی یکی نیست: در مرحله‌ی تاس اصلاً نمی‌شود جاده
+    /// خرید، ولی کارت جاده‌سازی همان‌جا هم بازی می‌شود.
+    /// </summary>
+    [Fact]
+    public async Task Free_roads_are_offered_even_in_the_roll_phase()
+    {
+        var game = NewGame(s => s with
+        {
+            Phase = TurnPhase.Roll,
+            CurrentPlayer = 0,
+            TurnNumber = 4,
+            Roads = [new RoadSnapshot(0, 0, 0, 0)],
+            Players =
+            [
+                s.Players[0] with
+                {
+                    DevelopmentCards = new Dictionary<DevelopmentCard, int> { [DevelopmentCard.RoadBuilding] = 1 }
+                },
+                s.Players[1],
+                s.Players[2]
+            ]
+        });
+
+        var view = await NewBuilder().BuildAsync(game, 0);
+
+        Assert.Empty(view.Legal.Roads);
+        Assert.NotEmpty(view.Legal.FreeRoads);
+    }
+
+    /// <summary>
+    /// جاده‌ی دوم روی وضعیتِ بعد از اولی سنجیده می‌شود، پس نما باید برای هر
+    /// انتخابِ اول جاهای تازه را هم بدهد — وگرنه زنجیره‌ساختن ناممکن است.
+    /// </summary>
+    [Fact]
+    public async Task Each_first_free_road_carries_the_spots_it_opens()
+    {
+        var game = MainPhaseGame(s => s with
+        {
+            Roads = [new RoadSnapshot(0, 0, 0, 0)],
+            Players =
+            [
+                s.Players[0] with
+                {
+                    DevelopmentCards = new Dictionary<DevelopmentCard, int> { [DevelopmentCard.RoadBuilding] = 1 }
+                },
+                s.Players[1],
+                s.Players[2]
+            ]
+        });
+
+        var view = await NewBuilder().BuildAsync(game, 0);
+
+        var free = view.Legal.FreeRoads.Select(Key).ToHashSet(StringComparer.Ordinal);
+
+        Assert.NotEmpty(free);
+        Assert.Equal(free, view.Legal.FollowUpRoads.Keys.ToHashSet(StringComparer.Ordinal));
+
+        // دست‌کم یک انتخابِ اول باید دری باز کند که در فهرستِ اولیه نبود.
+        Assert.Contains(
+            view.Legal.FollowUpRoads,
+            entry => entry.Value.Any(r => !free.Contains(Key(r))));
+    }
+
+    [Fact]
+    public async Task Without_the_card_no_free_roads_are_computed()
+    {
+        var view = await NewBuilder().BuildAsync(MainPhaseGame(), 0);
+
+        Assert.Empty(view.Legal.FreeRoads);
+        Assert.Empty(view.Legal.FollowUpRoads);
+    }
+
+    private static string Key(RoadSnapshot road) => $"{road.Q},{road.R},{road.Side}";
+
+    /// <summary>بازی‌ای در بدنه‌ی نوبتِ بازیکن اول، بدون چیدمان اولیه.</summary>
+    private static StoredGame MainPhaseGame(Func<GameSnapshot, GameSnapshot>? tweak = null) =>
+        NewGame(s =>
+        {
+            var main = s with { Phase = TurnPhase.Main, CurrentPlayer = 0, TurnNumber = 4 };
+            return tweak?.Invoke(main) ?? main;
+        });
+
     private static Dictionary<Resource, int> Hand(int ore = 0, int wool = 0) => new()
     {
         [Resource.Lumber] = 0,

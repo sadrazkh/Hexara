@@ -802,6 +802,26 @@ public static class GameEngine
         return MoveResult.Ok(new MonopolyPlayed(action.PlayerIndex, action.Resource, collected));
     }
 
+    /// <summary>
+    /// کارت‌هایی که این صندلی همین حالا می‌تواند بازی کند.
+    ///
+    /// عمومی است تا نما همین را بفرستد و رابط قاعده‌ی «کارتِ همین نوبت خریده
+    /// نمی‌شود» و «هر نوبت یک کارت» را دوباره پیاده نکند — همان قاعده‌ای که
+    /// برای نرخ بندر و جدول هزینه هم گذاشتیم.
+    /// </summary>
+    public static IReadOnlyList<DevelopmentCard> PlayableDevelopmentCards(GameState state, int playerIndex)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+
+        if (playerIndex < 0 || playerIndex >= state.Players.Count)
+        {
+            return [];
+        }
+
+        return [.. Enum.GetValues<DevelopmentCard>()
+            .Where(card => ValidateDevelopmentPlay(state, playerIndex, card) == GameError.None)];
+    }
+
     private static GameError ValidateDevelopmentPlay(GameState state, int playerIndex, DevelopmentCard card)
     {
         // کارت توسعه را می‌توان قبل یا بعد از تاس بازی کرد، ولی نه وسط ماجرای دزد.
@@ -1310,6 +1330,39 @@ public static class GameEngine
         return state.Board.Vertices.Where(v =>
             ValidateSettlementSpot(state, v) == GameError.None
             && (!requiresRoad || v.TouchingEdges().Any(e => state.RoadAt(e) == playerIndex)));
+    }
+
+    /// <summary>
+    /// ضلع‌هایی که *بعد از* گذاشتن یک جاده قانونی می‌شوند.
+    ///
+    /// کارت جاده‌سازی دو جاده را پشت سر هم می‌گذارد و جاده‌ی دوم را روی وضعیتِ
+    /// بعد از اولی می‌سنجد؛ پس فهرستِ «الان قانونی» برای انتخاب دوم کم است و
+    /// بازیکن نمی‌تواند زنجیره بسازد.
+    ///
+    /// جاده واقعاً گذاشته و بی‌درنگ برداشته می‌شود تا همان قاعده‌ی حقیقی جواب
+    /// بدهد، نه یک کپیِ ساده‌شده از آن. نسخه‌ی بازی دست نمی‌خورد (فقط
+    /// <c>Apply</c> جلویش می‌برد) و صدا زدنِ این متد روی وضعیتی که هم‌زمان
+    /// خوانده می‌شود نیست: نما داخل همان قفلِ بازی ساخته می‌شود.
+    /// </summary>
+    public static IReadOnlyList<EdgeId> LegalRoadEdgesAfter(GameState state, int playerIndex, EdgeId placed)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+
+        if (state.RoadAt(placed) is not null)
+        {
+            return [];
+        }
+
+        state.PlaceRoad(placed, playerIndex);
+
+        try
+        {
+            return [.. LegalRoadEdges(state, playerIndex)];
+        }
+        finally
+        {
+            state.RemoveRoad(placed);
+        }
     }
 
     /// <summary>ضلع‌هایی که این بازیکن الان می‌تواند روی آن‌ها جاده بسازد.</summary>

@@ -880,6 +880,24 @@ code {
   overflow-y: auto;
 }
 
+/*
+ * سرتیترِ کارتی که در حال بازی‌شدن است.
+ *
+ * پنلِ نوبت در این حالت شکل عوض می‌کند و کاربر باید یک نگاه بفهمد چرا دکمه‌های
+ * همیشگی نیستند — پس نام کارت مثل یک نشانِ روشن بالای پنل می‌نشیند.
+ */
+.hx-live__playing {
+  margin: 0;
+  padding: var(--hx-sp-1) var(--hx-sp-3);
+  border-radius: var(--hx-r-pill);
+  align-self: flex-start;
+  background: var(--hx-accent-grad);
+  color: var(--hx-on-accent);
+  font-weight: var(--hx-weight-bold);
+  font-size: var(--hx-text-sm);
+  box-shadow: var(--hx-shadow-sm);
+}
+
 .hx-live__counters {
   display: flex;
   flex-wrap: wrap;
@@ -1406,6 +1424,33 @@ button.hx-hand__top:hover:not(:disabled) {
   font-weight: var(--hx-weight-bold);
   text-align: center;
   box-shadow: var(--hx-shadow-sm);
+}
+
+/* «تازه» روی کارتی که همین نوبت خریده شده و هنوز قفل است. */
+.hx-hand__fresh {
+  position: absolute;
+  inset-block-start: 6px;
+  inset-inline-start: 50%;
+  translate: -50% 0;
+  z-index: 7;
+  padding: 0.05rem 0.4rem;
+  border-radius: var(--hx-r-pill);
+  background: color-mix(in srgb, var(--hx-bg) 78%, transparent);
+  color: var(--hx-text-dim);
+  font-size: var(--hx-text-2xs);
+  font-weight: var(--hx-weight-bold);
+  white-space: nowrap;
+  backdrop-filter: blur(2px);
+}
+
+/*
+ * کارت توسعه‌ی قابل بازی باید از دور پیدا باشد.
+ *
+ * فقط روی کارت‌های توسعه، نه روی کارت‌های منبع در پنل معامله — آن‌جا همه‌ی
+ * کارت‌ها دکمه‌اند و حلقه‌ی روی همه‌شان یعنی حلقه روی هیچ‌کدام.
+ */
+button.hx-hand__top--dev:not(:disabled) .hx-card2 {
+  box-shadow: var(--hx-ring-selected);
 }
 
 .hx-hand__title {

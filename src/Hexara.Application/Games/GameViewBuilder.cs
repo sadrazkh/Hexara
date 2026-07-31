@@ -1,4 +1,5 @@
-﻿using Hexara.Application.Common.Interfaces;
+﻿using System.Globalization;
+using Hexara.Application.Common.Interfaces;
 using Hexara.Application.Players;
 using Hexara.Domain.Board;
 using Hexara.Domain.Game;
@@ -139,6 +140,13 @@ public sealed class GameViewBuilder
     }
 
     /// <summary>
+    /// کلید یالی که کلاینت هم می‌سازد. همان قالبِ فشرده‌ی همیشگی، با فرهنگ
+    /// ناوابسته — علامت منفی در فارسی ‎ASCII‎ نیست و کلیدها هرگز جور درنمی‌آمدند.
+    /// </summary>
+    private static string Key(EdgeId edge) =>
+        string.Create(CultureInfo.InvariantCulture, $"{edge.Hex.Q},{edge.Hex.R},{edge.Side}");
+
+    /// <summary>
     /// حرکت‌های قانونی فقط وقتی محاسبه می‌شوند که واقعاً نوبت این صندلی باشد —
     /// هم برای صرفه‌جویی و هم چون در غیر این صورت هیچ‌کدامشان معنا ندارند.
     /// </summary>
@@ -178,9 +186,34 @@ public sealed class GameViewBuilder
                 .ToList()
             : [];
 
-        var robberTargets = state.Phase == TurnPhase.MoveRobber
+        var playable = GameEngine.PlayableDevelopmentCards(state, seat);
+
+        // خانه‌های دزد هم برای مرحله‌ی دزد لازم است و هم برای شوالیه، چون
+        // شوالیه هم دزد را جابه‌جا می‌کند.
+        var needsRobberTargets =
+            state.Phase == TurnPhase.MoveRobber || playable.Contains(DevelopmentCard.Knight);
+
+        var robberTargets = needsRobberTargets
             ? state.Board.Tiles.Where(t => t.Position != state.Robber).Select(t => t.Position).ToList()
             : [];
+
+        // جاده‌ی رایگان همان جاهایی است که جاده‌ی خریدنی می‌رود، ولی در مرحله‌ی
+        // تاس هم معنا دارد — و آن‌جا فهرستِ خریدنی خالی است.
+        var freeRoads = playable.Contains(DevelopmentCard.RoadBuilding)
+            ? GameEngine.LegalRoadEdges(state, seat).ToList()
+            : [];
+
+        // برای هر انتخابِ اول، جاهای تازه‌ی جاده‌ی دوم. فقط وقتی حساب می‌شود که
+        // کارت واقعاً در دست باشد، پس هزینه‌اش سرِ بازی عادی صفر است.
+        var followUps = freeRoads.ToDictionary(
+            first => Key(first),
+            first => (IReadOnlyList<RoadSnapshot>)
+            [
+                .. GameEngine.LegalRoadEdgesAfter(state, seat, first)
+                    .Where(e => e != first)
+                    .Select(e => new RoadSnapshot(e.Hex.Q, e.Hex.R, e.Side, seat))
+            ],
+            StringComparer.Ordinal);
 
         // نرخ‌ها فقط سرِ ساخت‌وساز معنا دارند، چون معامله همان‌جا ممکن است.
         var rates = state.Phase == TurnPhase.Main
@@ -192,6 +225,9 @@ public sealed class GameViewBuilder
         {
             IsMyTurn = true,
             TradeRates = rates,
+            FreeRoads = [.. freeRoads.Select(e => new RoadSnapshot(e.Hex.Q, e.Hex.R, e.Side, seat))],
+            FollowUpRoads = followUps,
+            PlayableCards = playable,
             Settlements = [.. settlements.Select(v => new VertexSnapshot(v.Hex.Q, v.Hex.R, v.Corner))],
             Roads = [.. roads.Select(e => new RoadSnapshot(e.Hex.Q, e.Hex.R, e.Side, seat))],
             Cities = [.. cities.Select(v => new VertexSnapshot(v.Hex.Q, v.Hex.R, v.Corner))],

@@ -162,8 +162,36 @@ public sealed record LegalMovesView
 
     public required IReadOnlyList<VertexSnapshot> Cities { get; init; }
 
-    /// <summary>خانه‌هایی که دزد می‌تواند برود.</summary>
+    /// <summary>
+    /// خانه‌هایی که دزد می‌تواند برود.
+    ///
+    /// هم برای مرحله‌ی دزد پر می‌شود و هم وقتی شوالیه قابل بازی است — چون
+    /// شوالیه هم دزد را جابه‌جا می‌کند و همان فهرست را لازم دارد.
+    /// </summary>
     public required IReadOnlyList<HexSnapshot> RobberTargets { get; init; }
+
+    /// <summary>
+    /// یال‌هایی که کارت جاده‌سازی می‌تواند رویشان جاده‌ی رایگان بگذارد.
+    ///
+    /// جدا از <see cref="Roads"/> است چون آن یکی «چه چیزی را می‌توانی
+    /// *بخری*» را می‌گوید و این یکی «کجا را می‌توانی مجانی بگیری» — و این دو
+    /// در مرحله‌ی تاس با هم فرق دارند.
+    /// </summary>
+    public required IReadOnlyList<RoadSnapshot> FreeRoads { get; init; }
+
+    /// <summary>
+    /// برای هر جاده‌ی رایگانِ اول، جاهایی که *بعد از* گذاشتنش برای جاده‌ی دوم باز
+    /// می‌شوند. کلید همان «‎q,r,side‎» است.
+    ///
+    /// بدون این، بازیکن نمی‌توانست با کارت جاده‌سازی زنجیره بسازد: جاده‌ی دومِ
+    /// چسبیده به اولی در فهرستِ <see cref="FreeRoads"/> نیست، چون آن فهرست پیش از
+    /// گذاشتن اولی حساب شده. حساب‌کردنش در کلاینت یعنی قاعده‌ی اتصال جاده دو جا
+    /// نوشته شود.
+    /// </summary>
+    public required IReadOnlyDictionary<string, IReadOnlyList<RoadSnapshot>> FollowUpRoads { get; init; }
+
+    /// <summary>کارت‌های توسعه‌ای که همین حالا می‌شود بازی کرد.</summary>
+    public required IReadOnlyList<DevelopmentCard> PlayableCards { get; init; }
 
     /// <summary>
     /// نرخ معامله با بانک برای هر منبع: چند واحد از آن باید بدهی تا یکی بگیری.
@@ -181,6 +209,9 @@ public sealed record LegalMovesView
         Roads = [],
         Cities = [],
         RobberTargets = [],
+        FreeRoads = [],
+        FollowUpRoads = new Dictionary<string, IReadOnlyList<RoadSnapshot>>(),
+        PlayableCards = [],
         TradeRates = new Dictionary<Resource, int>()
     };
 }

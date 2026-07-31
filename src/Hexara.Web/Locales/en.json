@@ -241,6 +241,11 @@
     "discardPrompt": "You must discard {0} cards.",
     "pickRobberHex": "Pick the tile the robber moves to on the board.",
     "pickVictim": "Who do you rob?",
+    "pickFreeRoads": "Pick up to two roads on the board. Picked so far: {0}",
+    "pickYearOfPlenty": "Take any two resources from the bank (they may be the same).",
+    "pickMonopoly": "Pick a resource; everyone hands you every card of it.",
+    "freshCard": "New",
+    "cardNotPlayable": "This card can't be played right now.",
     "clickTheBoard": "The legal spots are lit up on the board — click one.",
     "noWebgl": "Your browser doesn't support WebGL, so the 3D board can't be shown.",
     "link": {
