@@ -75,6 +75,7 @@
                 <a asp-controller="Home" asp-action="Index">@T["nav.home"]</a>
                 <a asp-controller="Lobby" asp-action="Index">@T["nav.lobby"]</a>
                 <a asp-controller="Leaderboard" asp-action="Index">@T["nav.leaderboard"]</a>
+                <a asp-controller="Home" asp-action="Rules">@T["nav.rules"]</a>
                 @if (User.Identity?.IsAuthenticated == true)
                 {
                     <a asp-controller="Profile" asp-action="Index">@T["nav.profile"]</a>

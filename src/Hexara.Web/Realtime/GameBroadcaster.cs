@@ -30,11 +30,17 @@ public sealed class GameBroadcaster
         _logger = logger;
     }
 
+    /// <summary>گروه تماشاچی‌های یک بازی — جدا از گروه خودِ بازیکن‌ها.</summary>
+    public static string WatchersOf(Guid gameId) => $"game:{gameId}:watch";
+
     /// <summary>
     /// هر بازیکن رویدادهای سانسورشده‌ی خودش و نمای تازه‌ی خودش را می‌گیرد.
     ///
     /// نمای کامل هر بار فرستاده می‌شود چون تنها منبع حقیقت است؛ رویدادها فقط برای
     /// انیمیشن و پیام‌اند.
+    ///
+    /// تماشاچی‌ها یک نمای مشترک می‌گیرند و **یک بار** ساخته می‌شود: نمای بی‌صندلی
+    /// برای همه‌شان یکی است، چون هیچ‌کدام دستی ندارند که مالِ خودش باشد.
     /// </summary>
     public async Task SendAsync(
         StoredGame game,
@@ -60,6 +66,36 @@ public sealed class GameBroadcaster
                 // آن یک نفر با CatchUp خودش را می‌رساند.
                 _logger.LogWarning(ex, "ارسال وضعیت بازی {GameId} به بازیکن {UserId} ناموفق بود.", game.Id, userId);
             }
+        }
+
+        await SendToWatchersAsync(game, events, online, cancellationToken);
+    }
+
+    /// <summary>
+    /// نمای تماشاچی‌ها.
+    ///
+    /// یک بار ساخته و به یک گروه فرستاده می‌شود. صندلیِ تهی یعنی ‎Hand‎ اصلاً
+    /// ساخته نمی‌شود و حرکت‌های قانونی خالی‌اند، و رویدادها با کمترین دانش
+    /// سانسور می‌شوند — پس تماشاچی هرگز به کارت کسی نمی‌رسد.
+    /// </summary>
+    private async Task SendToWatchersAsync(
+        StoredGame game,
+        IReadOnlyList<GameEvent> events,
+        IReadOnlySet<Guid> online,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var view = await _views.BuildAsync(game, viewerSeat: null, online, cancellationToken);
+
+            await _hub.Clients.Group(WatchersOf(game.Id))
+                .SendAsync("applied", GameEventRedactor.ForSeat(events, null), view, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // تماشاچی‌ها مهم‌ترین مخاطب نیستند؛ نرسیدنِ پیام به آن‌ها نباید
+            // چیزی را متوقف کند و خودشان هم با CatchUp جبران می‌کنند.
+            _logger.LogWarning(ex, "ارسال وضعیت بازی {GameId} به تماشاچی‌ها ناموفق بود.", game.Id);
         }
     }
 }

@@ -1,0 +1,97 @@
+@using Hexara.Domain.Game
+@model RulesViewModel
+@{
+    ViewData["Title"] = T["rules.title"];
+    var o = Model.Defaults;
+}
+
+@* هیچ عددی اینجا تایپ نشده. همه از ثابت‌های موتور می‌آیند، پس اگر قانونی عوض
+   شود این صفحه هم همان لحظه درست می‌شود. *@
+<section class="hx-container hx-rules">
+    <header class="hx-rules__head">
+        <h1>@T["rules.title"]</h1>
+        <p class="hx-muted">@T["rules.intro"]</p>
+    </header>
+
+    <article class="hx-panel">
+        <h2>@T["rules.goalTitle"]</h2>
+        <p>@T.T("rules.goalBody", o.VictoryPoints)</p>
+    </article>
+
+    <article class="hx-panel">
+        <h2>@T["rules.setupTitle"]</h2>
+        <p>@T["rules.setupBody"]</p>
+    </article>
+
+    <article class="hx-panel">
+        <h2>@T["rules.turnTitle"]</h2>
+        <ol class="hx-rules__steps">
+            <li>@T["rules.turnRoll"]</li>
+            <li>@T.T("rules.turnRobber", o.DiscardLimit)</li>
+            <li>@T["rules.turnBuild"]</li>
+            <li>@T["rules.turnEnd"]</li>
+        </ol>
+    </article>
+
+    <article class="hx-panel">
+        <h2>@T["rules.costsTitle"]</h2>
+
+        <table class="hx-rules__table">
+            <thead>
+                <tr>
+                    <th scope="col">@T["rules.thing"]</th>
+                    <th scope="col">@T["rules.cost"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var (labelKey, cost) in Model.Costs)
+                {
+                    <tr>
+                        <th scope="row">@T[labelKey]</th>
+                        <td>
+                            @string.Join("، ", cost.Select(c =>
+                                $"{c.Value}× {T["game.resource." + c.Key]}"))
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <p class="hx-muted hx-small">
+            @T.T("rules.pieces", o.RoadsPerPlayer, o.SettlementsPerPlayer, o.CitiesPerPlayer)
+        </p>
+    </article>
+
+    <article class="hx-panel">
+        <h2>@T["rules.tradeTitle"]</h2>
+        <p>@T.T("rules.tradeBank", o.BankTradeRate)</p>
+        <p>@T["rules.tradePorts"]</p>
+        <p>@T.T("rules.tradePlayers", o.TradeWindowSeconds)</p>
+    </article>
+
+    <article class="hx-panel">
+        <h2>@T["rules.cardsTitle"]</h2>
+        <p class="hx-muted">@T["rules.cardsIntro"]</p>
+
+        <dl class="hx-rules__cards">
+            @foreach (var card in Model.Cards)
+            {
+                <dt>@T["game.dev." + card]</dt>
+                <dd>@T["rules.card." + card]</dd>
+            }
+        </dl>
+    </article>
+
+    <article class="hx-panel">
+        <h2>@T["rules.awardsTitle"]</h2>
+        <p>@T.T("rules.longestRoad", o.LongestRoadMinimum)</p>
+        <p>@T.T("rules.largestArmy", o.LargestArmyMinimum)</p>
+    </article>
+
+    <article class="hx-panel">
+        <h2>@T["rules.fairTitle"]</h2>
+        <p>@T["rules.fairServer"]</p>
+        <p>@T["rules.fairSecrets"]</p>
+        <p>@T["rules.fairBot"]</p>
+    </article>
+</section>

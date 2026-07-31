@@ -29,6 +29,20 @@ public sealed class ChatOptions
     public int BurstSeconds { get; set; } = 10;
 }
 
+/// <summary>
+/// تنظیمات تماشا.
+///
+/// جدا از چت است چون سؤالِ متفاوتی جواب می‌دهد: چت درباره‌ی حرف‌زدنِ بازیکن‌هاست
+/// و این درباره‌ی اینکه چه کسی اجازه‌ی *دیدن* دارد. خاموشش که کنی، کسی که سرِ
+/// بازی نیست نه صفحه را می‌گیرد نه به هاب راه دارد.
+/// </summary>
+public sealed class SpectatorOptions
+{
+    public const string Section = "Spectators";
+
+    public bool Enabled { get; set; } = true;
+}
+
 /// <summary>یک پیام چت، همان‌طور که روی سیم می‌رود.</summary>
 /// <param name="Seat">
 /// صندلیِ فرستنده، نه نامش. نام از روی همان نمای بازی درمی‌آید که کلاینت دارد،

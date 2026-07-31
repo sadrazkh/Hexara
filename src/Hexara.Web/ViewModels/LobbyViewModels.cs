@@ -85,8 +85,8 @@ public class GamePlayViewModel
 {
     public required StoredGame Game { get; init; }
 
-    /// <summary>صندلی خودِ بیننده.</summary>
-    public required int Seat { get; init; }
+    /// <summary>صندلی خودِ بیننده؛ تهی یعنی تماشاچی است و فقط نگاه می‌کند.</summary>
+    public required int? Seat { get; init; }
 
     /// <summary>
     /// چت روشن است یا نه.
@@ -99,5 +99,5 @@ public class GamePlayViewModel
     /// <summary>صدا و تصویر پیکربندی شده است یا نه — همان منطقِ چت.</summary>
     public required bool VoiceEnabled { get; init; }
 
-    public bool IsMyTurn => Game.State.CurrentPlayer == Seat;
+    public bool IsMyTurn => Seat is { } seat && Game.State.CurrentPlayer == seat;
 }

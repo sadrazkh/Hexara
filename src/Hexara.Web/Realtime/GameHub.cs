@@ -32,6 +32,7 @@ public sealed class GameHub : Hub
     private readonly IClock _clock;
     private readonly LiveKitTokens _voice;
     private readonly IPlayerDirectory _directory;
+    private readonly SpectatorOptions _spectators;
 
     public GameHub(
         GameService games,
@@ -42,7 +43,8 @@ public sealed class GameHub : Hub
         GameChat chat,
         IClock clock,
         LiveKitTokens voice,
-        IPlayerDirectory directory)
+        IPlayerDirectory directory,
+        SpectatorOptions spectators)
     {
         _games = games;
         _views = views;
@@ -53,6 +55,7 @@ public sealed class GameHub : Hub
         _clock = clock;
         _voice = voice;
         _directory = directory;
+        _spectators = spectators;
     }
 
     private Guid? UserId =>
@@ -73,10 +76,31 @@ public sealed class GameHub : Hub
             return new JoinResult(false, "gameNotFound", null);
         }
 
-        if (game.SeatOf(userId) is not { } seat)
+        var seat = game.SeatOf(userId);
+
+        // تماشاچی گروهِ خودش را دارد و **به گروه بازیکن‌ها راه ندارد**.
+        //
+        // این فقط تمیزکاری نیست: چت و «حضور» هر دو به گروه بازیکن‌ها می‌روند و
+        // اگر تماشاچی آن‌جا بود، حرفِ خصوصیِ سرِ میز («سه گندم دارم») را
+        // می‌شنید و می‌توانست به یکی از بازیکن‌ها برساند.
+        if (seat is null)
         {
-            // تماشاچی در این فاز پشتیبانی نمی‌شود.
-            return new JoinResult(false, "notYourGame", null);
+            if (!_spectators.Enabled)
+            {
+                return new JoinResult(false, "notYourGame", null);
+            }
+
+            await Groups.AddToGroupAsync(
+                Context.ConnectionId,
+                GameBroadcaster.WatchersOf(gameId),
+                Context.ConnectionAborted);
+
+            // «حضور» درباره‌ی بازیکن‌هاست؛ تماشاچی نه کسی را آنلاین می‌کند نه
+            // مهلتِ نوبتِ کسی را عقب می‌اندازد.
+            var watching = await _views.BuildAsync(
+                game, viewerSeat: null, _presence.OnlineIn(gameId), Context.ConnectionAborted);
+
+            return new JoinResult(true, null, watching);
         }
 
         await Groups.AddToGroupAsync(Context.ConnectionId, GroupOf(gameId), Context.ConnectionAborted);
@@ -93,6 +117,8 @@ public sealed class GameHub : Hub
     public async Task Leave(Guid gameId)
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupOf(gameId), Context.ConnectionAborted);
+        await Groups.RemoveFromGroupAsync(
+            Context.ConnectionId, GameBroadcaster.WatchersOf(gameId), Context.ConnectionAborted);
         await AnnounceOfflineAsync(gameId, _presence.Remove(gameId, Context.ConnectionId));
     }
 
@@ -135,7 +161,15 @@ public sealed class GameHub : Hub
         }
 
         var game = await _games.GetAsync(gameId, Context.ConnectionAborted);
-        if (game is null || game.SeatOf(userId) is not { } seat)
+        if (game is null)
+        {
+            return null;
+        }
+
+        // تماشاچی صندلی ندارد و همین‌جا بیشترین سانسور را می‌گیرد؛ اگر تماشا
+        // خاموش باشد اصلاً نباید چیزی بگیرد.
+        var seat = game.SeatOf(userId);
+        if (seat is null && !_spectators.Enabled)
         {
             return null;
         }

@@ -227,6 +227,15 @@ const LAND_MS = 320;
 const RESOURCES = ['Lumber', 'Brick', 'Wool', 'Grain', 'Ore'] as const;
 
 const isMyTurn = computed(() => view.value?.legal.isMyTurn ?? false);
+
+/**
+ * تماشاچی: صندلی ندارد.
+ *
+ * دستِ تماشاچی اصلاً از سرور نمی‌آید (‎hand‎ تهی است) و حرکت‌های قانونی خالی‌اند،
+ * پس بیشترِ رابط خودبه‌خود ساکت می‌شود. تنها چیزی که لازم است گفته شود این است
+ * که *چرا* — وگرنه به نظر می‌رسد چیزی خراب است.
+ */
+const watching = computed(() => view.value !== null && view.value.seat === null);
 const phase = computed(() => view.value?.phase ?? '');
 
 const phaseLabel = computed(() =>
@@ -935,6 +944,11 @@ onBeforeUnmount(() => {
       >
         {{ t('game.endTurn') }}
       </button>
+      <!-- نشانِ تماشا، کنارِ وضعیت اتصال؛ همان‌جایی که چشم دنبال «الان چه خبر است» می‌گردد. -->
+      <span v-if="watching" class="hx-chip hx-chip--watching">
+        {{ t('game.watching') }}
+      </span>
+
       <span v-if="champion" class="hx-chip hx-chip--live">
         {{ iWon ? t('game.youWon') : t('game.wonBy', champion.displayName) }}
       </span>
@@ -1260,7 +1274,7 @@ onBeforeUnmount(() => {
           id="hx-panel-turn"
           class="hx-panel hx-panel--rail hx-muted"
         >
-          {{ t('game.waitingForOthers') }}
+          {{ watching ? t('game.watchingHint') : t('game.waitingForOthers') }}
         </p>
 
         <Fold

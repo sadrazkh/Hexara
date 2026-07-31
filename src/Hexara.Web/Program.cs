@@ -128,6 +128,9 @@ builder.Services.AddSingleton(builder.Configuration.GetSection(ChatOptions.Secti
     ?? new ChatOptions());
 builder.Services.AddSingleton<GameChat>();
 
+builder.Services.AddSingleton(builder.Configuration.GetSection(SpectatorOptions.Section).Get<SpectatorOptions>()
+    ?? new SpectatorOptions());
+
 // صدا و تصویر. کلید و رمز از متغیر محیطی می‌آیند نه از فایلِ کامیت‌شده؛ نبودنشان
 // یعنی خاموش، و بازی هیچ فرقی نمی‌کند.
 builder.Services.AddSingleton(builder.Configuration.GetSection(LiveKitOptions.Section).Get<LiveKitOptions>()
