@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import gsap from 'gsap';
+import { t } from '@/i18n';
 import {
   BoardScene,
   type BoardData,
@@ -30,6 +31,9 @@ let controls: OrbitControls | null = null;
 let board: BoardScene | null = null;
 let observer: ResizeObserver | null = null;
 let frame = 0;
+let boardReach = 1;
+let cameraMoved = false;
+let lastFitAspect = 1;
 
 /**
  * کیفیتِ همین رندرر، تا برد بداند زینتِ زمین سایه بیندازد یا نه. یک‌بار سرِ
@@ -114,9 +118,9 @@ function build(container: HTMLDivElement): void {
   board.update(props.board, props.highlights, boardOptions());
 
   const reach = board.extent(props.board.tiles);
+  boardReach = reach;
 
   camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 200);
-  camera.position.set(0, reach * 1.5, reach * 1.35);
 
   controls = new OrbitControls(camera, renderer.domElement);
   controls.target.set(0, 0, 0);
@@ -127,7 +131,8 @@ function build(container: HTMLDivElement): void {
   // نگذاریم دوربین زیر برد برود یا دقیقاً از بالا بیفتد؛ هر دو گیج‌کننده‌اند.
   controls.minPolarAngle = 0.15;
   controls.maxPolarAngle = Math.PI / 2.35;
-  controls.update();
+  controls.addEventListener('start', onCameraStart);
+  fitView(width, height);
 
   const key = new THREE.DirectionalLight(0xffffff, 2.2);
   key.position.set(reach * 0.7, reach * 1.6, reach * 0.9);
@@ -154,6 +159,7 @@ function build(container: HTMLDivElement): void {
   scene.add(rim);
 
   document.addEventListener(THEME_CHANGE, onThemeChange);
+  document.addEventListener('visibilitychange', onVisibilityChange);
 
   observer = new ResizeObserver(() => resize(container));
   observer.observe(container);
@@ -167,9 +173,49 @@ function resize(container: HTMLDivElement): void {
   const width = container.clientWidth || 1;
   const height = container.clientHeight || 1;
 
-  camera.aspect = width / height;
+  const aspect = width / height;
+  camera.aspect = aspect;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height, false);
+
+  // در portrait فضای افقی عامل محدودکننده است. تغییر جدی نسبت تصویر (چرخاندن
+  // گوشی/تبلت) حتی اگر کاربر قبلاً دوربین را حرکت داده باشد باید دوباره fit شود.
+  if (!cameraMoved || Math.abs(aspect - lastFitAspect) > 0.32) {
+    fitView(width, height);
+  }
+}
+
+function onCameraStart(): void {
+  cameraMoved = true;
+}
+
+function fitView(width?: number, height?: number): void {
+  if (!camera || !controls) return;
+
+  const w = width ?? host.value?.clientWidth ?? 1;
+  const h = height ?? host.value?.clientHeight ?? 1;
+  const aspect = Math.max(0.48, w / Math.max(1, h));
+  // در قاب عمودی حاشیهٔ امن بیشتری لازم است تا پورت‌های دو سوی برد هم زیر
+  // لبهٔ قاب یا bottom-sheet نروند. نمای افقیِ کم‌ارتفاع هم باید کل جزیره را جا دهد.
+  const fitFactor = aspect < 1 ? Math.max(3.45, 2.24 / aspect) : 3.05;
+  const distance = boardReach * fitFactor;
+
+  camera.position.set(0, distance * 0.72, distance * 0.69);
+  controls.target.set(0, 0, 0);
+  controls.minDistance = boardReach * 0.72;
+  controls.maxDistance = boardReach * 4.5;
+  controls.update();
+  lastFitAspect = aspect;
+  cameraMoved = false;
+}
+
+function onVisibilityChange(): void {
+  if (document.hidden) {
+    cancelAnimationFrame(frame);
+    frame = 0;
+  } else if (frame === 0) {
+    render();
+  }
 }
 
 function render(): void {
@@ -245,6 +291,13 @@ watch(
   () => [props.board, props.highlights, props.options],
   () => {
     board?.update(props.board, props.highlights, boardOptions());
+    if (board && host.value) {
+      const nextReach = board.extent(props.board.tiles);
+      if (Math.abs(nextReach - boardReach) > 0.05) {
+        boardReach = nextReach;
+        fitView();
+      }
+    }
     animateSpawned();
   },
   { deep: true },
@@ -265,7 +318,9 @@ onMounted(() => {
 onBeforeUnmount(() => {
   cancelAnimationFrame(frame);
   document.removeEventListener(THEME_CHANGE, onThemeChange);
+  document.removeEventListener('visibilitychange', onVisibilityChange);
   observer?.disconnect();
+  controls?.removeEventListener('start', onCameraStart);
   controls?.dispose();
   board?.dispose();
   renderer?.dispose();
@@ -283,6 +338,22 @@ onBeforeUnmount(() => {
     @pointermove="updateHover"
     @pointerleave="hovering = false"
   >
+    <button
+      v-if="!failed"
+      type="button"
+      class="hx-board__reset"
+      :aria-label="t('game.resetView')"
+      :title="t('game.resetView')"
+      @pointerdown.stop
+      @pointerup.stop
+      @click.stop="fitView()"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 9V4h5M4.7 4.7A9 9 0 1 1 3 14" />
+        <path d="M8 12h8M12 8v8" />
+      </svg>
+    </button>
+
     <p v-if="failed" class="hx-board__fallback">
       <slot name="fallback" />
     </p>
@@ -352,5 +423,44 @@ onBeforeUnmount(() => {
   padding: var(--hx-sp-4);
   text-align: center;
   color: var(--hx-text-faint);
+}
+
+.hx-board__reset {
+  position: absolute;
+  z-index: 3;
+  inset-block-end: var(--hx-sp-3);
+  inset-inline-end: var(--hx-sp-3);
+  display: grid;
+  place-items: center;
+  inline-size: 42px;
+  block-size: 42px;
+  padding: 0;
+  border: 1px solid var(--hx-border-strong);
+  border-radius: var(--hx-r-pill);
+  color: var(--hx-text);
+  background: color-mix(in srgb, var(--hx-bg) 78%, transparent);
+  box-shadow: var(--hx-shadow-md);
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+}
+
+.hx-board__reset:hover {
+  color: var(--hx-accent-2);
+  border-color: var(--hx-accent);
+}
+
+.hx-board__reset:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--hx-accent-2) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.hx-board__reset svg {
+  inline-size: 22px;
+  block-size: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 </style>

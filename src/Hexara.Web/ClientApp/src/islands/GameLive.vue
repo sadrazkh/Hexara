@@ -6,6 +6,8 @@ import Fold from './Fold.vue';
 import BuildPanel from './BuildPanel.vue';
 import Hand from './Hand.vue';
 import Card from './Card.vue';
+import Asset from '@/assets/Asset.vue';
+import type { AssetName } from '@/assets/registry';
 import type { BoardData, Highlights, Pick } from '@/three/board';
 import { vertexHexes, vertexKey } from '@/three/hex';
 import {
@@ -69,7 +71,9 @@ const folds = ref<Record<string, boolean>>({
  * دسکتاپ و موبایل یعنی هر پنلِ تازه باید دو جا اضافه شود و یک روز یکی‌شان
  * فراموش می‌شود.
  */
-const sheetOpen = ref(false);
+type SheetState = 'closed' | 'half' | 'full';
+const sheetState = ref<SheetState>('closed');
+const sheetOpen = computed(() => sheetState.value !== 'closed');
 
 /**
  * کدام دکمه‌ی نوارِ پایین روشن است.
@@ -82,32 +86,37 @@ const activeTab = ref<string | null>(null);
 
 /** دکمه‌های نوار پایینِ موبایل. ترتیب از روی این‌که چقدر بهشان سر می‌زنی. */
 const TABS = [
-  { key: 'turn', label: 'game.yourTurn' },
-  { key: 'build', label: 'game.build' },
-  { key: 'trade', label: 'game.trade' },
-  { key: 'hand', label: 'game.yourHand' },
-  { key: 'players', label: 'game.players' },
-] as const;
+  { key: 'turn', label: 'game.yourTurn', icon: 'icon.Dice' },
+  { key: 'build', label: 'game.build', icon: 'piece.Settlement' },
+  { key: 'trade', label: 'game.trade', icon: 'icon.Trade' },
+  { key: 'hand', label: 'game.yourHand', icon: 'icon.Cards' },
+  { key: 'players', label: 'game.players', icon: 'avatar.Placeholder' },
+] as const satisfies readonly { key: string; label: string; icon: AssetName }[];
 
 function closeSheet(): void {
-  sheetOpen.value = false;
+  sheetState.value = 'closed';
   activeTab.value = null;
 }
 
 /** یک برگه را باز می‌کند و همان پنل را هم باز می‌کند و می‌آوردش جلوی چشم. */
 function openPanel(key: string): void {
-  if (sheetOpen.value && activeTab.value === key) {
-    closeSheet();
+  if (activeTab.value === key && sheetState.value !== 'closed') {
+    sheetState.value = sheetState.value === 'half' ? 'full' : 'closed';
+    if (sheetState.value === 'closed') activeTab.value = null;
     return;
   }
 
   folds.value = { ...folds.value, [key]: true };
   activeTab.value = key;
-  sheetOpen.value = true;
+  sheetState.value = 'half';
 
   requestAnimationFrame(() => {
-    document.getElementById(`hx-panel-${key}`)?.scrollIntoView({ block: 'start' });
+    document.querySelector<HTMLElement>('.hx-live__rail')?.scrollTo({ top: 0 });
   });
+}
+
+function resizeSheet(): void {
+  sheetState.value = sheetState.value === 'full' ? 'half' : 'full';
 }
 
 let wideQuery: MediaQueryList | null = null;
@@ -559,12 +568,42 @@ onBeforeUnmount(() => {
 <template>
   <div class="hx-live">
     <header class="hx-live__bar">
-      <span class="hx-live__link" :data-link="link">{{ t(`game.link.${link}`) }}</span>
-      <span v-if="view">{{ t('game.turn') }} {{ view.turnNumber }} · {{ phaseLabel }}</span>
-      <span v-if="tumbling" class="hx-live__dice hx-live__dice--rolling">
-        🎲 {{ tumbling[0] }} + {{ tumbling[1] }}
+      <div class="hx-live__status">
+        <span class="hx-live__link" :data-link="link">{{ t(`game.link.${link}`) }}</span>
+        <span v-if="view" class="hx-live__turn">
+          <strong>{{ t('game.turn') }} {{ view.turnNumber }}</strong>
+          <span>{{ phaseLabel }}</span>
+        </span>
+      </div>
+
+      <span v-if="tumbling" class="hx-live__dice hx-live__dice--rolling" aria-live="polite">
+        <span class="hx-live__die">{{ tumbling[0] }}</span>
+        <span class="hx-live__dice-plus">+</span>
+        <span class="hx-live__die">{{ tumbling[1] }}</span>
       </span>
-      <span v-else-if="view?.die1" class="hx-live__dice">🎲 {{ view.die1 }} + {{ view.die2 }}</span>
+      <span v-else-if="view?.die1" class="hx-live__dice" aria-live="polite">
+        <span class="hx-live__die">{{ view.die1 }}</span>
+        <span class="hx-live__dice-plus">+</span>
+        <span class="hx-live__die">{{ view.die2 }}</span>
+      </span>
+
+      <button
+        v-if="isMyTurn && phase === 'Roll'"
+        type="button"
+        class="hx-btn hx-btn--primary hx-live__quick"
+        @click="actions.roll()"
+      >
+        <Asset name="icon.Dice" width="1.35rem" decorative />
+        {{ t('game.roll') }}
+      </button>
+      <button
+        v-else-if="isMyTurn && phase === 'Main'"
+        type="button"
+        class="hx-btn hx-btn--primary hx-live__quick"
+        @click="actions.endTurn()"
+      >
+        {{ t('game.endTurn') }}
+      </button>
       <span v-if="champion" class="hx-chip hx-chip--live">
         {{ iWon ? t('game.youWon') : t('game.wonBy', champion.displayName) }}
       </span>
@@ -603,7 +642,7 @@ onBeforeUnmount(() => {
           </span>
           <span class="hx-result__name">{{ player.displayName }}</span>
           <strong class="hx-result__points">
-            {{ player.publicVictoryPoints }} {{ t('lobby.pointsShort') }}
+            {{ t('lobby.pointsShort', player.publicVictoryPoints) }}
           </strong>
         </li>
       </ol>
@@ -612,6 +651,44 @@ onBeforeUnmount(() => {
     </section>
 
     <div class="hx-live__stage">
+      <aside v-if="view" class="hx-live__players-dock" :aria-label="t('game.players')">
+        <div class="hx-live__dock-head">
+          <span>{{ t('game.players') }}</span>
+          <span class="hx-chip">{{ view.players.length }}</span>
+        </div>
+
+        <ol class="hx-live__dock-seats">
+          <li
+            v-for="player in view.players"
+            :key="`dock-${player.index}`"
+            :class="{ 'is-active': player.index === view.currentPlayer }"
+          >
+            <span
+              class="hx-avatar hx-avatar--sm"
+              :style="{ '--hx-avatar-color': player.avatarColor }"
+            >
+              {{ (player.displayName || '?').slice(0, 1).toUpperCase() }}
+            </span>
+            <span class="hx-live__dock-player">
+              <strong>{{ player.displayName }}</strong>
+              <small>
+                {{ player.publicVictoryPoints }} ★ · {{ player.cardCount }} {{ t('game.cardsShort') }}
+              </small>
+            </span>
+            <span class="hx-live__presence" :class="{ 'is-offline': !player.isOnline }"></span>
+          </li>
+        </ol>
+
+        <div v-if="log.length > 0" class="hx-live__dock-log">
+          <strong>{{ t('game.log') }}</strong>
+          <ul>
+            <li v-for="(line, index) in log.slice(0, 4)" :key="`dock-log-${index}`">
+              {{ line }}
+            </li>
+          </ul>
+        </div>
+      </aside>
+
       <div class="hx-live__board">
         <GameBoard
           v-if="view"
@@ -647,7 +724,22 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <aside class="hx-live__rail" :class="{ 'is-open': sheetOpen }">
+      <aside
+        class="hx-live__rail"
+        :class="{ 'is-open': sheetOpen }"
+        :data-sheet-state="sheetState"
+        :data-active-tab="activeTab"
+      >
+        <button
+          v-if="!wide"
+          type="button"
+          class="hx-live__sheet-grabber"
+          :aria-label="t('game.resizePanel')"
+          @click="resizeSheet()"
+        >
+          <span></span>
+        </button>
+
         <Fold
           v-if="view && isMyTurn"
           :label="t('game.yourTurn')"
@@ -728,7 +820,11 @@ onBeforeUnmount(() => {
       </template>
         </Fold>
 
-        <p v-else-if="view && !isOver" class="hx-panel hx-panel--rail hx-muted">
+        <p
+          v-else-if="view && !isOver"
+          id="hx-panel-turn"
+          class="hx-panel hx-panel--rail hx-muted"
+        >
           {{ t('game.waitingForOthers') }}
         </p>
 
@@ -929,6 +1025,7 @@ onBeforeUnmount(() => {
 
         <Fold
           v-if="view"
+          class="hx-live__players-fold"
           :label="t('game.players')"
           :always="wide"
           :id="`hx-panel-players`"
@@ -975,6 +1072,91 @@ onBeforeUnmount(() => {
         </Fold>
       </aside>
     </div>
+
+    <section
+      v-if="view && view.hand"
+      class="hx-live__command-deck"
+      :aria-label="t('game.yourHand')"
+    >
+      <article class="hx-command-card hx-command-card--hand">
+        <header class="hx-command-card__head">
+          <span>
+            <Asset name="icon.Cards" width="1.35rem" decorative />
+            {{ t('game.yourHand') }}
+          </span>
+          <span class="hx-chip">{{ view.players[view.seat ?? 0]?.cardCount ?? 0 }}</span>
+        </header>
+
+        <Hand
+          :resources="view.hand.resources"
+          :development="{ ...view.hand.developmentCards, ...view.hand.newDevelopmentCards }"
+        />
+      </article>
+
+      <article class="hx-command-card hx-command-card--dice">
+        <header class="hx-command-card__head">
+          <span>
+            <Asset name="icon.Dice" width="1.35rem" decorative />
+            {{ t('game.roll') }}
+          </span>
+          <span class="hx-chip">{{ phaseLabel }}</span>
+        </header>
+
+        <div class="hx-command-dice" :class="{ 'is-rolling': tumbling }" aria-live="polite">
+          <span class="hx-command-die hx-command-die--red">{{ tumbling?.[0] ?? view.die1 ?? '•' }}</span>
+          <span class="hx-command-die hx-command-die--gold">{{ tumbling?.[1] ?? view.die2 ?? '•' }}</span>
+        </div>
+
+        <button
+          v-if="isMyTurn && phase === 'Roll'"
+          type="button"
+          class="hx-btn hx-btn--primary hx-command-card__action"
+          @click="actions.roll()"
+        >
+          {{ t('game.roll') }}
+        </button>
+        <button
+          v-else-if="isMyTurn && phase === 'Main'"
+          type="button"
+          class="hx-btn hx-btn--primary hx-command-card__action"
+          @click="actions.endTurn()"
+        >
+          {{ t('game.endTurn') }}
+        </button>
+        <p v-else class="hx-command-card__hint">{{ phaseLabel }}</p>
+      </article>
+
+      <article class="hx-command-card hx-command-card--trade">
+        <header class="hx-command-card__head">
+          <span>
+            <Asset name="icon.Trade" width="1.35rem" decorative />
+            {{ t('game.trade') }}
+          </span>
+          <span class="hx-chip">{{ offerLeft ?? '—' }}</span>
+        </header>
+
+        <div class="hx-command-trade">
+          <div>
+            <small>{{ t('game.tradeGive') }}</small>
+            <strong>{{ offer ? describeBundle(offer.give) : t('game.tradeWithBank') }}</strong>
+          </div>
+          <span class="hx-command-trade__arrow" aria-hidden="true">⇄</span>
+          <div>
+            <small>{{ t('game.tradeTake') }}</small>
+            <strong>{{ offer ? describeBundle(offer.take) : `${bankGive ? rateOf(bankGive) : 4}:1` }}</strong>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          class="hx-btn hx-btn--outline hx-command-card__action"
+          :disabled="!isMyTurn || phase !== 'Main'"
+          @click="bankOpen = true"
+        >
+          {{ t('game.tradeWithBank') }}
+        </button>
+      </article>
+    </section>
 
     <!--
       نوار پایینِ موبایل. روی صفحه‌ی پهن اصلاً رندر نمی‌شود، چون آن‌جا ریل
@@ -1065,7 +1247,7 @@ onBeforeUnmount(() => {
     </div>
 
     <template v-if="!wide && view && !isOver">
-      <div v-if="sheetOpen" class="hx-live__scrim" @click="closeSheet()"></div>
+      <div v-if="sheetState === 'full'" class="hx-live__scrim" @click="closeSheet()"></div>
 
       <nav class="hx-live__tabs" :aria-label="t('game.title')">
         <button
@@ -1077,7 +1259,8 @@ onBeforeUnmount(() => {
           :aria-expanded="sheetOpen && activeTab === tab.key"
           @click="openPanel(tab.key)"
         >
-          {{ t(tab.label) }}
+          <Asset :name="tab.icon" width="1.45rem" decorative />
+          <span>{{ t(tab.label) }}</span>
         </button>
       </nav>
     </template>

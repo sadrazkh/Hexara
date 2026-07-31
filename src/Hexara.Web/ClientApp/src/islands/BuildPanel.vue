@@ -2,6 +2,8 @@
 import { computed } from 'vue';
 import { t } from '@/i18n';
 import type { GameView } from '@/game/connection';
+import Asset from '@/assets/Asset.vue';
+import type { AssetName } from '@/assets/registry';
 
 /**
  * ساخت‌وساز: چه می‌توانی بسازی، به چه قیمتی، و چرا نمی‌توانی.
@@ -26,6 +28,13 @@ const LABEL: Record<Kind, string> = {
   Settlement: 'game.buildSettlement',
   City: 'game.buildCity',
   DevelopmentCard: 'game.buyCard',
+};
+
+const ICON: Record<Kind, AssetName> = {
+  Road: 'piece.Road',
+  Settlement: 'piece.Settlement',
+  City: 'piece.City',
+  DevelopmentCard: 'icon.Cards',
 };
 
 const hand = computed(() => props.view.hand?.resources ?? {});
@@ -92,6 +101,7 @@ function piecesLeft(kind: Kind): number | null {
   <ul class="hx-build">
     <li v-for="kind in KINDS" :key="kind" class="hx-build__row" :class="{ 'is-ready': ready(kind) }">
       <div class="hx-build__head">
+        <Asset :name="ICON[kind]" width="1.9rem" decorative />
         <span class="hx-build__name">{{ t(LABEL[kind]) }}</span>
         <span class="hx-build__left">{{ piecesLeft(kind) }}</span>
       </div>

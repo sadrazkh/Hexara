@@ -4,7 +4,14 @@ import { describe, expect, it } from 'vitest';
 import fa from '@locales/fa.json';
 import en from '@locales/en.json';
 import { flatten } from '@/i18n';
-import { ASSETS, assetFor, assetSpec, type AssetName } from './registry';
+import {
+  ASSETS,
+  TERRAIN_ART,
+  assetFor,
+  assetSpec,
+  terrainArt,
+  type AssetName,
+} from './registry';
 
 const names = Object.keys(ASSETS) as AssetName[];
 const flatFa = flatten(fa);
@@ -39,6 +46,24 @@ describe('the asset registry', () => {
 
   it('returns null for something it has no art for, instead of a broken key', () => {
     expect(assetFor('resource', 'Unobtainium')).toBeNull();
+  });
+});
+
+describe('terrain art variations', () => {
+  it('registers three optimized variations for every terrain family', () => {
+    for (const variants of Object.values(TERRAIN_ART)) {
+      expect(variants).toHaveLength(3);
+      expect(new Set(variants).size).toBe(3);
+    }
+  });
+
+  it('chooses a stable variation from axial coordinates', () => {
+    expect(terrainArt('Forest', -2, 1)).toBe(terrainArt('Forest', -2, 1));
+    expect(TERRAIN_ART.Forest).toContain(terrainArt('Forest', -2, 1));
+  });
+
+  it('returns null for an unknown terrain', () => {
+    expect(terrainArt('Ocean', 0, 0)).toBeNull();
   });
 });
 

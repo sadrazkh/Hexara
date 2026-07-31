@@ -199,6 +199,8 @@
     "buildDeckEmpty": "دسته‌ی کارت توسعه خالی است.",
     "openPanel": "باز کردن {0}",
     "closePanel": "بستن",
+    "resizePanel": "تغییر اندازهٔ پنل",
+    "resetView": "بازنشانی نمای نقشه",
     "trade": "معامله",
     "tradeBankHint": "با بانک معامله کن. نرخ را بندرهایت تعیین می‌کنند.",
     "tradePlayersHint": "یا به بازیکن‌های دیگر پیشنهاد بده.",
@@ -224,6 +226,7 @@
       "Rejected": "نپذیرفت"
     },
     "players": "بازیکنان",
+    "cardsShort": "کارت",
     "yourHand": "دست شما",
     "victoryPoints": "امتیاز پیروزی",
     "log": "رویدادها",

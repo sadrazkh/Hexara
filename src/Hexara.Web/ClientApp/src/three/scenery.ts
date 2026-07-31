@@ -166,7 +166,7 @@ function at(rand: () => number, x: number, z: number): Instance {
  * هفت‌تایشان کنار هم «جنگل» بخوانند. یک مخروطِ بزرگ فقط یک مخروطِ بزرگ است.
  */
 function forest(bag: Bag, rand: () => number): void {
-  for (const spot of scatter(rand, 6 + Math.floor(rand() * 3), 0.1)) {
+  for (const spot of scatter(rand, 6, 0.1)) {
     const tall = 0.3 + rand() * 0.16;
     const wide = 0.15 + rand() * 0.05;
     const lean = (rand() - 0.5) * 0.12;
@@ -204,7 +204,7 @@ function forest(bag: Bag, rand: () => number): void {
 /** کوه: چند قله‌ی تیزِ کم‌وجه با کلاهک روشن، بلندترین نزدیک میانه. */
 function mountains(bag: Bag, rand: () => number): void {
   // پهن‌ترین قله ‎۰٫۳۶‎ است، پس نیمش ‎۰٫۱۸‎.
-  const peaks = scatter(rand, 4 + Math.floor(rand() * 2), 0.18);
+  const peaks = scatter(rand, 3 + Math.floor(rand() * 2), 0.18);
 
   // یکی از قله‌ها بلندتر است تا رشته‌کوه یک راس داشته باشد. جای مرکزِ خانه
   // نمی‌نشیند، چون آن‌جا مالِ ژتون عدد است.
@@ -242,8 +242,8 @@ function fields(bag: Bag, rand: () => number): void {
   const lean = rand() * Math.PI;
   const cos = Math.cos(lean);
   const sin = Math.sin(lean);
-  const rows = 5;
-  const perRow = 7;
+  const rows = 4;
+  const perRow = 5;
 
   for (let row = 0; row < rows; row++) {
     const across = -SAFE_OUTER + ((row + 0.5) / rows) * SAFE_OUTER * 2;
@@ -267,7 +267,7 @@ function fields(bag: Bag, rand: () => number): void {
   }
 
   // دو بافه‌ی درو‌شده، تا معلوم شود محصول همین‌جا برداشت می‌شود.
-  for (const spot of scatter(rand, 2, 0.07)) {
+  for (const spot of scatter(rand, 1, 0.07)) {
     bag.sheaf.push({
       ...at(rand, spot.x, spot.z),
       size: 0.1,
@@ -287,7 +287,7 @@ function fields(bag: Bag, rand: () => number): void {
 
 /** چراگاه: بوته‌های علف و دو گوسفند. */
 function pasture(bag: Bag, rand: () => number): void {
-  for (const spot of scatter(rand, 7 + Math.floor(rand() * 3), 0.08)) {
+  for (const spot of scatter(rand, 4 + Math.floor(rand() * 2), 0.08)) {
     // هر بوته سه پره است تا از بالا هم توپُر دیده شود.
     for (let blade = 0; blade < 3; blade++) {
       const angle = (blade / 3) * Math.PI * 2 + rand();
@@ -302,7 +302,7 @@ function pasture(bag: Bag, rand: () => number): void {
     }
   }
 
-  for (const spot of scatter(rand, 2, 0.08)) {
+  for (const spot of scatter(rand, 1, 0.08)) {
     bag.fleece.push({
       ...at(rand, spot.x, spot.z),
       size: 0.13 + rand() * 0.03,
@@ -314,11 +314,11 @@ function pasture(bag: Bag, rand: () => number): void {
 
 /** تپه: پشته‌های نرم خاک و یک چینه‌ی آجر. */
 function hills(bag: Bag, rand: () => number): void {
-  for (const spot of scatter(rand, 4 + Math.floor(rand() * 2), 0.18)) {
+  for (const spot of scatter(rand, 1, 0.18)) {
     bag.mound.push({
       ...at(rand, spot.x, spot.z),
-      size: 0.28 + rand() * 0.08,
-      height: 0.11 + rand() * 0.07,
+      size: 0.18 + rand() * 0.04,
+      height: 0.07 + rand() * 0.04,
       shade: 0.76 + rand() * 0.28,
     });
   }
@@ -341,7 +341,7 @@ function hills(bag: Bag, rand: () => number): void {
 
 /** کویر: چند پشته‌ی شنی کم‌ارتفاع و یک‌دو سنگ. کم‌تعداد، چون خلوتی خودش معناست. */
 function desert(bag: Bag, rand: () => number): void {
-  for (const spot of scatter(rand, 3, 0.18)) {
+  for (const spot of scatter(rand, 2, 0.18)) {
     bag.mound.push({
       ...at(rand, spot.x, spot.z),
       size: 0.28 + rand() * 0.08,
@@ -350,7 +350,7 @@ function desert(bag: Bag, rand: () => number): void {
     });
   }
 
-  for (const spot of scatter(rand, 2, 0.08)) {
+  for (const spot of scatter(rand, 1, 0.08)) {
     bag.rock.push({
       ...at(rand, spot.x, spot.z),
       size: 0.1 + rand() * 0.06,

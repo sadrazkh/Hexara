@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { t } from '@/i18n';
 import { assetSpec, type AssetName } from './registry';
 
@@ -23,6 +23,12 @@ const props = withDefaults(
 
 const spec = computed(() => assetSpec(props.name));
 const label = computed(() => t(spec.value.labelKey));
+const failed = ref(false);
+
+watch(
+  () => spec.value.src,
+  () => (failed.value = false),
+);
 
 const ratio = computed(() => {
   switch (spec.value.shape) {
@@ -50,7 +56,15 @@ const initial = computed(() => label.value.trim().slice(0, 1));
     :aria-label="decorative ? undefined : label"
     :aria-hidden="decorative ? 'true' : undefined"
   >
-    <img v-if="spec.src" class="hx-asset__img" :src="spec.src" alt="" decoding="async" />
+    <img
+      v-if="spec.src && !failed"
+      class="hx-asset__img"
+      :src="spec.src"
+      alt=""
+      decoding="async"
+      loading="lazy"
+      @error="failed = true"
+    />
 
     <span v-else class="hx-asset__fallback" aria-hidden="true">
       <span class="hx-asset__initial">{{ initial }}</span>

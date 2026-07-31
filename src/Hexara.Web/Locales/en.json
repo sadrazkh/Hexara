@@ -199,6 +199,8 @@
     "buildDeckEmpty": "The development deck is empty.",
     "openPanel": "Open {0}",
     "closePanel": "Close",
+    "resizePanel": "Resize panel",
+    "resetView": "Reset board view",
     "trade": "Trade",
     "tradeBankHint": "Trade with the bank. Your ports set the rate.",
     "tradePlayersHint": "Or offer a swap to the other players.",
@@ -224,6 +226,7 @@
       "Rejected": "declined"
     },
     "players": "Players",
+    "cardsShort": "cards",
     "yourHand": "Your hand",
     "victoryPoints": "Victory points",
     "log": "Events",

@@ -12,6 +12,7 @@ import {
   type VertexId,
 } from './hex';
 import { buildScenery } from './scenery';
+import { terrainArt } from '../assets/registry';
 
 export const TILE_SIZE = 1;
 
@@ -151,14 +152,19 @@ export class BoardScene {
   private readonly disposables: { dispose(): void }[] = [];
   private readonly seatMaterials = new Map<number, THREE.MeshStandardMaterial>();
   private readonly terrainMaterials = new Map<string, THREE.MeshStandardMaterial>();
+  private readonly terrainTopMaterials = new Map<string, THREE.MeshStandardMaterial>();
+  private readonly terrainTextures = new Map<string, THREE.Texture>();
   private readonly numberTextures = new Map<number, THREE.Texture>();
   private readonly tokenMaterials = new Map<number, THREE.MeshBasicMaterial>();
   private readonly portMaterials = new Map<string, THREE.MeshStandardMaterial>();
+  private readonly portTopMaterials = new Map<string, THREE.MeshStandardMaterial>();
+  private readonly portTextures = new Map<string, THREE.Texture>();
 
   private readonly geo = {
-    tile: new THREE.CylinderGeometry(TILE_SIZE * 0.97, TILE_SIZE * 0.97, 0.34, 6),
+    tile: new THREE.CylinderGeometry(TILE_SIZE * 0.955, TILE_SIZE * 0.955, 0.3, 6),
+    tileRim: new THREE.CylinderGeometry(TILE_SIZE * 0.985, TILE_SIZE * 0.985, 0.34, 6),
     token: new THREE.CircleGeometry(TILE_SIZE * 0.34, 32),
-    port: new THREE.ConeGeometry(TILE_SIZE * 0.12, TILE_SIZE * 0.3, 4),
+    port: new THREE.CylinderGeometry(TILE_SIZE * 0.23, TILE_SIZE * 0.25, 0.14, 6),
     road: new THREE.BoxGeometry(TILE_SIZE * 0.78, 0.1, 0.14),
     settlement: new THREE.BoxGeometry(0.26, 0.2, 0.26),
     settlementRoof: new THREE.ConeGeometry(0.19, 0.18, 4),
@@ -183,6 +189,12 @@ export class BoardScene {
     roughness: 0.6,
   });
 
+  private readonly tileRimMaterial = new THREE.MeshStandardMaterial({
+    color: tokenColor('--hx-accent', 0xe0a63a),
+    roughness: 0.46,
+    metalness: 0.28,
+  });
+
   /** دریا موقع تعویض تم باید به‌روز شود، پس ارجاعش نگه داشته می‌شود. */
   private seaMaterial: THREE.MeshStandardMaterial | null = null;
 
@@ -205,7 +217,12 @@ export class BoardScene {
 
   constructor() {
     this.root.add(this.backdrop, this.terrain, this.scenery, this.pieces, this.markers);
-    this.disposables.push(...Object.values(this.geo), this.highlightMaterial, this.robberMaterial);
+    this.disposables.push(
+      ...Object.values(this.geo),
+      this.highlightMaterial,
+      this.robberMaterial,
+      this.tileRimMaterial,
+    );
   }
 
   get pickables(): THREE.Mesh[] {
@@ -263,8 +280,9 @@ export class BoardScene {
       );
     }
 
-    this.seaMaterial?.color.copy(tokenColor('--hx-res-sea', 0x4a90c4));
+    this.seaMaterial?.color.copy(tokenColor('--hx-res-sea', 0x155f7c));
     this.highlightMaterial.color.copy(tokenColor('--hx-accent-2', 0xf2cf7a));
+    this.tileRimMaterial.color.copy(tokenColor('--hx-accent', 0xe0a63a));
 
     // زینت رنگ را در نمونه‌ها دارد نه در متریال، پس از نو ساخته می‌شود. فقط
     // موقع تعویض تم پیش می‌آید، نه در جریان بازی.
@@ -316,8 +334,23 @@ export class BoardScene {
 
     for (const tile of data.tiles) {
       const { x, z } = axialToWorld(tile.q, tile.r, TILE_SIZE);
-      const mesh = new THREE.Mesh(this.geo.tile, this.terrainMaterial(tile.terrain));
-      mesh.position.set(x, 0, z);
+      const baseMaterial = this.terrainMaterial(tile.terrain);
+
+      // قاب باریک فلزی بین خانه‌ها، بافت‌ها را از هم جدا نگه می‌دارد و در تم روشن
+      // و تیره از همان accent سیستم طراحی رنگ می‌گیرد.
+      const rim = new THREE.Mesh(this.geo.tileRim, this.tileRimMaterial);
+      rim.position.set(x, -0.012, z);
+      rim.receiveShadow = true;
+      this.terrain.add(rim);
+
+      // CylinderGeometry برای بدنه، سقف و کف material index جدا دارد. تصویر فقط
+      // روی سطح بالا می‌نشیند؛ بنابراین عدد، مهره و لبه هنوز آبجکت مستقل‌اند.
+      const mesh = new THREE.Mesh(this.geo.tile, [
+        baseMaterial,
+        this.terrainTopMaterial(tile.terrain, tile.q, tile.r),
+        baseMaterial,
+      ]);
+      mesh.position.set(x, 0.022, z);
       mesh.receiveShadow = true;
       mesh.castShadow = true;
 
@@ -358,6 +391,36 @@ export class BoardScene {
     return material;
   }
 
+  private terrainTopMaterial(terrain: string, q: number, r: number): THREE.MeshStandardMaterial {
+    const src = terrainArt(terrain, q, r);
+    if (!src) return this.terrainMaterial(terrain);
+
+    const cached = this.terrainTopMaterials.get(src);
+    if (cached) return cached;
+
+    let texture = this.terrainTextures.get(src);
+    if (!texture) {
+      texture = new THREE.TextureLoader().load(src);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.anisotropy = 4;
+      texture.minFilter = THREE.LinearMipmapLinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      this.terrainTextures.set(src, texture);
+      this.disposables.push(texture);
+    }
+
+    const material = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      map: texture,
+      roughness: 0.72,
+      metalness: 0.02,
+    });
+
+    this.terrainTopMaterials.set(src, material);
+    this.disposables.push(material);
+    return material;
+  }
+
   private numberToken(value: number, x: number, z: number): THREE.Mesh {
     let material = this.tokenMaterials.get(value);
     if (!material) {
@@ -372,7 +435,7 @@ export class BoardScene {
 
     const mesh = new THREE.Mesh(this.geo.token, material);
     mesh.rotation.x = -Math.PI / 2;
-    mesh.position.set(x, 0.176, z);
+    mesh.position.set(x, 0.205, z);
     return mesh;
   }
 
@@ -433,13 +496,73 @@ export class BoardScene {
       this.disposables.push(material);
     }
 
-    const mesh = new THREE.Mesh(this.geo.port, material);
+    let topMaterial = this.portTopMaterials.get(key);
+    if (!topMaterial) {
+      const texture = this.portTexture(port.resource);
+      topMaterial = new THREE.MeshStandardMaterial({
+        map: texture,
+        roughness: 0.48,
+        metalness: 0.12,
+      });
+      this.portTopMaterials.set(key, topMaterial);
+      this.disposables.push(topMaterial);
+    }
+
+    const mesh = new THREE.Mesh(this.geo.port, [material, topMaterial, material]);
 
     // کمی بیرون از ساحل تا روی خودِ خانه ننشیند.
     const push = 1.3;
-    mesh.position.set(edge.x * push, 0.28, edge.z * push);
+    mesh.position.set(edge.x * push, 0.22, edge.z * push);
     mesh.castShadow = true;
     return mesh;
+  }
+
+  /**
+   * پورت یک نشان مستقل و خوانا است؛ نسبت معامله روی خود نشان می‌آید و رنگ
+   * منبع فقط نقش راهنما دارد. این بافت کوچک یک‌بار ساخته و در کل صحنه بازاستفاده می‌شود.
+   */
+  private portTexture(resource?: string | null): THREE.Texture {
+    const key = resource ?? 'generic';
+    const cached = this.portTextures.get(key);
+    if (cached) return cached;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 160;
+    canvas.height = 160;
+    const ctx = canvas.getContext('2d')!;
+    const accent = tokenColor('--hx-accent', 0xe0a63a).getStyle();
+    const resourceColor = resource
+      ? tokenColor(RESOURCE_TOKEN[resource] ?? '--hx-port-generic', 0xffffff).getStyle()
+      : tokenColor('--hx-port-generic', 0xe8dcc0).getStyle();
+
+    ctx.fillStyle = '#16212a';
+    ctx.beginPath();
+    ctx.arc(80, 80, 76, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 9;
+    ctx.stroke();
+
+    ctx.fillStyle = resourceColor;
+    ctx.beginPath();
+    ctx.arc(80, 45, 17, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.55)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.fillStyle = '#fff5d8';
+    ctx.font = '800 43px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(resource ? '2:1' : '3:1', 80, 103);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 4;
+    this.portTextures.set(key, texture);
+    this.disposables.push(texture);
+    return texture;
   }
 
   /** یک‌بار در طول عمر صحنه ساخته می‌شود — بازساختنش با هر تغییر نشتی است. */
@@ -447,9 +570,9 @@ export class BoardScene {
     const radius = this.extent(tiles) + TILE_SIZE * 1.4;
     const geometry = new THREE.CylinderGeometry(radius, radius, 0.14, 72);
     const material = new THREE.MeshStandardMaterial({
-      color: tokenColor('--hx-res-sea', 0x4a90c4),
-      roughness: 0.22,
-      metalness: 0.4,
+      color: tokenColor('--hx-res-sea', 0x155f7c),
+      roughness: 0.34,
+      metalness: 0.24,
     });
     this.seaMaterial = material;
     this.disposables.push(geometry, material);

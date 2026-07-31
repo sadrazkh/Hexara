@@ -20,11 +20,29 @@ import artPortGrain from './svg/port-grain.svg';
 import artPortLumber from './svg/port-lumber.svg';
 import artPortOre from './svg/port-ore.svg';
 import artPortWool from './svg/port-wool.svg';
-import artResourceBrick from './svg/resource-brick.svg';
-import artResourceGrain from './svg/resource-grain.svg';
-import artResourceLumber from './svg/resource-lumber.svg';
-import artResourceOre from './svg/resource-ore.svg';
-import artResourceWool from './svg/resource-wool.svg';
+import artResourceBrick from './generated/resources/brick.jpg';
+import artResourceGrain from './generated/resources/grain.jpg';
+import artResourceLumber from './generated/resources/lumber.jpg';
+import artResourceOre from './generated/resources/ore.jpg';
+import artResourceWool from './generated/resources/wool.jpg';
+import artTerrainDesert01 from './generated/terrain/desert-01.webp';
+import artTerrainDesert02 from './generated/terrain/desert-02.webp';
+import artTerrainDesert03 from './generated/terrain/desert-03.webp';
+import artTerrainFields01 from './generated/terrain/fields-01.webp';
+import artTerrainFields02 from './generated/terrain/fields-02.webp';
+import artTerrainFields03 from './generated/terrain/fields-03.webp';
+import artTerrainForest01 from './generated/terrain/forest-01.webp';
+import artTerrainForest02 from './generated/terrain/forest-02.webp';
+import artTerrainForest03 from './generated/terrain/forest-03.webp';
+import artTerrainHills01 from './generated/terrain/hills-01.webp';
+import artTerrainHills02 from './generated/terrain/hills-02.webp';
+import artTerrainHills03 from './generated/terrain/hills-03.webp';
+import artTerrainMountains01 from './generated/terrain/mountains-01.webp';
+import artTerrainMountains02 from './generated/terrain/mountains-02.webp';
+import artTerrainMountains03 from './generated/terrain/mountains-03.webp';
+import artTerrainPasture01 from './generated/terrain/pasture-01.webp';
+import artTerrainPasture02 from './generated/terrain/pasture-02.webp';
+import artTerrainPasture03 from './generated/terrain/pasture-03.webp';
 
 /**
  * تنها جایی که می‌داند کدام تصویر در کدام فایل است.
@@ -60,6 +78,33 @@ export interface AssetSpec {
 
   /** رنگِ جانشین. توکنِ CSS است تا با تم عوض شود. */
   tone?: string;
+}
+
+/**
+ * بافت‌های مستقل زمین.
+ *
+ * این جدول عمداً جدا از ASSETS رابط است: بافت‌ها توسط Three.js مصرف می‌شوند و متن
+ * جایگزین یا قاب DOM ندارند. انتخاب variation فقط از مختصات ثابت خانه می‌آید تا
+ * refresh ظاهر بورد را عوض نکند و هیچ اثری روی قوانین یا دادهٔ سرور نداشته باشد.
+ */
+export const TERRAIN_ART = {
+  Desert: [artTerrainDesert01, artTerrainDesert02, artTerrainDesert03],
+  Fields: [artTerrainFields01, artTerrainFields02, artTerrainFields03],
+  Forest: [artTerrainForest01, artTerrainForest02, artTerrainForest03],
+  Hills: [artTerrainHills01, artTerrainHills02, artTerrainHills03],
+  Mountains: [artTerrainMountains01, artTerrainMountains02, artTerrainMountains03],
+  Pasture: [artTerrainPasture01, artTerrainPasture02, artTerrainPasture03],
+} as const satisfies Record<string, readonly string[]>;
+
+export type TerrainArtName = keyof typeof TERRAIN_ART;
+
+export function terrainArt(terrain: string, q: number, r: number): string | null {
+  const variants = TERRAIN_ART[terrain as TerrainArtName];
+  if (!variants) return null;
+
+  // دو عدد اول بزرگ، مختصات axial را به یک seed دیداری پایدار تبدیل می‌کنند.
+  const hash = (Math.imul(q, 73_856_093) ^ Math.imul(r, 19_349_663) ^ 0x5f3759df) >>> 0;
+  return variants[hash % variants.length] ?? variants[0] ?? null;
 }
 
 /**
