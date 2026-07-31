@@ -34,7 +34,6 @@ export default defineConfig({
         // دانلود نمی‌کنند و کش مرورگر بین نسخه‌ها حفظ می‌شود.
         manualChunks(id) {
           if (id.includes('node_modules/three')) return 'three';
-          if (id.includes('node_modules/gsap')) return 'gsap';
           return undefined;
         },
       },

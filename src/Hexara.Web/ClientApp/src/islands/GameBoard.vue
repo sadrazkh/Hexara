@@ -3,7 +3,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import gsap from 'gsap';
+import { popIn } from '@/three/tween';
 import { t } from '@/i18n';
 import {
   BoardScene,
@@ -230,6 +230,9 @@ function render(): void {
   renderer.render(scene, camera);
 }
 
+/** بریدنِ تویین‌های در جریان، برای وقتی که صحنه پیش از تمام شدنشان برچیده شود. */
+const tweens = new Set<() => void>();
+
 /** قطعه‌های تازه از هیچ بزرگ می‌شوند تا ساخت‌وساز حس داشته باشد. */
 function animateSpawned(): void {
   if (!board) return;
@@ -238,8 +241,10 @@ function animateSpawned(): void {
   if (reduceMotion) return;
 
   for (const piece of spawned) {
-    piece.scale.setScalar(0.01);
-    gsap.to(piece.scale, { x: 1, y: 1, z: 1, duration: 0.42, ease: 'back.out(2.2)' });
+    // بریدنِ تویین سرِ برچیدنِ صحنه نگه داشته می‌شود، وگرنه فریم‌ها روی یک شیءِ
+    // دورانداخته ادامه می‌دهند. تمام که شد خودش را از فهرست برمی‌دارد.
+    const stop: () => void = popIn(piece.scale, { onEnd: () => tweens.delete(stop) });
+    tweens.add(stop);
   }
 }
 
@@ -317,6 +322,12 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   cancelAnimationFrame(frame);
+
+  // تویین‌های نیمه‌کاره بریده می‌شوند، وگرنه فریم‌هایشان روی قطعه‌های
+  // دورانداخته‌ی صحنه ادامه می‌دهند.
+  for (const stop of [...tweens]) stop();
+  tweens.clear();
+
   document.removeEventListener(THEME_CHANGE, onThemeChange);
   document.removeEventListener('visibilitychange', onVisibilityChange);
   observer?.disconnect();

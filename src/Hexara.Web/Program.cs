@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.IO.Compression;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Hexara.Application;
@@ -10,6 +11,7 @@ using Hexara.Infrastructure.Identity;
 using Hexara.Infrastructure.Persistence;
 using Hexara.Web.Infrastructure;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.ResponseCompression;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
@@ -137,6 +139,35 @@ builder.Services.AddSingleton(builder.Configuration.GetSection(LiveKitOptions.Se
     ?? new LiveKitOptions());
 builder.Services.AddSingleton<LiveKitTokens>();
 
+// ── فشرده‌سازی پاسخ ──────────────────────────────────────────────────────
+//
+// دارایی‌ها خام روی سیم می‌رفتند: تنها ‎three.js‎ نیم مگابایت. با Brotli حدود یک
+// پنجم می‌شود، بی‌آنکه یک پیکسل عوض شود.
+//
+// **‎text/html‎ عمداً بیرون است.** صفحه‌های ما توکن ضدجعل دارند و فشرده‌کردنِ
+// پاسخی که هم راز دارد و هم ورودیِ کاربر، همان چیزی است که حمله‌ی BREACH از آن
+// تغذیه می‌کند. صفحه‌ها کوچک‌اند و وزن در دارایی‌هاست، پس چیزی از دست نمی‌رود.
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.Providers.Add<GzipCompressionProvider>();
+    options.MimeTypes =
+    [
+        "text/javascript",
+        "application/javascript",
+        "text/css",
+        "image/svg+xml",
+        "application/json",
+        "application/manifest+json"
+    ];
+});
+
+// سریع‌ترین سطح، نه کوچک‌ترین: هر فایل با نامِ هش‌دارش فقط یک بار دانلود می‌شود،
+// پس چند کیلوبایتِ اضافه ارزانتر از صرفِ صدها میلی‌ثانیه CPU سرِ هر درخواست است.
+builder.Services.Configure<BrotliCompressionProviderOptions>(o => o.Level = CompressionLevel.Fastest);
+builder.Services.Configure<GzipCompressionProviderOptions>(o => o.Level = CompressionLevel.Fastest);
+
 builder.Services.Configure<AutoPlayOptions>(builder.Configuration.GetSection(AutoPlayOptions.Section));
 builder.Services.AddHostedService<AutoPlayService>();
 
@@ -210,15 +241,33 @@ app.UseHexaraSecurityHeaders(
     liveKit.IsConfigured ? liveKit.Url : string.Empty);
 
 app.UseHttpsRedirection();
+
+// فشرده‌سازی باید پیش از سرو شدن فایل‌ها بیاید، وگرنه چیزی برای فشرده‌کردن نمانده.
+app.UseResponseCompression();
+
 app.UseStaticFiles(new StaticFileOptions
 {
     OnPrepareResponse = context =>
     {
+        var headers = context.Context.Response.Headers;
+
         // سرویس‌ورکر هرگز نباید کش شود، وگرنه نسخه‌ی تازه هیچ‌وقت جایگزین قبلی
         // نمی‌شود و کاربر برای همیشه با دارایی‌های کهنه می‌ماند.
         if (context.File.Name.Equals("sw.js", StringComparison.OrdinalIgnoreCase))
         {
-            context.Context.Response.Headers.CacheControl = "no-cache, no-store, must-revalidate";
+            headers.CacheControl = "no-cache, no-store, must-revalidate";
+            return;
+        }
+
+        // فایل‌های زیر ‎/dist/assets‎ نامشان هشِ محتواست: عوض که شوند نامشان هم
+        // عوض می‌شود. پس می‌شود گفت «هرگز دوباره نپرس» — و همین است که بازدید
+        // دوم را از نیم مگابایت به صفر می‌رساند.
+        //
+        // عمداً فقط همین پوشه: ‎favicon‎ و ‎manifest‎ نام ثابت دارند و اگر
+        // ‎immutable‎ می‌شدند، تا یک سال در مرورگر گیر می‌کردند.
+        if (context.Context.Request.Path.StartsWithSegments("/dist/assets"))
+        {
+            headers.CacheControl = "public, max-age=31536000, immutable";
         }
     }
 });
