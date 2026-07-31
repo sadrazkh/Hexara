@@ -10,7 +10,7 @@ import Die from './Die.vue';
 import Asset from '@/assets/Asset.vue';
 import type { AssetName } from '@/assets/registry';
 import type { BoardData, Highlights, Pick } from '@/three/board';
-import { vertexHexes, vertexKey } from '@/three/hex';
+import { vertexKey } from '@/three/hex';
 import { edgeKey, freeRoadChoices } from '@/game/cards';
 import { nextFace } from '@/game/dice';
 import Chat from './Chat.vue';
@@ -546,25 +546,25 @@ const remainingFreeRoads = computed(() =>
 );
 
 /** بازیکنانی که می‌شود از آن‌ها دزدید: ساختمانی کنار خانه‌ی دزد دارند و کارت دارند. */
+/**
+ * کسانی که می‌شود از آن‌ها دزدید — **مستقیم از سرور**.
+ *
+ * پیش از این کلاینت خودش حساب می‌کرد و فقط دو شرط از چهار شرط را می‌دانست:
+ * هم‌تیمی و مصونیتِ «دزد مهربان» را نمی‌دید. نتیجه‌اش این بود که در بازی تیمی
+ * هم‌تیمی را پیشنهاد می‌داد و سرور ردش می‌کرد — و بدتر، وقتی همه‌ی نامزدها
+ * هم‌تیمی یا مصون بودند، دکمه‌ی «بی‌قربانی» هرگز نمی‌آمد و دزد اصلاً جابه‌جا
+ * نمی‌شد.
+ */
 const robberVictims = computed(() => {
   const current = view.value;
   const hex = robberHex.value;
-  if (!current || !hex || current.seat === null) return [];
+  if (!current || !hex) return [];
 
-  const owners = new Set<number>();
-  for (const building of current.buildings) {
-    if (vertexTouches(building, hex)) owners.add(building.playerIndex);
-  }
+  const seats = current.legal.robberVictims[`${hex.q},${hex.r}`] ?? [];
 
-  return current.players.filter(
-    (p) => owners.has(p.index) && p.index !== current.seat && p.cardCount > 0,
-  );
+  return seats.map((index) => current.players[index]).filter((p) => p !== undefined);
 });
 
-/** آیا این گوشه به آن خانه می‌رسد؟ همان سه هگزی که سرور هم می‌شمارد. */
-function vertexTouches(vertex: { q: number; r: number; corner: number }, hex: Hex): boolean {
-  return vertexHexes(vertex).some((h) => h.q === hex.q && h.r === hex.r);
-}
 
 /**
  * انداختن تاس روی صفحه.

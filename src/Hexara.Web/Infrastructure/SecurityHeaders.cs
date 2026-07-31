@@ -57,6 +57,29 @@ public static class SecurityHeaders
             headers["Permissions-Policy"] =
                 $"accelerometer=(), {media}, geolocation=(), gyroscope=(), payment=(), usb=()";
 
+            // صفحه‌ها هرگز کش نمی‌شوند.
+            //
+            // بی این، پاسخِ ‎HTML‎ هیچ ‎Cache-Control‎ی نداشت و مرورگر اجازه داشت
+            // با حدسِ خودش نگهش دارد. نتیجه‌اش این بود: صفحه‌ی کهنه از کشِ مرورگر
+            // می‌آمد، نامِ دارایی‌های قدیمی را داشت، و آن دارایی‌ها هم در کشِ
+            // سرویس‌ورکر بودند — پس کلِ برنامه یک نسخه عقب بالا می‌آمد و فقط با
+            // رفرشِ دستی درست می‌شد.
+            //
+            // روی ‎Content-Type‎ سنجیده می‌شود نه روی مسیر، و در ‎OnStarting‎ تا
+            // بعد از تصمیمِ فایل‌های ایستا اجرا شود — وگرنه ‎immutable‎ دارایی‌های
+            // هش‌دار را پاک می‌کرد.
+            context.Response.OnStarting(static state =>
+            {
+                var response = (HttpResponse)state;
+
+                if (response.ContentType?.StartsWith("text/html", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    response.Headers.CacheControl = "no-store";
+                }
+
+                return Task.CompletedTask;
+            }, context.Response);
+
             await next();
         });
     }

@@ -220,6 +220,20 @@ public sealed record LegalMovesView
     /// </summary>
     public required IReadOnlyDictionary<string, IReadOnlyList<RoadSnapshot>> FollowUpRoads { get; init; }
 
+    /// <summary>
+    /// برای هر خانه‌ی هدفِ دزد، صندلی‌هایی که می‌شود از آن‌ها دزدید. کلید «‎q,r‎».
+    ///
+    /// **بی این، کلاینت مجبور بود قاعده را خودش پیاده کند — و می‌کرد، ناقص.**
+    /// قاعده‌ی واقعی چهار شرط دارد: خودت نباشی، کارت داشته باشد، هم‌تیمی‌ات نباشد،
+    /// و با «دزد مهربان» مصون نشده باشد. کلاینت فقط دو شرط اول را می‌دانست، پس در
+    /// بازی تیمی هم‌تیمی را پیشنهاد می‌داد و سرور ردش می‌کرد.
+    ///
+    /// بدتر از آن: وقتی *همه‌ی* نامزدها هم‌تیمی یا مصون بودند، سرور «قربانی نده»
+    /// می‌خواست ولی کلاینت دکمه‌ی بی‌قربانی را نشان نمی‌داد — و دزد اصلاً
+    /// جابه‌جا نمی‌شد.
+    /// </summary>
+    public required IReadOnlyDictionary<string, IReadOnlyList<int>> RobberVictims { get; init; }
+
     /// <summary>کارت‌های توسعه‌ای که همین حالا می‌شود بازی کرد.</summary>
     public required IReadOnlyList<DevelopmentCard> PlayableCards { get; init; }
 
@@ -230,6 +244,7 @@ public sealed record LegalMovesView
         Roads = [],
         Cities = [],
         RobberTargets = [],
+        RobberVictims = new Dictionary<string, IReadOnlyList<int>>(),
         FreeRoads = [],
         FollowUpRoads = new Dictionary<string, IReadOnlyList<RoadSnapshot>>(),
         PlayableCards = []

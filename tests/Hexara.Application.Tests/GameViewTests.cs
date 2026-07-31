@@ -408,6 +408,88 @@ public class GameViewTests
             ]
         });
 
+    // ── قربانی‌های دزد ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// نما باید برای *هر* خانه‌ی هدف بگوید از چه کسی می‌شود دزدید.
+    ///
+    /// بی این، کلاینت قاعده را خودش می‌ساخت و فقط دو شرط از چهار شرط را می‌دانست.
+    /// </summary>
+    [Fact]
+    public async Task Every_robber_target_carries_its_victims()
+    {
+        var game = NewGame(s => s with { Phase = TurnPhase.MoveRobber, CurrentPlayer = 0, TurnNumber = 4 });
+
+        var view = await NewBuilder().BuildAsync(game, 0);
+
+        Assert.NotEmpty(view.Legal.RobberTargets);
+        Assert.Equal(
+            view.Legal.RobberTargets.Select(t => $"{t.Q},{t.R}").ToHashSet(StringComparer.Ordinal),
+            view.Legal.RobberVictims.Keys.ToHashSet(StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    /// **این همان حالتی است که دزد را قفل می‌کرد.**
+    ///
+    /// هم‌تیمی قربانی نیست. کلاینت این را نمی‌دانست، پس دکمه‌ی هم‌تیمی را نشان
+    /// می‌داد، سرور ردش می‌کرد، و چون فهرستِ کلاینت خالی نبود دکمه‌ی «بی‌قربانی»
+    /// هم نمی‌آمد — هیچ کلیکی حرکت را تمام نمی‌کرد.
+    ///
+    /// همان سناریو دو بار ساخته می‌شود، با تیم و بی تیم؛ وگرنه معلوم نبود که
+    /// نبودنِ صندلی ۲ واقعاً از قاعده‌ی تیم آمده یا از جای دیگری.
+    /// </summary>
+    [Fact]
+    public async Task A_teammate_is_never_offered_as_a_victim()
+    {
+        var soloVictims = await VictimsAsync(withTeams: false);
+        var teamVictims = await VictimsAsync(withTeams: true);
+
+        // بی تیم، صندلی ۲ قربانیِ معتبری است…
+        Assert.Contains(soloVictims, seats => seats.Contains(2));
+
+        // …و با تیم (تقسیم یک‌درمیان: ۰ و ۲ هم‌تیمی‌اند) هیچ‌جا نیست.
+        Assert.All(teamVictims, seats => Assert.DoesNotContain(2, seats));
+    }
+
+    /// <summary>یک صندلیِ کارت‌دار کنار خانه‌ی مرکزی، با یا بی تیم‌بندی.</summary>
+    private static async Task<IReadOnlyList<IReadOnlyList<int>>> VictimsAsync(bool withTeams)
+    {
+        var vertex = VertexId.Of(new Axial(0, 0), 0);
+
+        var game = NewGame(s => s with
+        {
+            Phase = TurnPhase.MoveRobber,
+            CurrentPlayer = 0,
+            TurnNumber = 4,
+            Options = s.Options with { Teams = withTeams ? TeamAssignment.Alternating(4) : null },
+            Buildings =
+            [
+                new BuildingSnapshot(vertex.Hex.Q, vertex.Hex.R, vertex.Corner, 2, BuildingKind.Settlement)
+            ],
+            Players =
+            [
+                s.Players[0],
+                s.Players[1],
+                s.Players[2] with { Resources = Hand(ore: 5) }
+            ]
+        });
+
+        var view = await NewBuilder().BuildAsync(game, 0);
+
+        return [.. view.Legal.RobberVictims.Values];
+    }
+
+    /// <summary>خودت هرگز قربانیِ خودت نیستی.</summary>
+    [Fact]
+    public async Task You_are_never_your_own_victim()
+    {
+        var game = NewGame(s => s with { Phase = TurnPhase.MoveRobber, CurrentPlayer = 0, TurnNumber = 4 });
+
+        var view = await NewBuilder().BuildAsync(game, 0);
+
+        Assert.All(view.Legal.RobberVictims.Values, seats => Assert.DoesNotContain(0, seats));
+    }
+
     private static string Key(RoadSnapshot road) => $"{road.Q},{road.R},{road.Side}";
 
     /// <summary>بازی‌ای در بدنه‌ی نوبتِ بازیکن اول، بدون چیدمان اولیه.</summary>

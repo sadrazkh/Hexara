@@ -62,7 +62,12 @@ async function fromCacheFirst(request) {
  */
 async function fromNetworkFirst(request) {
   try {
-    return await fetch(request);
+    // ‎no-store‎ یعنی کشِ ‎HTTP‎ خودِ مرورگر هم دور زده می‌شود، نه فقط کشِ ما.
+    //
+    // بی این، ‎fetch‎ می‌توانست همان صفحه‌ی کهنه‌ای را برگرداند که مرورگر نگه
+    // داشته بود و ما فکر می‌کردیم «از شبکه گرفتیم». سرور هم ‎no-store‎ می‌فرستد؛
+    // این دومی برای صفحه‌هایی است که پیش از آن تغییر کش شده‌اند.
+    return await fetch(request, { cache: 'no-store' });
   } catch {
     return (await caches.match('/offline')) ?? Response.error();
   }

@@ -155,6 +155,10 @@ public sealed class GameViewBuilder
     private static string Key(EdgeId edge) =>
         string.Create(CultureInfo.InvariantCulture, $"{edge.Hex.Q},{edge.Hex.R},{edge.Side}");
 
+    /// <summary>همان قالب برای یک خانه. باز هم با فرهنگ ناوابسته.</summary>
+    private static string Key(Axial hex) =>
+        string.Create(CultureInfo.InvariantCulture, $"{hex.Q},{hex.R}");
+
     /// <summary>
     /// حرکت‌های قانونی فقط وقتی محاسبه می‌شوند که واقعاً نوبت این صندلی باشد —
     /// هم برای صرفه‌جویی و هم چون در غیر این صورت هیچ‌کدامشان معنا ندارند.
@@ -206,6 +210,13 @@ public sealed class GameViewBuilder
             ? state.Board.Tiles.Where(t => t.Position != state.Robber).Select(t => t.Position).ToList()
             : [];
 
+        // قربانی‌های هر خانه از خودِ موتور می‌آیند. فهرستِ خالی هم معنادار است:
+        // یعنی «برو ولی از کسی ندزد» — و کلاینت باید همان را نشان بدهد.
+        var victims = robberTargets.ToDictionary(
+            Key,
+            hex => (IReadOnlyList<int>)[.. GameEngine.RobberVictims(state, hex, seat)],
+            StringComparer.Ordinal);
+
         // جاده‌ی رایگان همان جاهایی است که جاده‌ی خریدنی می‌رود، ولی در مرحله‌ی
         // تاس هم معنا دارد — و آن‌جا فهرستِ خریدنی خالی است.
         //
@@ -238,7 +249,8 @@ public sealed class GameViewBuilder
             Settlements = [.. settlements.Select(v => new VertexSnapshot(v.Hex.Q, v.Hex.R, v.Corner))],
             Roads = [.. roads.Select(e => new RoadSnapshot(e.Hex.Q, e.Hex.R, e.Side, seat))],
             Cities = [.. cities.Select(v => new VertexSnapshot(v.Hex.Q, v.Hex.R, v.Corner))],
-            RobberTargets = [.. robberTargets.Select(h => new HexSnapshot(h.Q, h.R))]
+            RobberTargets = [.. robberTargets.Select(h => new HexSnapshot(h.Q, h.R))],
+            RobberVictims = victims
         };
     }
 }

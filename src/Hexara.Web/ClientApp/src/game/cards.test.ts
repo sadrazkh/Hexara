@@ -13,6 +13,7 @@ function legal(free: RoadAt[], followUps: Record<string, RoadAt[]> = {}): LegalM
     roads: [],
     cities: [],
     robberTargets: [],
+    robberVictims: {},
     freeRoads: free,
     followUpRoads: followUps,
     playableCards: [],
