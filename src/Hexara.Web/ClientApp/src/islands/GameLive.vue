@@ -6,11 +6,13 @@ import Fold from './Fold.vue';
 import BuildPanel from './BuildPanel.vue';
 import Hand from './Hand.vue';
 import Card from './Card.vue';
+import Die from './Die.vue';
 import Asset from '@/assets/Asset.vue';
 import type { AssetName } from '@/assets/registry';
 import type { BoardData, Highlights, Pick } from '@/three/board';
 import { vertexHexes, vertexKey } from '@/three/hex';
 import { edgeKey, freeRoadChoices } from '@/game/cards';
+import { nextFace } from '@/game/dice';
 import {
   GameConnection,
   type GameEvent,
@@ -61,8 +63,38 @@ const bankOpen = ref(false);
 const offerGive = ref<Record<string, number>>({});
 const offerTake = ref<Record<string, number>>({});
 
-/** تاس‌ها قبل از نشستن روی عدد واقعی چند بار می‌چرخند. */
+/**
+ * چرخشِ تاس.
+ *
+ * سه حالت دارد و هر سه فقط ظاهری‌اند: ‎rolling‎ یعنی وجه‌ها دارند عوض می‌شوند،
+ * ‎settling‎ همان تپشِ کوتاهِ فرود، و ‎tumbling‎ وجه‌هایی که همین حالا دیده
+ * می‌شوند. **هیچ‌کدام نتیجه نیستند** — نتیجه ‎view.die1/die2‎ است که پیش از
+ * شروع انیمیشن از سرور رسیده و بعد از فرود دوباره خودش را نشان می‌دهد.
+ */
+const rolling = ref(false);
+const settling = ref(false);
 const tumbling = ref<[number, number] | null>(null);
+
+/** وجه‌هایی که باید کشیده شوند: حین چرخش وجهِ قلابی، وگرنه عددِ سرور. */
+const faces = computed<[number | null, number | null]>(() => {
+  const shown = tumbling.value;
+  if (shown) return shown;
+
+  return [view.value?.die1 ?? null, view.value?.die2 ?? null];
+});
+
+/**
+ * اعلامِ صوتیِ نتیجه، فقط یک بار و فقط بعد از فرود.
+ *
+ * پیش از این ‎aria-live‎ روی خودِ تاس‌ها بود و صفحه‌خوان تمام وجه‌های قلابیِ حین
+ * چرخش را هم می‌خواند — یعنی ده عددِ نادرست پیش از عددِ درست.
+ */
+const rollSpoken = computed(() => {
+  const current = view.value;
+  if (rolling.value || !current || current.die1 === null || current.die2 === null) return '';
+
+  return t('game.rolledTotal', current.die1, current.die2, current.die1 + current.die2);
+});
 
 /** ساعت دیواری که هر ثانیه تیک می‌زند — فقط برای شمارش معکوس مهلت نوبت. */
 const now = ref(Date.now());
@@ -151,7 +183,13 @@ function onWideChange(event: MediaQueryListEvent | MediaQueryList): void {
 
 let connection: GameConnection | null = null;
 let tumble = 0;
+let landing = 0;
 let ticker = 0;
+
+/** زمان‌بندی چرخش تاس؛ کوتاه، چون نتیجه از قبل معلوم است. */
+const SPIN_MS = 620;
+const SPIN_STEP_MS = 80;
+const LAND_MS = 320;
 
 const RESOURCES = ['Lumber', 'Brick', 'Wool', 'Grain', 'Ore'] as const;
 
@@ -478,24 +516,51 @@ function vertexTouches(vertex: { q: number; r: number; corner: number }, hex: He
 }
 
 /**
- * چرخیدن کوتاه تاس‌ها. عمداً دوبعدی است: عددی که مهم است سرور تعیین کرده و
- * انیمیشن فقط باید لحظه‌ی انداختن را حس‌دار کند، نه اینکه نتیجه را معلق نگه دارد.
+ * انداختن تاس روی صفحه.
+ *
+ * عمداً نتیجه را معلق نگه نمی‌دارد: عددِ واقعی همان لحظه‌ی رسیدنِ نما آمده و اگر
+ * انیمیشن طولانی شود، بازیکن جلوتر از تاس می‌فهمد چه شده. پس چرخش کوتاه است و
+ * بعدش یک تپشِ فرود، تا لحظه‌ی انداختن حس داشته باشد نه اینکه انتظار بسازد.
+ *
+ * برای همه اجرا می‌شود نه فقط برای اندازنده — رویدادِ ‎DiceRolled‎ به همه می‌رسد.
  */
 function rollDice(): void {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
   clearInterval(tumble);
-  const until = Date.now() + 620;
+  clearTimeout(landing);
+
+  // با «حرکت کمتر»، تاس بی‌مقدمه روی نتیجه می‌نشیند؛ نه چرخشی، نه تپشی.
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    rolling.value = false;
+    settling.value = false;
+    tumbling.value = null;
+    return;
+  }
+
+  rolling.value = true;
+  settling.value = false;
+
+  const until = Date.now() + SPIN_MS;
 
   tumble = window.setInterval(() => {
     if (Date.now() >= until) {
-      clearInterval(tumble);
-      tumbling.value = null;
+      land();
       return;
     }
 
-    tumbling.value = [1 + Math.floor(Math.random() * 6), 1 + Math.floor(Math.random() * 6)];
-  }, 70);
+    const [first, second] = tumbling.value ?? [null, null];
+    tumbling.value = [nextFace(first, Math.random), nextFace(second, Math.random)];
+  }, SPIN_STEP_MS);
+}
+
+/** پایان چرخش: وجه‌های قلابی کنار می‌روند و عددِ سرور با یک تپش می‌نشیند. */
+function land(): void {
+  clearInterval(tumble);
+
+  rolling.value = false;
+  settling.value = true;
+  tumbling.value = null;
+
+  landing = window.setTimeout(() => (settling.value = false), LAND_MS);
 }
 
 function describe(event: GameEvent): string {
@@ -747,6 +812,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   clearInterval(tumble);
+  clearTimeout(landing);
   clearInterval(ticker);
   wideQuery?.removeEventListener('change', onWideChange);
   void connection?.stop();
@@ -764,15 +830,18 @@ onBeforeUnmount(() => {
         </span>
       </div>
 
-      <span v-if="tumbling" class="hx-live__dice hx-live__dice--rolling" aria-live="polite">
-        <span class="hx-live__die">{{ tumbling[0] }}</span>
-        <span class="hx-live__dice-plus">+</span>
-        <span class="hx-live__die">{{ tumbling[1] }}</span>
-      </span>
-      <span v-else-if="view?.die1" class="hx-live__dice" aria-live="polite">
-        <span class="hx-live__die">{{ view.die1 }}</span>
-        <span class="hx-live__dice-plus">+</span>
-        <span class="hx-live__die">{{ view.die2 }}</span>
+      <!--
+        تاس‌ها بی ‎aria-live‎ هستند و اعلامشان جای دیگری است، پایینِ همین نوار —
+        وگرنه صفحه‌خوان وجه‌های قلابیِ حین چرخش را هم می‌خواند.
+      -->
+      <span
+        v-if="rolling || faces[0] !== null"
+        class="hx-live__dice"
+        :class="{ 'is-rolling': rolling, 'is-settling': settling }"
+      >
+        <span class="hx-live__die"><Die :face="faces[0]" /></span>
+        <span class="hx-live__dice-plus" aria-hidden="true">+</span>
+        <span class="hx-live__die"><Die :face="faces[1]" /></span>
       </span>
 
       <button
@@ -802,6 +871,9 @@ onBeforeUnmount(() => {
         {{ t('game.deadlineIn', countdown) }}
       </span>
     </header>
+
+    <!-- نتیجه‌ی تاس فقط یک بار و فقط بعد از فرود اعلام می‌شود. -->
+    <p class="hx-sr-only" aria-live="polite">{{ rollSpoken }}</p>
 
     <p v-if="problem" class="hx-alert" role="alert">{{ problem }}</p>
 
@@ -1487,9 +1559,9 @@ onBeforeUnmount(() => {
           <span class="hx-chip">{{ phaseLabel }}</span>
         </header>
 
-        <div class="hx-command-dice" :class="{ 'is-rolling': tumbling }" aria-live="polite">
-          <span class="hx-command-die hx-command-die--red">{{ tumbling?.[0] ?? view.die1 ?? '•' }}</span>
-          <span class="hx-command-die hx-command-die--gold">{{ tumbling?.[1] ?? view.die2 ?? '•' }}</span>
+        <div class="hx-command-dice" :class="{ 'is-rolling': rolling, 'is-settling': settling }">
+          <span class="hx-command-die hx-command-die--red"><Die :face="faces[0]" /></span>
+          <span class="hx-command-die hx-command-die--gold"><Die :face="faces[1]" /></span>
         </div>
 
         <button

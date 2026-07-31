@@ -870,10 +870,6 @@ code {
   font-variant-numeric: tabular-nums;
 }
 
-.hx-live__dice--rolling {
-  color: var(--hx-accent-2);
-}
-
 .hx-live__controls {
   display: flex;
   flex-direction: column;
@@ -2085,13 +2081,72 @@ body:has(#island-game-live) .hx-footer {
   font-weight: var(--hx-weight-bold);
 }
 
-.hx-live__dice--rolling .hx-live__die {
-  animation: hx-die-tumble 180ms linear infinite alternate;
+/* ── وجهِ تاس ─────────────────────────────────────────────────────────────
+   خال‌ها به‌جای رقم. اندازه‌ها درصدی‌اند تا همین یک وجه هم در تاسِ ۱٫۸rem نوار
+   بالا درست دربیاید و هم روی کارتِ ۴٫۷rem — بی‌آنکه دو نسخه لازم شود. */
+
+.hx-die__face {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8%;
+  inline-size: 66%;
+  aspect-ratio: 1;
+  transform-origin: 50% 55%;
 }
 
-@keyframes hx-die-tumble {
-  to {
-    transform: translateY(-2px) rotate(4deg) scale(1.04);
+.hx-die__pip {
+  border-radius: 50%;
+  /* رنگِ خال از رنگِ متنِ قاب می‌آید، پس تاس قرمز و طلایی هر کدام خالِ خودش را دارد. */
+  background: currentColor;
+  opacity: 0;
+  box-shadow: inset 0 -0.5px 1px rgb(0 0 0 / 25%);
+}
+
+.hx-die__pip.is-on {
+  opacity: 1;
+}
+
+/*
+ * چرخش روی *وجه* می‌نشیند نه روی قاب.
+ *
+ * قابِ تاس روی کارت خودش زاویه دارد (‎rotate(-7deg)‎ و ‎rotate(9deg)‎)، و اگر
+ * انیمیشن ‎transform‎ را روی قاب می‌گذاشتیم آن زاویه پاک می‌شد و تاس‌ها سرِ هر
+ * انداختن می‌پریدند سرِ جای صاف.
+ */
+.is-rolling .hx-die__face {
+  animation: hx-die-spin 420ms linear infinite;
+}
+
+@keyframes hx-die-spin {
+  0% {
+    transform: rotate(0) scale(1);
+  }
+
+  50% {
+    transform: rotate(180deg) scale(0.86) translateY(-12%);
+  }
+
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+/* تپشِ فرود: یک بار، کوتاه، تا «نشستن» حس شود. */
+.is-settling .hx-die__face {
+  animation: hx-die-land 320ms var(--hx-ease);
+}
+
+@keyframes hx-die-land {
+  0% {
+    transform: scale(1.28);
+  }
+
+  55% {
+    transform: scale(0.94);
+  }
+
+  100% {
+    transform: scale(1);
   }
 }
 
@@ -2634,7 +2689,8 @@ body:has(#island-game-live) .hx-footer {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hx-live__dice--rolling .hx-live__die {
+  .is-rolling .hx-die__face,
+  .is-settling .hx-die__face {
     animation: none;
   }
 
@@ -2910,15 +2966,7 @@ body:has(#island-game-live) .hx-footer {
     transform: rotate(9deg) translateY(0.35rem);
   }
 
-  .hx-command-dice.is-rolling .hx-command-die {
-    animation: hx-command-tumble 220ms linear infinite alternate;
-  }
-
-  @keyframes hx-command-tumble {
-    to {
-      transform: rotate(10deg) translateY(-7px) scale(1.04);
-    }
-  }
+  /* چرخش و فرود از همان قواعد مشترکِ ‎.hx-die__face‎ می‌آید. */
 
   .hx-command-card__action {
     position: relative;

@@ -246,6 +246,7 @@
     "pickMonopoly": "Pick a resource; everyone hands you every card of it.",
     "freshCard": "New",
     "cardNotPlayable": "This card can't be played right now.",
+    "rolledTotal": "Rolled {0} and {1}, total {2}",
     "awards": "Awards",
     "awardsAndPorts": "Awards & ports",
     "longestRoad": "Longest road",
