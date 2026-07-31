@@ -48,6 +48,11 @@ public class RoomViewModel
 
     public required Guid CurrentUserId { get; init; }
 
+    /// <summary>گفت‌وگو و صدای اتاق انتظار — همان کلیدهای بازی.</summary>
+    public required bool ChatEnabled { get; init; }
+
+    public required bool VoiceEnabled { get; init; }
+
     public bool IsHost => Room.IsHost(CurrentUserId);
 
     public bool IsMember => Room.Contains(CurrentUserId);

@@ -27,7 +27,9 @@
 <div id="island-room-live"
      data-code="@Model.Room.Code"
      data-user-id="@Model.CurrentUserId"
-     data-board-edit-url="@Url.Action("Edit", "Board", new { code = Model.Room.Code })">
+     data-board-edit-url="@Url.Action("Edit", "Board", new { code = Model.Room.Code })"
+     data-chat-enabled="@Model.ChatEnabled.ToString().ToLowerInvariant()"
+     data-voice-enabled="@Model.VoiceEnabled.ToString().ToLowerInvariant()">
 
     <div class="hx-panel">
         <h2 class="hx-panel__title">@T["lobby.seats"]</h2>

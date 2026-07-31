@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { t } from '@/i18n';
-import type { Link } from '@/game/connection';
+import type { ChatMessage, Link } from '@/game/connection';
 import { RoomConnection, type RoomSettingsInput, type RoomView } from '@/room/connection';
+import Chat from './Chat.vue';
+import Voice from './Voice.vue';
 
 const props = defineProps<{
   code: string;
   userId: string;
   boardEditUrl: string;
+  chatEnabled?: boolean;
+  voiceEnabled?: boolean;
 }>();
 
 /**
@@ -32,7 +36,50 @@ const form = ref<RoomSettingsInput>({
   teams: false,
 });
 
+/**
+ * گفت‌وگوی اتاق انتظار.
+ *
+ * فقط برای کسانی که صندلی دارند — سرور هم همین را رعایت می‌کند و پنل هم اصلاً
+ * ساخته نمی‌شود. با شروع بازی، همین گفت‌وگو به صفحه‌ی بازی می‌رود.
+ */
+const chat = ref<ChatMessage[]>([]);
+
 let connection: RoomConnection | null = null;
+
+/** صندلی خودم در اتاق؛ تهی یعنی فقط تماشا می‌کنم. */
+const mySeat = computed(() => room.value?.seats.find((s) => s.userId === me)?.seat ?? null);
+
+/** اهالیِ اتاق، در همان دو شکلی که پنل‌های گفت‌وگو و صدا می‌خواهند. */
+const chatPeople = computed(() =>
+  (room.value?.seats ?? []).map((s) => ({
+    seat: s.seat,
+    displayName: s.displayName,
+    avatarColor: s.avatarColor,
+  })),
+);
+
+const voicePeople = computed(() =>
+  (room.value?.seats ?? []).map((s) => ({
+    userId: s.userId,
+    displayName: s.displayName,
+    avatarColor: s.avatarColor,
+  })),
+);
+
+function sendChat(text: string): void {
+  void connection?.sendChat(text);
+}
+
+function voiceTicket() {
+  return connection?.voiceTicket() ?? Promise.resolve(null);
+}
+
+/** تاریخچه هر بار که اتصال زنده می‌شود از نو گرفته می‌شود، نه فقط اولِ کار. */
+async function refreshChat(): Promise<void> {
+  if (!props.chatEnabled) return;
+
+  chat.value = (await connection?.chatHistory()) ?? [];
+}
 
 const isHost = computed(() => room.value?.hostId === me);
 const isMember = computed(() => room.value?.seats.some((s) => s.userId === me) ?? false);
@@ -139,7 +186,10 @@ function initial(name: string): string {
 
 onMounted(() => {
   connection = new RoomConnection(code, {
-    onLink: (value) => (link.value = value),
+    onLink: (value) => {
+      link.value = value;
+      if (value === 'live') void refreshChat();
+    },
     onRoom: (value) => {
       const first = room.value === null;
       room.value = value;
@@ -150,6 +200,9 @@ onMounted(() => {
     },
     onClosed: () => window.location.assign('/Lobby'),
     onError: (message) => (problem.value = message),
+    onChat: (message) => {
+      chat.value = [...chat.value, message];
+    },
   });
 
   void connection.start();
@@ -318,6 +371,30 @@ onBeforeUnmount(() => {
 
         <p v-if="!canStart" class="hx-muted hx-small">{{ t('lobby.needTwoPlayers') }}</p>
       </template>
+    </div>
+
+    <!--
+      صدا و گفت‌وگو فقط برای کسانی که صندلی دارند.
+
+      اتاق را هر کسی که کد را دارد تماشا می‌کند، پس شرطِ ‎mySeat‎ لازم است — و
+      سرور هم مستقل از این، همان قاعده را می‌سنجد. اینجا فقط چیزی نشان داده
+      نمی‌شود که کار نکند.
+    -->
+    <div v-if="voiceEnabled && room && !started && mySeat !== null" class="hx-panel">
+      <h2 class="hx-panel__title">{{ t('game.voice') }}</h2>
+      <Voice :people="voicePeople" :ticket="voiceTicket" />
+    </div>
+
+    <div v-if="chatEnabled && room && !started && mySeat !== null" class="hx-panel">
+      <h2 class="hx-panel__title">{{ t('game.chat') }}</h2>
+      <Chat
+        :messages="chat"
+        :people="chatPeople"
+        :seat="mySeat"
+        :live="link === 'live'"
+        @send="sendChat($event)"
+      />
+      <p class="hx-muted hx-small">{{ t('lobby.chatFollows') }}</p>
     </div>
   </div>
 </template>

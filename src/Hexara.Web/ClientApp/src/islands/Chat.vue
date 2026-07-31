@@ -1,7 +1,19 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import { t } from '@/i18n';
-import type { ChatMessage, PlayerView } from '@/game/connection';
+import type { ChatMessage } from '@/game/connection';
+
+/**
+ * کمترین چیزی که برای نشان‌دادنِ فرستنده لازم است.
+ *
+ * عمداً نه ‎PlayerView‎: همین پنل در اتاق انتظار هم کار می‌کند و آن‌جا آدم‌ها
+ * صندلیِ اتاق دارند نه صندلیِ بازی.
+ */
+export interface ChatPerson {
+  seat: number;
+  displayName: string;
+  avatarColor: string;
+}
 
 /**
  * چتِ داخل بازی.
@@ -19,7 +31,7 @@ import type { ChatMessage, PlayerView } from '@/game/connection';
  */
 const props = defineProps<{
   messages: ChatMessage[];
-  players: PlayerView[];
+  people: ChatPerson[];
   seat: number | null;
   /** وقتی اتصال زنده نیست، نوشتن معنا ندارد. */
   live: boolean;
@@ -37,7 +49,9 @@ const canSend = computed(() => props.live && draft.value.trim().length > 0);
 
 const lines = computed(() =>
   props.messages.map((message) => {
-    const author = props.players[message.seat] ?? null;
+    // با *مقدارِ* صندلی پیدا می‌شود نه با جایگاه در آرایه: در اتاق انتظار
+    // صندلی‌ها پشت سر هم نیستند و کسی که برود، یک شماره وسط خالی می‌ماند.
+    const author = props.people.find((p) => p.seat === message.seat) ?? null;
 
     return {
       id: message.id,

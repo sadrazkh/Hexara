@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Hexara.Application.Common.Interfaces;
 using Hexara.Application.Games;
+using Hexara.Application.Rooms;
 using Hexara.Domain.Game;
 using Hexara.Infrastructure.Identity;
 using Hexara.Web.Realtime;
@@ -36,6 +37,23 @@ internal sealed class HubHarness : IAsyncDisposable
     }
 
     public GameHub Hub { get; }
+
+    /// <summary>همان اتصال، این بار روی هابِ اتاق.</summary>
+    public RoomHub Room
+    {
+        get
+        {
+            var hub = ActivatorUtilities.CreateInstance<RoomHub>(_scope.ServiceProvider);
+            hub.Groups = Groups;
+            hub.Clients = Clients;
+            hub.Context = Hub.Context;
+
+            return hub;
+        }
+    }
+
+    /// <summary>سرویس اتاق‌ها، برای چیدنِ سناریو.</summary>
+    public RoomService Rooms => _scope.ServiceProvider.GetRequiredService<RoomService>();
 
     /// <summary>چه کسی به کدام گروه اضافه یا از آن برداشته شد.</summary>
     public FakeGroups Groups { get; }

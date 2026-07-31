@@ -79,19 +79,34 @@ public sealed class LiveKitTokens
     public static string RoomOf(Guid gameId) => $"game-{gameId:N}";
 
     /// <summary>
+    /// نامِ اتاق صوتیِ اتاق انتظار.
+    ///
+    /// عمداً از اتاق صوتیِ بازی جداست: اتاق انتظار و بازی دو شناسه‌ی متفاوت‌اند و
+    /// یکی‌کردنشان یعنی کسی که فقط اتاق را تماشا می‌کند بتواند بلیتِ صدای بازی را
+    /// بگیرد. بهایش یک قطعِ کوتاه سرِ شروع بازی است.
+    /// </summary>
+    public static string LobbyOf(Guid roomId) => $"room-{roomId:N}";
+
+    /// <summary>
     /// بلیت این کاربر برای اتاق این بازی؛ تهی یعنی صدا و تصویر پیکربندی نشده.
     ///
     /// این متد **اجازه نمی‌دهد**، فقط بلیت می‌سازد. بررسی اینکه این کاربر واقعاً
     /// سرِ این بازی نشسته، پیش از صدا زدنِ این انجام می‌شود.
     /// </summary>
-    public VoiceTicket? Issue(Guid gameId, Guid userId, string displayName)
+    public VoiceTicket? Issue(Guid gameId, Guid userId, string displayName) =>
+        IssueFor(RoomOf(gameId), userId, displayName);
+
+    /// <summary>همان بلیت، برای اتاق انتظار.</summary>
+    public VoiceTicket? IssueForLobby(Guid roomId, Guid userId, string displayName) =>
+        IssueFor(LobbyOf(roomId), userId, displayName);
+
+    private VoiceTicket? IssueFor(string room, Guid userId, string displayName)
     {
         if (!_options.IsConfigured)
         {
             return null;
         }
 
-        var room = RoomOf(gameId);
         var now = _clock.UtcNow;
 
         var payload = new Dictionary<string, object>

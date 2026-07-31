@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Hexara.Application.Common.Interfaces;
 using Hexara.Application.Rooms;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -24,9 +25,20 @@ public sealed class RoomHub : Hub
 {
     private readonly RoomService _rooms;
     private readonly RoomBroadcaster _broadcaster;
+    private readonly GameChat _chat;
+    private readonly IClock _clock;
+    private readonly LiveKitTokens _voice;
 
-    public RoomHub(RoomService rooms, RoomBroadcaster broadcaster)
+    public RoomHub(
+        RoomService rooms,
+        RoomBroadcaster broadcaster,
+        GameChat chat,
+        IClock clock,
+        LiveKitTokens voice)
     {
+        _chat = chat;
+        _clock = clock;
+        _voice = voice;
         _rooms = rooms;
         _broadcaster = broadcaster;
     }
@@ -143,8 +155,95 @@ public sealed class RoomHub : Hub
             return new RoomActionResult(false, "roomNotFound", null);
         }
 
-        return await ApplyAsync(await _rooms.StartAsync(room.Id, userId, Context.ConnectionAborted));
+        var started = await _rooms.StartAsync(room.Id, userId, Context.ConnectionAborted);
+
+        // گفت‌وگوی اتاق با بازی می‌آید. تا یک ثانیه پیش داشتند هماهنگ می‌کردند و
+        // اگر تاریخچه جا می‌ماند، صفحه‌ی بازی با چتِ خالی باز می‌شد.
+        if (started.GameId is { } gameId)
+        {
+            _chat.Move(room.Id, gameId);
+        }
+
+        return await ApplyAsync(started);
     }
+
+    // ── گفت‌وگو و صدا ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// یک پیام در اتاق انتظار.
+    ///
+    /// **فقط کسانی که صندلی دارند می‌فرستند و فقط همان‌ها می‌گیرند.** اتاق را هر
+    /// کسی که کد را دارد می‌تواند تماشا کند (‎Join‎ عضویت نمی‌خواهد)، و همان
+    /// قاعده‌ای که در بازی گذاشتیم اینجا هم برقرار است: تماشاچی حرفِ سرِ میز را
+    /// نمی‌شنود.
+    ///
+    /// به‌جای گروه، مستقیم به کاربرهای صندلی‌دار فرستاده می‌شود — عضویتِ گروه
+    /// باید با هر گرفتن و رها کردنِ صندلی به‌روز می‌ماند و یک بار جا ماندنش یعنی
+    /// نشتی؛ فهرست اعضا همیشه تازه خوانده می‌شود.
+    /// </summary>
+    public async Task SendChat(string code, string? text)
+    {
+        if (!_chat.Enabled || UserId is not { } userId)
+        {
+            return;
+        }
+
+        var room = await _rooms.FindAsync(code, Context.ConnectionAborted);
+        if (SeatOf(room, userId) is not { } seat)
+        {
+            return;
+        }
+
+        if (_chat.Post(room!.Id, seat, text, _clock.UtcNow) is { } message)
+        {
+            await Clients.Users(Members(room)).SendAsync("chat", message, Context.ConnectionAborted);
+        }
+    }
+
+    /// <summary>پیام‌های اخیرِ همین اتاق؛ تماشاچی چیزی نمی‌گیرد.</summary>
+    public async Task<IReadOnlyList<ChatMessage>> ChatHistory(string code)
+    {
+        if (!_chat.Enabled || UserId is not { } userId)
+        {
+            return [];
+        }
+
+        var room = await _rooms.FindAsync(code, Context.ConnectionAborted);
+
+        return SeatOf(room, userId) is null ? [] : _chat.History(room!.Id);
+    }
+
+    /// <summary>
+    /// بلیت صدای اتاق انتظار.
+    ///
+    /// اتاق صوتی‌اش از اتاق صوتیِ بازی جداست، پس تماشاچیِ اتاق — حتی اگر روزی
+    /// بلیت بگیرد — به صدای خودِ بازی نمی‌رسد.
+    /// </summary>
+    public async Task<VoiceTicket?> VoiceTicket(string code)
+    {
+        if (!_voice.IsConfigured || UserId is not { } userId)
+        {
+            return null;
+        }
+
+        var room = await _rooms.FindAsync(code, Context.ConnectionAborted);
+        if (SeatOf(room, userId) is null)
+        {
+            return null;
+        }
+
+        var name = room!.Members.First(m => m.UserId == userId).DisplayName;
+
+        return _voice.IssueForLobby(room.Id, userId, name);
+    }
+
+    /// <summary>صندلیِ این کاربر در این اتاق؛ تهی یعنی فقط تماشاچی است.</summary>
+    private static int? SeatOf(Room? room, Guid userId) =>
+        room?.Members.FirstOrDefault(m => m.UserId == userId)?.Seat;
+
+    /// <summary>شناسه‌ی همه‌ی صندلی‌نشین‌ها — گیرندگانِ چتِ اتاق.</summary>
+    private static IReadOnlyList<string> Members(Room room) =>
+        [.. room.Members.Select(m => m.UserId.ToString())];
 
     /// <summary>ترک اتاق — نه فقط بیرون رفتن از گروهِ پیام، خودِ صندلی خالی می‌شود.</summary>
     public async Task<RoomActionResult> LeaveRoom(string code)

@@ -42,6 +42,15 @@ const props = defineProps<{ gameId: string; chatEnabled?: boolean; voiceEnabled?
  */
 const chat = ref<ChatMessage[]>([]);
 
+/** بازیکنان در همان شکلی که پنل گفت‌وگو می‌خواهد؛ صندلی همان اندیس بازیکن است. */
+const chatPeople = computed(() =>
+  (view.value?.players ?? []).map((p) => ({
+    seat: p.index,
+    displayName: p.displayName,
+    avatarColor: p.avatarColor,
+  })),
+);
+
 const link = ref<Link>('connecting');
 const view = ref<GameView | null>(null);
 const log = ref<string[]>([]);
@@ -1612,7 +1621,7 @@ onBeforeUnmount(() => {
           :open="folds.voice"
           @update:open="folds.voice = $event"
         >
-          <Voice :players="view.players" :ticket="voiceTicket" />
+          <Voice :people="view.players" :ticket="voiceTicket" />
         </Fold>
 
         <!--
@@ -1629,7 +1638,7 @@ onBeforeUnmount(() => {
         >
           <Chat
             :messages="chat"
-            :players="view.players"
+            :people="chatPeople"
             :seat="view.seat"
             :live="link === 'live'"
             @send="sendChat($event)"

@@ -54,6 +54,23 @@ public class GameChatTests
         Assert.Equal("سلام دنیا", message!.Text);
     }
 
+    /// <summary>
+    /// نیم‌فاصله بخشی از خودِ متنِ فارسی است، نه نویز.
+    ///
+    /// نسخه‌ی اول همه‌ی دسته‌ی ‎Cf‎ را می‌برد و «می‌کنم» را «می کنم» می‌کرد. سرِ
+    /// آزمایشِ زنده لو رفت، نه در آزمون — چون آن موقع فقط با ‎U+202E‎ سنجیده بودم.
+    /// </summary>
+    [Theory]
+    [InlineData("می‌کنم")]
+    [InlineData("نیم‌فاصله و اتصالِ‍اجباری")]
+    [InlineData("کتاب‌ها را می‌خوانم")]
+    public void Persian_zero_width_joiners_survive(string text)
+    {
+        var message = New().Post(Game, 0, text, Noon);
+
+        Assert.Equal(text, message!.Text);
+    }
+
     [Fact]
     public void Control_characters_are_stripped()
     {

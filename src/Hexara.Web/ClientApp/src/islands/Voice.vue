@@ -2,8 +2,14 @@
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue';
 import { t } from '@/i18n';
 import type { Track } from 'livekit-client';
-import type { PlayerView } from '@/game/connection';
 import { VoiceSession, type VoiceParticipant, type VoiceState } from '@/voice/session';
+
+/** همان کمترین چیزی که برای نامِ کنارِ صدا لازم است. */
+export interface VoicePerson {
+  userId: string;
+  displayName: string;
+  avatarColor: string;
+}
 
 /**
  * پنل صدا و تصویر.
@@ -16,7 +22,7 @@ import { VoiceSession, type VoiceParticipant, type VoiceState } from '@/voice/se
  * آن وصل می‌شود، نه با نامی که LiveKit می‌دهد؛ همان قاعده‌ای که در چت هم هست.
  */
 const props = defineProps<{
-  players: PlayerView[];
+  people: VoicePerson[];
   /** بلیت را می‌گیرد؛ تهی یعنی نمی‌شود پیوست. */
   ticket: () => Promise<{ url: string; token: string; room: string } | null>;
 }>();
@@ -57,12 +63,12 @@ const busy = computed(() => state.value === 'joining');
 
 /** نامِ نمایشی از روی فهرست بازیکن‌ها؛ شناسه همان ‎userId‎ است. */
 function nameOf(participant: VoiceParticipant): string {
-  const player = props.players.find((p) => p.userId === participant.identity);
-  return player?.displayName || participant.name || t('game.unknownPlayer');
+  const person = props.people.find((p) => p.userId === participant.identity);
+  return person?.displayName || participant.name || t('game.unknownPlayer');
 }
 
 function colorOf(participant: VoiceParticipant): string {
-  return props.players.find((p) => p.userId === participant.identity)?.avatarColor ?? 'var(--hx-accent)';
+  return props.people.find((p) => p.userId === participant.identity)?.avatarColor ?? 'var(--hx-accent)';
 }
 
 async function join(): Promise<void> {

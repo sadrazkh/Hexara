@@ -26,13 +26,20 @@ public class LobbyController : Controller
         RoomService rooms,
         ICurrentUser user,
         UiTranslator translator,
-        RoomBroadcaster live)
+        RoomBroadcaster live,
+        GameChat chat,
+        LiveKitTokens voice)
     {
         _rooms = rooms;
         _user = user;
         _t = translator;
         _live = live;
+        _chat = chat;
+        _voice = voice;
     }
+
+    private readonly GameChat _chat;
+    private readonly LiveKitTokens _voice;
 
     private Guid UserId => _user.UserId ?? throw new InvalidOperationException("کاربر وارد نشده است.");
 
@@ -96,7 +103,13 @@ public class LobbyController : Controller
             return RedirectToAction("Play", "Game", new { id = gameId });
         }
 
-        return View(new RoomViewModel { Room = room, CurrentUserId = UserId });
+        return View(new RoomViewModel
+        {
+            Room = room,
+            CurrentUserId = UserId,
+            ChatEnabled = _chat.Enabled,
+            VoiceEnabled = _voice.IsConfigured
+        });
     }
 
     [HttpPost]

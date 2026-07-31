@@ -4,7 +4,8 @@ import {
   HubConnectionState,
   LogLevel,
 } from '@microsoft/signalr';
-import type { Link } from '@/game/connection';
+import type { ChatMessage, Link } from '@/game/connection';
+import type { VoiceTicket } from '@/voice/session';
 
 export interface RoomSeat {
   seat: number;
@@ -51,6 +52,7 @@ export interface RoomHandlers {
   onRoom(room: RoomView): void;
   onClosed(): void;
   onError(message: string): void;
+  onChat(message: ChatMessage): void;
 }
 
 /**
@@ -74,6 +76,7 @@ export class RoomConnection {
       .build();
 
     this.connection.on('room', (room: RoomView) => this.handlers.onRoom(room));
+    this.connection.on('chat', (message: ChatMessage) => this.handlers.onChat(message));
     this.connection.on('closed', () => this.handlers.onClosed());
 
     this.connection.onreconnecting(() => this.handlers.onLink('reconnecting'));
@@ -117,6 +120,43 @@ export class RoomConnection {
 
   leaveRoom(): Promise<RoomActionResult | null> {
     return this.call('LeaveRoom');
+  }
+
+  /**
+   * یک پیام در اتاق.
+   *
+   * مثل چتِ بازی، بی‌صدا: سرور پیامِ خالی یا پیامِ کسی که صندلی ندارد را رد
+   * می‌کند و **هیچ‌کدامِ این‌ها نباید اتاق را متوقف کند**.
+   */
+  async sendChat(text: string): Promise<void> {
+    if (this.connection.state !== HubConnectionState.Connected) return;
+
+    try {
+      await this.connection.invoke('SendChat', this.code, text);
+    } catch {
+      // بی‌صدا؛ اتاق سرِ جایش است.
+    }
+  }
+
+  async chatHistory(): Promise<ChatMessage[]> {
+    if (this.connection.state !== HubConnectionState.Connected) return [];
+
+    try {
+      return await this.connection.invoke<ChatMessage[]>('ChatHistory', this.code);
+    } catch {
+      return [];
+    }
+  }
+
+  /** بلیت صدای اتاق انتظار — جدا از اتاق صوتیِ بازی. */
+  async voiceTicket(): Promise<VoiceTicket | null> {
+    if (this.connection.state !== HubConnectionState.Connected) return null;
+
+    try {
+      return await this.connection.invoke<VoiceTicket | null>('VoiceTicket', this.code);
+    } catch {
+      return null;
+    }
   }
 
   private async call(method: string, ...args: unknown[]): Promise<RoomActionResult | null> {

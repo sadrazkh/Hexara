@@ -106,6 +106,7 @@
     "settings": "Game settings",
     "leave": "Leave room",
     "start": "Start game",
+    "chatFollows": "This conversation carries over to the game when it starts.",
     "needTwoPlayers": "At least two players are needed to start.",
     "startingNow": "Starting — taking you to the board…",
     "closedNotice": "Everyone left, so this room is closed.",
