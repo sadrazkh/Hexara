@@ -59,7 +59,9 @@ public class GameEventRedactorTests
         GameEvent[] events =
         [
             new DiceRolled(0, 3, 4),
-            new ResourcesProduced([new ResourceGrant(1, Resource.Ore, 2)]),
+            new ResourcesProduced(
+                [new ResourceGrant(1, Resource.Ore, 2)],
+                [new ProductionSource(1, new Axial(1, 0), Resource.Ore)]),
             new RobberMoved(0, new Axial(0, 0), new Axial(1, 0)),
             new CardsDiscarded(1, new Dictionary<Resource, int> { [Resource.Wool] = 2 }),
             new GameWon(2, 10)

@@ -12,6 +12,7 @@ import type { AssetName } from '@/assets/registry';
 import type { BoardData, Highlights, Pick } from '@/three/board';
 import { vertexKey } from '@/three/hex';
 import { edgeKey, freeRoadChoices } from '@/game/cards';
+import { harvestOf, type Harvest } from '@/game/production';
 import { nextFace } from '@/game/dice';
 import Chat from './Chat.vue';
 import Voice from './Voice.vue';
@@ -99,6 +100,20 @@ const offerTake = ref<Record<string, number>>({});
  * می‌شوند. **هیچ‌کدام نتیجه نیستند** — نتیجه ‎view.die1/die2‎ است که پیش از
  * شروع انیمیشن از سرور رسیده و بعد از فرود دوباره خودش را نشان می‌دهد.
  */
+/**
+ * آنچه همین دور به من رسید: کارت‌ها برای نمایش، خانه‌ها برای درخشش روی برد.
+ *
+ * ‎nonce‎ لازم است چون دو تاسِ پشت سر هم می‌توانند دقیقاً همان خانه‌ها را بدهند و
+ * تماشای خودِ آرایه دومی را نمی‌گرفت.
+ */
+const harvest = ref<Harvest>({ cards: {}, hexes: [], total: 0 });
+const harvestNonce = ref(0);
+
+/** به برد فقط خانه‌ها می‌رود؛ کارت‌ها کار خودِ پنل است. */
+const boardHarvest = computed(() => ({ hexes: harvest.value.hexes, nonce: harvestNonce.value }));
+
+let harvestTimer = 0;
+
 const rolling = ref(false);
 const settling = ref(false);
 const tumbling = ref<[number, number] | null>(null);
@@ -230,6 +245,9 @@ let ticker = 0;
 
 /** زمان‌بندی چرخش تاس؛ کوتاه، چون نتیجه از قبل معلوم است. */
 const SPIN_MS = 620;
+
+/** چند میلی‌ثانیه کارت‌های رسیده روی صفحه بمانند — کمی بیشتر از درخششِ برد. */
+const HARVEST_MS = 3200;
 const SPIN_STEP_MS = 80;
 const LAND_MS = 320;
 
@@ -641,6 +659,24 @@ function voiceTicket() {
   return connection?.voiceTicket() ?? Promise.resolve(null);
 }
 
+/**
+ * برداشتِ این دور را نشان می‌دهد و بعد از چند ثانیه برمی‌دارد.
+ *
+ * برداشتِ خالی هم پاک می‌کند: اگر تاسِ بعدی چیزی به تو نداد، کارت‌های دورِ قبل
+ * نباید همان‌جا بمانند و وانمود کنند تازه‌اند.
+ */
+function showHarvest(next: Harvest): void {
+  clearTimeout(harvestTimer);
+  harvest.value = next;
+  harvestNonce.value += 1;
+
+  if (next.total === 0) return;
+
+  harvestTimer = window.setTimeout(() => {
+    harvest.value = { cards: {}, hexes: [], total: 0 };
+  }, HARVEST_MS);
+}
+
 function sendChat(text: string): void {
   void connection?.sendChat(text);
 }
@@ -881,6 +917,9 @@ onMounted(() => {
     },
     onEvents: (events) => {
       if (events.some((e) => e.$kind === 'DiceRolled')) rollDice();
+
+      showHarvest(harvestOf(events, view.value?.seat ?? null));
+
       log.value = [...events.map(describe), ...log.value].slice(0, 40);
     },
     onPresence: () => {
@@ -905,6 +944,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   clearInterval(tumble);
   clearTimeout(landing);
+  clearTimeout(harvestTimer);
   clearInterval(ticker);
   wideQuery?.removeEventListener('change', onWideChange);
   void connection?.stop();
@@ -1054,10 +1094,40 @@ onBeforeUnmount(() => {
           class="hx-board--fill"
           :board="board"
           :highlights="highlights"
+          :harvest="boardHarvest"
           @pick="onPick"
         >
           <template #fallback>{{ t('game.noWebgl') }}</template>
         </GameBoard>
+
+        <!--
+          آنچه همین دور به تو رسید.
+
+          روی برد می‌نشیند نه در ریل، چون چشمِ کاربر همان لحظه روی برد است و
+          خانه‌های پرداخت‌کننده دارند می‌درخشند؛ نگاه نباید جای دیگری برود.
+          ‎aria-live‎ دارد تا با صفحه‌خوان هم شنیده شود.
+        -->
+        <Transition name="hx-harvest">
+          <div
+            v-if="harvest.total > 0"
+            class="hx-harvest"
+            role="status"
+            aria-live="polite"
+          >
+            <span class="hx-harvest__label">{{ t('game.harvest') }}</span>
+
+            <ul class="hx-harvest__cards">
+              <li
+                v-for="(count, resource, index) in harvest.cards"
+                :key="resource"
+                class="hx-harvest__card"
+                :style="{ '--hx-harvest-i': index }"
+              >
+                <Card :name="(`resource.${resource}` as AssetName)" :count="count" width="3.1rem" />
+              </li>
+            </ul>
+          </div>
+        </Transition>
 
         <!--
           روکشِ سبک روی برد. عمداً کوچک و گوشه‌ای است: چیزی که همیشه لازم داری

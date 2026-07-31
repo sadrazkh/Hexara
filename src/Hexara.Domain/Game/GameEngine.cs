@@ -97,10 +97,10 @@ public static class GameEngine
         // آبادی دور دوم منابع خانه‌های مجاورش را همان لحظه می‌دهد.
         if (state.SetupStep >= state.Options.PlayerCount)
         {
-            var grants = GrantStartingResources(state, action.PlayerIndex, action.Vertex);
+            var (grants, sources) = GrantStartingResources(state, action.PlayerIndex, action.Vertex);
             if (grants.Count > 0)
             {
-                events.Add(new ResourcesProduced(grants));
+                events.Add(new ResourcesProduced(grants, sources));
             }
         }
 
@@ -177,9 +177,14 @@ public static class GameEngine
         }
     }
 
-    private static List<ResourceGrant> GrantStartingResources(GameState state, int playerIndex, VertexId vertex)
+    /// <summary>سهم‌ها و خانه‌هایی که آن‌ها را دادند.</summary>
+    private static (List<ResourceGrant> Grants, List<ProductionSource> Sources) GrantStartingResources(
+        GameState state,
+        int playerIndex,
+        VertexId vertex)
     {
         var grants = new List<ResourceGrant>();
+        var sources = new List<ProductionSource>();
         var player = state.Player(playerIndex);
 
         foreach (var hex in vertex.TouchingHexes())
@@ -197,9 +202,10 @@ public static class GameEngine
             state.BankTake(resource, 1);
             player.Add(resource, 1);
             grants.Add(new ResourceGrant(playerIndex, resource, 1));
+            sources.Add(new ProductionSource(playerIndex, hex, resource));
         }
 
-        return grants;
+        return (grants, sources);
     }
 
     // ── تاس و تولید ──────────────────────────────────────────────────────
@@ -242,6 +248,10 @@ public static class GameEngine
     {
         var demand = new Dictionary<Resource, Dictionary<int, int>>();
 
+        // کدام خانه در سهمِ چه کسی نقش داشت. جمع‌بندیِ زیر خانه را گم می‌کند، و
+        // رابط برای هایلایت‌کردنِ خانه‌های پرداخت‌کننده دقیقاً همین را می‌خواهد.
+        var sources = new HashSet<ProductionSource>();
+
         foreach (var tile in state.Board.TilesWithNumber(roll))
         {
             if (tile.Position == state.Robber || tile.Resource is not { } resource)
@@ -261,6 +271,10 @@ public static class GameEngine
                     : demand[resource] = [];
 
                 perPlayer[building.PlayerIndex] = perPlayer.GetValueOrDefault(building.PlayerIndex) + building.Yield;
+
+                // یک خانه می‌تواند دو ساختمانِ یک بازیکن داشته باشد؛ مجموعه تکرار
+                // را خودش می‌گیرد.
+                sources.Add(new ProductionSource(building.PlayerIndex, tile.Position, resource));
             }
         }
 
@@ -294,7 +308,15 @@ public static class GameEngine
 
         if (grants.Count > 0)
         {
-            events.Insert(0, new ResourcesProduced(grants));
+            // فقط خانه‌هایی که سهمشان واقعاً پرداخت شد. منبعی که بانک کم آورد و
+            // رد شد نباید روی برد چشمک بزند.
+            var paid = grants.Select(g => (g.PlayerIndex, g.Resource)).ToHashSet();
+
+            events.Insert(
+                0,
+                new ResourcesProduced(
+                    grants,
+                    [.. sources.Where(x => paid.Contains((x.PlayerIndex, x.Resource)))]));
         }
 
         return events;

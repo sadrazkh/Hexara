@@ -125,6 +125,9 @@ export interface Highlights {
 
 const EMPTY_HIGHLIGHTS: Highlights = { vertices: [], edges: [], hexes: [] };
 
+/** چند ثانیه درخششِ برداشت روی برد بماند. */
+const HARVEST_SECONDS = 2.4;
+
 /**
  * صحنه‌ی برد.
  *
@@ -148,6 +151,15 @@ export class BoardScene {
   private readonly scenery = new THREE.Group();
   private readonly pieces = new THREE.Group();
   private readonly markers = new THREE.Group();
+
+  /**
+   * درخششِ خانه‌هایی که همین دور به تو کارت دادند.
+   *
+   * گروهِ جدا از ‎markers‎ و **بی هیچ ‎pick‎** — این یک خبر است نه یک دکمه. اگر
+   * در همان گروه می‌نشست، هر بار که فهرست انتخاب‌ها عوض می‌شد پاک می‌شد، و
+   * بدتر: خانه‌ای که فقط دارد خبر می‌دهد کلیک‌پذیر می‌شد.
+   */
+  private readonly harvest = new THREE.Group();
 
   private readonly disposables: { dispose(): void }[] = [];
   private readonly seatMaterials = new Map<number, THREE.MeshStandardMaterial>();
@@ -184,6 +196,14 @@ export class BoardScene {
     depthWrite: false,
   });
 
+  /** درخششِ برداشت — همان رنگِ نشانه‌ها ولی جدا، چون شفافیتش انیمیت می‌شود. */
+  private readonly harvestMaterial = new THREE.MeshBasicMaterial({
+    color: tokenColor('--hx-accent-2', 0xf2cf7a),
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+  });
+
   private readonly robberMaterial = new THREE.MeshStandardMaterial({
     color: tokenColor('--hx-piece-robber', 0x17130d),
     roughness: 0.6,
@@ -214,12 +234,14 @@ export class BoardScene {
   private sceneryDisposables: { dispose(): void }[] = [];
   private sceneryTiles: Tile[] = [];
   private sceneryShadows = true;
+  private harvestAge = 0;
 
   constructor() {
-    this.root.add(this.backdrop, this.terrain, this.scenery, this.pieces, this.markers);
+    this.root.add(this.backdrop, this.terrain, this.scenery, this.pieces, this.markers, this.harvest);
     this.disposables.push(
       ...Object.values(this.geo),
       this.highlightMaterial,
+      this.harvestMaterial,
       this.robberMaterial,
       this.tileRimMaterial,
     );
@@ -282,6 +304,7 @@ export class BoardScene {
 
     this.seaMaterial?.color.copy(tokenColor('--hx-res-sea', 0x155f7c));
     this.highlightMaterial.color.copy(tokenColor('--hx-accent-2', 0xf2cf7a));
+    this.harvestMaterial.color.copy(tokenColor('--hx-accent-2', 0xf2cf7a));
     this.tileRimMaterial.color.copy(tokenColor('--hx-accent', 0xe0a63a));
 
     // زینت رنگ را در نمونه‌ها دارد نه در متریال، پس از نو ساخته می‌شود. فقط
@@ -745,6 +768,52 @@ export class BoardScene {
       if (child.userData.pulse) {
         child.scale.setScalar(scale);
       }
+    }
+  }
+
+  /**
+   * خانه‌هایی که همین دور کارت دادند را نشان می‌دهد.
+   *
+   * فهرستِ خالی یعنی پاک کن. صدا زدنِ دوباره، قبلی را کنار می‌گذارد — دو تاسِ
+   * پشت سر هم نباید درخشش‌ها را روی هم انباشته کنند.
+   */
+  showHarvest(hexes: readonly Axial[]): void {
+    this.clear(this.harvest);
+    this.harvestAge = 0;
+
+    for (const hex of hexes) {
+      const { x, z } = axialToWorld(hex.q, hex.r, TILE_SIZE);
+
+      const mesh = new THREE.Mesh(this.geo.markHex, this.harvestMaterial);
+      mesh.position.set(x, 0.18, z);
+      mesh.scale.setScalar(1.9);
+      this.harvest.add(mesh);
+    }
+  }
+
+  /**
+   * درخشش را جلو می‌برد: سریع روشن، بعد آرام محو.
+   *
+   * ‎delta‎ می‌گیرد نه زمانِ مطلق، تا مستقل از نرخِ فریم همان‌قدر طول بکشد.
+   */
+  animateHarvest(delta: number): void {
+    if (this.harvest.children.length === 0) return;
+
+    this.harvestAge += delta;
+
+    if (this.harvestAge >= HARVEST_SECONDS) {
+      this.clear(this.harvest);
+      this.harvestMaterial.opacity = 0;
+      return;
+    }
+
+    const t = this.harvestAge / HARVEST_SECONDS;
+
+    // بالا رفتنِ تند تا یک‌پنجمِ راه، بعد افتِ نرم تا صفر.
+    this.harvestMaterial.opacity = t < 0.2 ? (t / 0.2) * 0.6 : (1 - (t - 0.2) / 0.8) * 0.6;
+
+    for (const child of this.harvest.children) {
+      child.scale.setScalar(1.9 + t * 0.45);
     }
   }
 

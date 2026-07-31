@@ -13,10 +13,23 @@ import {
   type Pick,
 } from '@/three/board';
 import { THEME_CHANGE, token } from '@/theme';
+import type { Hex } from '@/game/connection';
 
 const props = withDefaults(
-  defineProps<{ board: BoardData; highlights: Highlights; options?: BoardOptions }>(),
-  { options: () => ({}) },
+  defineProps<{
+    board: BoardData;
+    highlights: Highlights;
+    options?: BoardOptions;
+    /**
+     * خانه‌هایی که همین دور به بیننده کارت دادند.
+     *
+     * با ‎nonce‎ همراه است چون دو تاسِ پشت سر هم می‌توانند *همان* خانه‌ها را
+     * بدهند و یک ‎watch‎ روی خودِ آرایه دومی را نمی‌گرفت — درخشش دیگر تکرار
+     * نمی‌شد.
+     */
+    harvest?: { hexes: Hex[]; nonce: number };
+  }>(),
+  { options: () => ({}), harvest: () => ({ hexes: [], nonce: 0 }) },
 );
 const emit = defineEmits<{ pick: [Pick] }>();
 
@@ -223,8 +236,15 @@ function render(): void {
   if (!renderer || !scene || !camera) return;
 
   controls?.update();
+
+  // ‎getDelta‎ فقط یک بار: خودش ‎elapsedTime‎ را جلو می‌برد و ‎getElapsedTime‎ هم
+  // درونش همین را صدا می‌زند — با دو بار صدا زدن، دومی تقریباً صفر می‌شد و
+  // درخششِ برداشت هرگز جلو نمی‌رفت.
+  const delta = clock.getDelta();
+
   if (!reduceMotion) {
-    board?.animateMarkers(clock.getElapsedTime());
+    board?.animateMarkers(clock.elapsedTime);
+    board?.animateHarvest(delta);
   }
 
   renderer.render(scene, camera);
@@ -291,6 +311,17 @@ function onPointerUp(event: PointerEvent): void {
     pickAt(event);
   }
 }
+
+// درخششِ خانه‌های پرداخت‌کننده. ‎nonce‎ تضمین می‌کند تاسِ دوم با همان خانه‌ها هم
+// دوباره بدرخشد.
+watch(
+  () => props.harvest.nonce,
+  () => {
+    if (reduceMotion) return;
+
+    board?.showHarvest(props.harvest.hexes);
+  },
+);
 
 watch(
   () => [props.board, props.highlights, props.options],

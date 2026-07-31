@@ -182,4 +182,77 @@ public class ProductionTests
             }
         }
     }
+
+    // ── خانه‌های پرداخت‌کننده ─────────────────────────────────────────────
+
+    /// <summary>
+    /// رابط باید بتواند خانه‌هایی را که به تو کارت داده‌اند هایلایت کند، پس
+    /// رویداد باید بگوید کدام خانه در سهمِ چه کسی نقش داشت.
+    /// </summary>
+    [Fact]
+    public void Production_says_which_tiles_paid_whom()
+    {
+        var state = Games.SetupWithProductiveRoll(out var roll);
+
+        var produced = GameEngine.Apply(state, new RollDice(state.CurrentPlayer))
+            .Events.OfType<ResourcesProduced>().Single();
+
+        Assert.NotEmpty(produced.Sources);
+
+        foreach (var source in produced.Sources)
+        {
+            // هر خانه‌ی نام‌برده واقعاً همان عدد را دارد، دزد رویش نیست، و همان
+            // منبعی را می‌دهد که ادعا شده.
+            var tile = state.Board.TileAt(source.Hex);
+
+            Assert.NotNull(tile);
+            Assert.Equal(roll, tile.Number);
+            Assert.NotEqual(state.Robber, source.Hex);
+            Assert.Equal(tile.Resource, source.Resource);
+
+            // و آن بازیکن واقعاً ساختمانی کنار همان خانه دارد.
+            Assert.Contains(
+                tile.Vertices(),
+                v => state.BuildingAt(v)?.PlayerIndex == source.PlayerIndex);
+        }
+    }
+
+    /// <summary>هر کسی که سهم گرفته باید دست‌کم یک خانه‌ی نام‌برده داشته باشد.</summary>
+    [Fact]
+    public void Everyone_who_was_paid_has_a_source()
+    {
+        var state = Games.SetupWithProductiveRoll(out _);
+
+        var produced = GameEngine.Apply(state, new RollDice(state.CurrentPlayer))
+            .Events.OfType<ResourcesProduced>().Single();
+
+        foreach (var grant in produced.Grants)
+        {
+            Assert.Contains(
+                produced.Sources,
+                s => s.PlayerIndex == grant.PlayerIndex && s.Resource == grant.Resource);
+        }
+    }
+
+    /// <summary>
+    /// خانه‌ی دزدزده هرگز نام برده نمی‌شود — وگرنه روی برد چشمک می‌زد در حالی که
+    /// چیزی نداده.
+    /// </summary>
+    [Fact]
+    public void The_robbed_tile_is_never_a_source()
+    {
+        var state = Games.SetupWithProductiveRoll(out var roll);
+
+        // دزد را روی یکی از خانه‌های همین عدد می‌گذاریم.
+        var target = state.Board.TilesWithNumber(roll).First(t => t.Resource is not null);
+        state.Robber = target.Position;
+
+        var produced = GameEngine.Apply(state, new RollDice(state.CurrentPlayer))
+            .Events.OfType<ResourcesProduced>().SingleOrDefault();
+
+        if (produced is not null)
+        {
+            Assert.DoesNotContain(produced.Sources, s => s.Hex == target.Position);
+        }
+    }
 }

@@ -25,7 +25,24 @@ public sealed record DiceRolled(int PlayerIndex, int Die1, int Die2) : GameEvent
 /// <summary>یک سهم تولید: بازیکن، منبع و تعداد.</summary>
 public sealed record ResourceGrant(int PlayerIndex, Resource Resource, int Amount);
 
-public sealed record ResourcesProduced(IReadOnlyList<ResourceGrant> Grants) : GameEvent;
+/// <summary>
+/// اینکه *کدام خانه* به چه کسی چه منبعی داد.
+///
+/// عمداً بی تعداد: تولید بر اساس (منبع، بازیکن) جمع می‌شود و وقتی بانک کم
+/// می‌آورد سهم به‌طور جزئی پرداخت می‌شود، پس نسبت‌دادنِ یک عددِ دقیق به یک خانه
+/// معنای روشنی ندارد. اینجا فقط «این خانه در سهمِ تو نقش داشت» گفته می‌شود —
+/// همان چیزی که برای هایلایت‌کردنِ خانه لازم است. تعدادها در
+/// <see cref="ResourceGrant"/> هستند و همان‌ها مرجع‌اند.
+/// </summary>
+public sealed record ProductionSource(int PlayerIndex, Axial Hex, Resource Resource);
+
+/// <param name="Sources">
+/// خانه‌های پرداخت‌کننده. رویدادهای قدیمیِ ذخیره‌شده این را ندارند و خالی
+/// می‌خوانند — رابط هم در آن حالت فقط هایلایت نشان نمی‌دهد.
+/// </param>
+public sealed record ResourcesProduced(
+    IReadOnlyList<ResourceGrant> Grants,
+    IReadOnlyList<ProductionSource> Sources) : GameEvent;
 
 /// <summary>بانک برای این منبع کم آورد و طبق قانون هیچ‌کس آن را نگرفت.</summary>
 public sealed record ProductionSkippedForBank(Resource Resource) : GameEvent;

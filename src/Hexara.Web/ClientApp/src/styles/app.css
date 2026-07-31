@@ -1652,6 +1652,98 @@ button.hx-hand__top--dev:not(:disabled) .hx-card2 {
   gap: var(--hx-sp-2);
 }
 
+/* ── برداشتِ این دور ──────────────────────────────────────────────────── */
+
+/*
+ * کارت‌هایی که همین تاس به تو داد، روی خودِ برد.
+ *
+ * ‎pointer-events: none‎ حیاتی است — این یک خبر است، و اگر کلیک را بگیرد درست
+ * همان لحظه‌ای که باید دزد یا آبادی را انتخاب کنی جلوی برد را می‌گیرد.
+ */
+.hx-harvest {
+  position: absolute;
+  inset-block-end: var(--hx-sp-3);
+  inset-inline-start: 50%;
+  translate: -50% 0;
+  z-index: var(--hx-z-overlay, 3);
+
+  display: flex;
+  align-items: center;
+  gap: var(--hx-sp-3);
+  padding: var(--hx-sp-2) var(--hx-sp-4);
+  border: 1px solid color-mix(in srgb, var(--hx-accent-2) 42%, var(--hx-border));
+  border-radius: var(--hx-r-pill);
+  background: color-mix(in srgb, var(--hx-bg) 82%, transparent);
+  backdrop-filter: blur(6px);
+  box-shadow: var(--hx-shadow-lg, 0 12px 32px rgb(0 0 0 / 32%));
+  pointer-events: none;
+}
+
+.hx-harvest__label {
+  font-size: var(--hx-text-xs);
+  font-weight: var(--hx-weight-bold);
+  color: var(--hx-accent-2);
+  white-space: nowrap;
+}
+
+.hx-harvest__cards {
+  display: flex;
+  gap: var(--hx-sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * هر کارت با کمی تأخیرِ بیشتر از قبلی می‌آید، تا چشم بتواند یکی‌یکی بشماردشان.
+ * تأخیر از اندیس می‌آید نه از یک انیمیشنِ جدا برای هر کدام.
+ */
+.hx-harvest__card {
+  animation: hx-harvest-in 420ms var(--hx-ease) backwards;
+  animation-delay: calc(var(--hx-harvest-i) * 90ms);
+}
+
+@keyframes hx-harvest-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.82);
+  }
+}
+
+.hx-harvest-enter-active,
+.hx-harvest-leave-active {
+  transition:
+    opacity var(--hx-dur-slow) var(--hx-ease),
+    transform var(--hx-dur-slow) var(--hx-ease);
+}
+
+.hx-harvest-enter-from,
+.hx-harvest-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 10px);
+}
+
+@media (max-width: 640px) {
+  .hx-harvest {
+    gap: var(--hx-sp-2);
+    padding: var(--hx-sp-2);
+  }
+
+  .hx-harvest__label {
+    display: none;
+  }
+}
+
+/* «حرکت کمتر» یعنی کارت‌ها بی‌مقدمه سرِ جایشان بنشینند. */
+@media (prefers-reduced-motion: reduce) {
+  .hx-harvest__card,
+  .hx-harvest-enter-active,
+  .hx-harvest-leave-active {
+    animation: none;
+    transition: none;
+  }
+}
+
 /* ── صدا و تصویر ─────────────────────────────────────────────────────── */
 
 .hx-voice {

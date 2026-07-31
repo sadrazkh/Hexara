@@ -143,7 +143,9 @@ public class GameJsonTests
         var events = new List<GameEvent>
         {
             new DiceRolled(0, 3, 4),
-            new ResourcesProduced([new ResourceGrant(1, Resource.Ore, 2)]),
+            new ResourcesProduced(
+                [new ResourceGrant(1, Resource.Ore, 2)],
+                [new ProductionSource(1, new Axial(1, 0), Resource.Ore)]),
             new RobberMoved(0, new Axial(0, 0), new Axial(1, 0)),
             new ResourceStolen(0, 1, Resource.Wool),
             new SettlementBuilt(2, VertexId.Of(new Axial(0, 0), 3)),
