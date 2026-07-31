@@ -544,4 +544,111 @@ public class TradeTests
 
         Assert.Equal(GameError.TradeExpired, result.Error);
     }
+
+    // ── نرخِ همه‌ی منابع با یک پیمایش ──────────────────────────────────────
+
+    /// <summary>
+    /// ‎MaritimeRates‎ برای سرعت اضافه شد و یعنی قاعده‌ی نرخ حالا دو پیاده‌سازی
+    /// دارد. این تست تنها چیزی است که نمی‌گذارد از هم بلغزند: هر پنج منبع، برای
+    /// هر بازیکن، در چند چیدمانِ متفاوتِ بندر.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void All_rates_at_once_agree_with_asking_one_by_one(bool dedicated)
+    {
+        var state = Games.New(players: 3);
+        var port = state.Board.Ports.First(p => p.IsGeneric != dedicated);
+
+        // یک بازیکن روی بندر، یکی روی بندرِ دیگر، یکی بی‌بندر.
+        state.PlaceBuilding(port.Vertices().First(), new Building(0, BuildingKind.Settlement));
+
+        var another = state.Board.Ports.First(p => p.Edge != port.Edge);
+        state.PlaceBuilding(another.Vertices().First(), new Building(1, BuildingKind.City));
+
+        foreach (var player in state.Players)
+        {
+            var atOnce = GameEngine.MaritimeRates(state, player.Index);
+
+            foreach (var resource in TerrainExtensions.AllResources)
+            {
+                Assert.Equal(GameEngine.MaritimeRate(state, player.Index, resource), atOnce[resource]);
+            }
+        }
+    }
+
+    [Fact]
+    public void All_rates_at_once_covers_every_resource()
+    {
+        var rates = GameEngine.MaritimeRates(Games.New(players: 2), 0);
+
+        Assert.Equal(TerrainExtensions.AllResources.OrderBy(r => r), rates.Keys.OrderBy(r => r));
+        Assert.All(rates.Values, rate => Assert.Equal(4, rate));
+    }
+
+    /// <summary>بندر عمومی روی هر پنج منبع می‌نشیند، نه فقط یکی.</summary>
+    [Fact]
+    public void A_generic_port_lowers_every_resource_at_once()
+    {
+        var state = Games.New(players: 2);
+        var port = state.Board.Ports.First(p => p.IsGeneric);
+        state.PlaceBuilding(port.Vertices().First(), new Building(0, BuildingKind.Settlement));
+
+        Assert.All(GameEngine.MaritimeRates(state, 0).Values, rate => Assert.Equal(3, rate));
+    }
+
+    // ── مالکیت بندر ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// شهر هم بندر می‌دهد، نه فقط آبادی.
+    ///
+    /// ارتقای آبادی به شهر نباید بندر را از دست بدهد — و چون هر دو «ساختمان»‌اند
+    /// این به‌سادگی می‌توانست با یک شرطِ اضافه خراب شود.
+    /// </summary>
+    [Fact]
+    public void A_city_holds_a_port_just_like_a_settlement()
+    {
+        var state = Games.New(players: 2);
+        var port = state.Board.Ports.First(p => !p.IsGeneric);
+
+        state.PlaceBuilding(port.Vertices().First(), new Building(0, BuildingKind.City));
+
+        Assert.Equal([port.Edge], GameEngine.PortsOf(state, 0).Select(p => p.Edge));
+    }
+
+    [Fact]
+    public void A_port_belongs_to_nobody_until_someone_builds_on_it()
+    {
+        var state = Games.New(players: 2);
+
+        Assert.Empty(GameEngine.PortsOf(state, 0));
+    }
+
+    /// <summary>ساختمانِ حریف روی بندر، بندر را مالِ او می‌کند نه مالِ تو.</summary>
+    [Fact]
+    public void A_port_under_an_opponent_is_not_yours()
+    {
+        var state = Games.New(players: 2);
+        var port = state.Board.Ports.First();
+
+        state.PlaceBuilding(port.Vertices().First(), new Building(1, BuildingKind.Settlement));
+
+        Assert.Empty(GameEngine.PortsOf(state, 0));
+        Assert.Single(GameEngine.PortsOf(state, 1));
+    }
+
+    /// <summary>هر دو گوشه‌ی یک بندر کار می‌کنند، نه فقط اولی.</summary>
+    [Fact]
+    public void Either_corner_of_a_port_works()
+    {
+        var port = Games.New(players: 2).Board.Ports.First(p => !p.IsGeneric);
+
+        foreach (var corner in port.Vertices())
+        {
+            var state = Games.New(players: 2);
+            state.PlaceBuilding(corner, new Building(0, BuildingKind.Settlement));
+
+            Assert.Equal([port.Edge], GameEngine.PortsOf(state, 0).Select(p => p.Edge));
+        }
+    }
 }

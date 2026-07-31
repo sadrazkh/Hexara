@@ -933,6 +933,38 @@ public static class GameEngine
         return rate;
     }
 
+    /// <summary>
+    /// نرخِ همه‌ی منابع، با یک بار گشتن روی بندرها.
+    ///
+    /// نما نرخِ هر پنج منبع را برای *هر* بازیکن می‌خواهد. با صدا زدنِ
+    /// <see cref="MaritimeRate"/> برای هرکدام، بندرها شش بار پشت سر هم پیموده
+    /// می‌شدند — و این کار در هر بار ساختنِ نما، برای هر بازیکن، بعد از هر حرکت
+    /// تکرار می‌شد. جوابش دقیقاً همان است، فقط یک بار.
+    /// </summary>
+    public static Dictionary<Resource, int> MaritimeRates(GameState state, int playerIndex)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+
+        var rates = TerrainExtensions.AllResources.ToDictionary(r => r, _ => state.Options.BankTradeRate);
+
+        foreach (var port in PortsOf(state, playerIndex))
+        {
+            if (port.Resource is { } only)
+            {
+                rates[only] = Math.Min(rates[only], port.Rate);
+                continue;
+            }
+
+            // بندر عمومی روی هر پنج منبع کار می‌کند.
+            foreach (var resource in TerrainExtensions.AllResources)
+            {
+                rates[resource] = Math.Min(rates[resource], port.Rate);
+            }
+        }
+
+        return rates;
+    }
+
     /// <summary>مهلتِ تازه از روی تنظیماتِ همین بازی. بی‌زمان یعنی بی‌مهلت. */</summary>
     private static DateTimeOffset? Deadline(GameState state, DateTimeOffset? now) =>
         now is { } moment ? moment.AddSeconds(state.Options.TradeWindowSeconds) : null;
@@ -1349,18 +1381,23 @@ public static class GameEngine
     }
 
     /// <summary>
-    /// ضلع‌هایی که *بعد از* گذاشتن یک جاده قانونی می‌شوند.
+    /// ضلع‌هایی که گذاشتنِ یک جاده آن‌ها را *تازه* قانونی می‌کند.
     ///
     /// کارت جاده‌سازی دو جاده را پشت سر هم می‌گذارد و جاده‌ی دوم را روی وضعیتِ
     /// بعد از اولی می‌سنجد؛ پس فهرستِ «الان قانونی» برای انتخاب دوم کم است و
     /// بازیکن نمی‌تواند زنجیره بسازد.
     ///
-    /// جاده واقعاً گذاشته و بی‌درنگ برداشته می‌شود تا همان قاعده‌ی حقیقی جواب
-    /// بدهد، نه یک کپیِ ساده‌شده از آن. نسخه‌ی بازی دست نمی‌خورد (فقط
-    /// <c>Apply</c> جلویش می‌برد) و صدا زدنِ این متد روی وضعیتی که هم‌زمان
-    /// خوانده می‌شود نیست: نما داخل همان قفلِ بازی ساخته می‌شود.
+    /// جاده واقعاً گذاشته و بی‌درنگ برداشته می‌شود تا همان قاعده‌ی حقیقی
+    /// (<c>IsRoadConnected</c>) جواب بدهد، نه یک کپیِ ساده‌شده از آن. نسخه‌ی بازی
+    /// دست نمی‌خورد (فقط <c>Apply</c> جلویش می‌برد) و صدا زدنِ این متد روی وضعیتی
+    /// که هم‌زمان خوانده می‌شود نیست: نما داخل همان قفلِ بازی ساخته می‌شود.
+    ///
+    /// **فقط همسایه‌ها پرسیده می‌شوند.** قانونی‌بودنِ یک یال فقط به دو سرِ خودش
+    /// نگاه می‌کند، پس گذاشتنِ جاده‌ی <paramref name="placed"/> جوابِ هیچ یالی جز
+    /// آن‌هایی که با آن سرِ مشترک دارند را عوض نمی‌کند. پیش از این کلِ برد پیموده
+    /// می‌شد — روی برد بزرگ ۲۱۰ یال به‌ازای *هر* انتخابِ اول.
     /// </summary>
-    public static IReadOnlyList<EdgeId> LegalRoadEdgesAfter(GameState state, int playerIndex, EdgeId placed)
+    public static IReadOnlyList<EdgeId> RoadsOpenedBy(GameState state, int playerIndex, EdgeId placed)
     {
         ArgumentNullException.ThrowIfNull(state);
 
@@ -1369,11 +1406,25 @@ public static class GameEngine
             return [];
         }
 
+        var neighbours = placed.Endpoints()
+            .SelectMany(v => v.TouchingEdges())
+            .Distinct()
+            .Where(e => e != placed && state.Board.ContainsEdge(e) && state.RoadAt(e) is null)
+            .ToList();
+
+        // «تازه» یعنی تازه: همسایه‌ای که از قبل هم قانونی بود در فهرست جداگانه‌ی
+        // جاده‌های آزاد هست و دوباره فرستادنش فقط حجم است.
+        var alreadyLegal = neighbours.Where(e => IsRoadConnected(state, playerIndex, e)).ToHashSet();
+
         state.PlaceRoad(placed, playerIndex);
 
         try
         {
-            return [.. LegalRoadEdges(state, playerIndex)];
+            return
+            [
+                .. neighbours.Where(e =>
+                    !alreadyLegal.Contains(e) && IsRoadConnected(state, playerIndex, e))
+            ];
         }
         finally
         {

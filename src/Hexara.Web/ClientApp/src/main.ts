@@ -17,6 +17,29 @@ const islands: Record<string, IslandLoader> = {
   'island-board-editor': () => import('./islands/BoardEditor.vue'),
 };
 
+/**
+ * جزیره‌هایی که سوار شدنشان می‌تواند صبر کند.
+ *
+ * بردِ سه‌بعدیِ صفحه‌ی اول تزئینی است ولی نیم مگابایت ‎three.js‎ می‌آورد — یعنی
+ * صفحه‌ای که کاربر هنوز ثبت‌نام هم نکرده، پیش از هر چیز دیگری منتظر آن می‌ماند.
+ * پس تا بی‌کار شدنِ مرورگر عقب می‌افتد. **چیزی از ظاهر کم نمی‌شود**، فقط ترتیب
+ * عوض می‌شود: بقیه‌ی صفحه اول می‌آید.
+ *
+ * جزیره‌های دیگر خودِ صفحه‌اند (بازی، اتاق، ویرایشگر) و عقب انداختنشان یعنی
+ * نشان‌دادنِ یک صفحه‌ی خالی.
+ */
+const DEFERRED = new Set(['island-hero-board']);
+
+/** تا بی‌کار شدنِ مرورگر صبر می‌کند؛ اگر پشتیبانی نشد، یک تیکِ کوتاه. */
+function whenIdle(): Promise<void> {
+  return new Promise((resolve) => {
+    const idle = window.requestIdleCallback as typeof window.requestIdleCallback | undefined;
+
+    if (idle) idle(() => resolve(), { timeout: 2000 });
+    else window.setTimeout(resolve, 200);
+  });
+}
+
 /** تمام ‎data-*‎ عنصر میزبان به عنوان prop به کامپوننت داده می‌شود. */
 function propsFrom(el: HTMLElement): Record<string, unknown> {
   const props: Record<string, unknown> = {};
@@ -47,6 +70,8 @@ async function mountIslands(): Promise<void> {
       if (!el) return;
 
       try {
+        if (DEFERRED.has(id)) await whenIdle();
+
         const module = await load();
         el.innerHTML = '';
         createApp(module.default, propsFrom(el)).mount(el);

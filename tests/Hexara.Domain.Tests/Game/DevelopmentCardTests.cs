@@ -428,10 +428,44 @@ public class DevelopmentCardTests
 
         var first = EdgeId.Of(Center, 1);
         var before = GameEngine.LegalRoadEdges(state, 0).ToHashSet();
-        var after = GameEngine.LegalRoadEdgesAfter(state, 0, first);
+        var opened = GameEngine.RoadsOpenedBy(state, 0, first);
 
         Assert.Contains(first, before);
-        Assert.Contains(after, e => !before.Contains(e));
+        Assert.Contains(opened, e => !before.Contains(e));
+    }
+
+    /// <summary>
+    /// این تست نگهبانِ یک میان‌بر است.
+    ///
+    /// ‎RoadsOpenedBy‎ فقط یال‌های همسایه‌ی جاده‌ی گذاشته‌شده را می‌پرسد نه کلِ برد،
+    /// چون قانونی‌بودنِ یک یال فقط به دو سرِ خودش نگاه می‌کند. اینجا همان ادعا برای
+    /// *هر* انتخابِ ممکن با پیمایشِ کاملِ برد سنجیده می‌شود؛ اگر روزی قاعده‌ی اتصال
+    /// جاده عوض شود و دیگر محلی نباشد، همین‌جا لو می‌رود.
+    /// </summary>
+    [Fact]
+    public void The_neighbour_only_shortcut_agrees_with_scanning_the_whole_board()
+    {
+        var state = Games.New(players: 3);
+        Games.RunSetup(state);
+
+        var candidates = GameEngine.LegalRoadEdges(state, 0).ToList();
+        Assert.NotEmpty(candidates);
+
+        foreach (var first in candidates)
+        {
+            var before = GameEngine.LegalRoadEdges(state, 0).ToHashSet();
+
+            // مرجع: کلِ برد را با همان قاعده می‌پیماییم.
+            state.PlaceRoad(first, 0);
+            var byBruteForce = GameEngine.LegalRoadEdges(state, 0)
+                .Where(e => !before.Contains(e))
+                .ToHashSet();
+            state.RemoveRoad(first);
+
+            var byShortcut = GameEngine.RoadsOpenedBy(state, 0, first).ToHashSet();
+
+            Assert.Equal(byBruteForce, byShortcut);
+        }
     }
 
     /// <summary>
@@ -447,7 +481,7 @@ public class DevelopmentCardTests
         var roads = state.Roads.ToDictionary(r => r.Key, r => r.Value);
         var version = state.Version;
 
-        GameEngine.LegalRoadEdgesAfter(state, 0, EdgeId.Of(Center, 1));
+        GameEngine.RoadsOpenedBy(state, 0, EdgeId.Of(Center, 1));
 
         Assert.Equal(roads, state.Roads);
         Assert.Equal(version, state.Version);
@@ -460,7 +494,7 @@ public class DevelopmentCardTests
         var taken = EdgeId.Of(Center, 0);
         state.PlaceRoad(taken, 1);
 
-        Assert.Empty(GameEngine.LegalRoadEdgesAfter(state, 0, taken));
+        Assert.Empty(GameEngine.RoadsOpenedBy(state, 0, taken));
         Assert.Equal(1, state.RoadAt(taken));
     }
 }

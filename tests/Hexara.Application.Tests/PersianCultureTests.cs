@@ -1,3 +1,4 @@
+using Hexara.Application.Common.Interfaces;
 using System.Globalization;
 using System.Text.Json;
 using Hexara.Application.Games;
@@ -235,5 +236,98 @@ public class PersianCultureTests : IDisposable
             Assert.Contains('-', text);
             Assert.DoesNotContain('−', text);
         }
+    }
+
+    // ── کلیدهایی که بعداً اضافه شدند ──────────────────────────────────────
+
+    /// <summary>
+    /// کلیدهای «جاده‌ی دومِ کارت جاده‌سازی» با دستِ خودمان از مختصات ساخته
+    /// می‌شوند، و مختصاتِ منفی روی این برد فراوان است.
+    ///
+    /// اگر با فرهنگ جاری ساخته می‌شدند، زیر فارسی کلید «‎−1,0,2‎» می‌شد (با منهای
+    /// ‎U+2212‎) در حالی که کلاینت «‎-1,0,2‎» می‌فرستد — و هیچ جاده‌ی دومی هرگز
+    /// پیدا نمی‌شد، بی‌آنکه خطایی بدهد.
+    /// </summary>
+    [Fact]
+    public async Task Follow_up_road_keys_stay_ascii_under_persian()
+    {
+        var game = RoadBuildingGame();
+
+        var view = await new GameViewBuilder(new Directory()).BuildAsync(game, 0);
+
+        Assert.NotEmpty(view.Legal.FollowUpRoads);
+
+        foreach (var key in view.Legal.FollowUpRoads.Keys)
+        {
+            Assert.DoesNotContain('−', key);
+            Assert.DoesNotContain('‎', key);
+            Assert.Matches("^-?[0-9]+,-?[0-9]+,[0-9]+$", key);
+        }
+
+        // و کلیدها واقعاً با همان یال‌هایی که فرستاده شده‌اند جور درمی‌آیند.
+        //
+        // خودِ این مقایسه هم باید با فرهنگ ناوابسته ساخته شود: نسخه‌ی اولِ همین
+        // تست با ‎$"{r.Q},..."‎ نوشته شده بود و زیر فارسی «‎−1‎» تولید کرد، پس
+        // شکست — نه چون کد خراب بود، که چون تله دقیقاً همین است و حتی در تست
+        // هم گیر می‌اندازد.
+        var free = view.Legal.FreeRoads
+            .Select(r => string.Create(CultureInfo.InvariantCulture, $"{r.Q},{r.R},{r.Side}"))
+            .ToHashSet(StringComparer.Ordinal);
+
+        Assert.Equal(free, view.Legal.FollowUpRoads.Keys.ToHashSet(StringComparer.Ordinal));
+    }
+
+    /// <summary>دست‌کم یک کلیدِ منفی باید در کار باشد وگرنه تست چیزی را نمی‌سنجد.</summary>
+    [Fact]
+    public async Task At_least_one_of_those_keys_is_negative()
+    {
+        var view = await new GameViewBuilder(new Directory()).BuildAsync(RoadBuildingGame(), 0);
+
+        Assert.Contains(view.Legal.FollowUpRoads.Keys, k => k.Contains('-', StringComparison.Ordinal));
+    }
+
+    /// <summary>بازی‌ای با کارت جاده‌سازی در دست و یک شبکه‌ی جاده‌ی واقعی.</summary>
+    private static StoredGame RoadBuildingGame()
+    {
+        var ids = Enumerable.Range(0, 3)
+            .Select(i => Guid.Parse($"00000000-0000-0000-0000-00000000000{i}"))
+            .ToList();
+
+        var state = GameState.Create(new GameOptions { PlayerCount = 3, Seed = 5 }, ids);
+
+        while (state.IsSetup)
+        {
+            var player = state.CurrentPlayer;
+            var vertex = GameEngine.LegalSettlementVertices(state, player)
+                .OrderBy(v => v.ToString(), StringComparer.Ordinal).First();
+            GameEngine.Apply(state, new PlaceInitialSettlement(player, vertex));
+
+            var edge = vertex.TouchingEdges()
+                .Where(e => state.Board.ContainsEdge(e) && state.RoadAt(e) is null)
+                .OrderBy(e => e.ToString(), StringComparer.Ordinal).First();
+            GameEngine.Apply(state, new PlaceInitialRoad(player, edge));
+        }
+
+        var snapshot = state.ToSnapshot() with { Phase = TurnPhase.Main, CurrentPlayer = 0, TurnNumber = 4 };
+        var players = snapshot.Players.ToList();
+        players[0] = players[0] with
+        {
+            DevelopmentCards = new Dictionary<DevelopmentCard, int> { [DevelopmentCard.RoadBuilding] = 1 }
+        };
+
+        return new StoredGame(
+            Guid.NewGuid(),
+            GameStatus.Active,
+            ids,
+            GameState.Restore(snapshot with { Players = players }));
+    }
+
+    private sealed class Directory : IPlayerDirectory
+    {
+        public Task<IReadOnlyList<PlayerProfile>> GetAsync(
+            IReadOnlyList<Guid> userIds,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<PlayerProfile>>(
+                [.. userIds.Select(id => new PlayerProfile(id, "کسی", "#000000", false))]);
     }
 }

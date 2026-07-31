@@ -123,8 +123,7 @@ public sealed class GameViewBuilder
             // معامله تعیین‌کننده است. نرخ از موتور می‌آید تا قاعده‌اش یک جا بماند.
             Ports = [.. GameEngine.PortsOf(state, player.Index)
                 .Select(p => new PortSnapshot(p.Edge.Hex.Q, p.Edge.Hex.R, p.Edge.Side, p.Resource))],
-            TradeRates = Enum.GetValues<Resource>()
-                .ToDictionary(r => r, r => GameEngine.MaritimeRate(state, player.Index, r)),
+            TradeRates = GameEngine.MaritimeRates(state, player.Index),
 
             SettlementsLeft = player.SettlementsLeft,
             CitiesLeft = player.CitiesLeft,
@@ -209,8 +208,14 @@ public sealed class GameViewBuilder
 
         // جاده‌ی رایگان همان جاهایی است که جاده‌ی خریدنی می‌رود، ولی در مرحله‌ی
         // تاس هم معنا دارد — و آن‌جا فهرستِ خریدنی خالی است.
-        var freeRoads = playable.Contains(DevelopmentCard.RoadBuilding)
-            ? GameEngine.LegalRoadEdges(state, seat).ToList()
+        //
+        // در مرحله‌ی ساخت‌وساز همان فهرستِ بالا دوباره استفاده می‌شود نه اینکه از نو
+        // حساب شود: پیمایشِ کلِ یال‌های برد است و روی برد بزرگ دو برابر شدنش دیده
+        // می‌شود.
+        List<EdgeId> freeRoads = playable.Contains(DevelopmentCard.RoadBuilding)
+            ? state.Phase == TurnPhase.Main
+                ? roads
+                : [.. GameEngine.LegalRoadEdges(state, seat)]
             : [];
 
         // برای هر انتخابِ اول، جاهای تازه‌ی جاده‌ی دوم. فقط وقتی حساب می‌شود که
@@ -219,8 +224,7 @@ public sealed class GameViewBuilder
             first => Key(first),
             first => (IReadOnlyList<RoadSnapshot>)
             [
-                .. GameEngine.LegalRoadEdgesAfter(state, seat, first)
-                    .Where(e => e != first)
+                .. GameEngine.RoadsOpenedBy(state, seat, first)
                     .Select(e => new RoadSnapshot(e.Hex.Q, e.Hex.R, e.Side, seat))
             ],
             StringComparer.Ordinal);
