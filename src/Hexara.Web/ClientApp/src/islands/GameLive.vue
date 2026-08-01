@@ -558,6 +558,14 @@ const highlights = computed<Highlights>(() => {
   };
 });
 
+/** نامِ خواندنیِ یک خانه برای فهرستِ پشتیبان: «۶ — جنگل». */
+function tileLabel(hex: Hex): string {
+  const tile = view.value?.tiles.find((t) => t.q === hex.q && t.r === hex.r);
+  const terrain = tile ? t(`board.terrain.${tile.terrain}`) : '';
+
+  return tile?.number ? `${tile.number} — ${terrain}` : terrain;
+}
+
 /** یال‌هایی که کارت جاده‌سازی در این لحظه می‌پذیرد — قاعده‌اش در ‎game/cards‎ است. */
 const remainingFreeRoads = computed(() =>
   view.value ? freeRoadChoices(view.value.legal, freeRoadPicks.value) : [],
@@ -1210,6 +1218,28 @@ onBeforeUnmount(() => {
 
         <template v-if="playing === 'Knight'">
           <p v-if="!robberHex">{{ t('game.pickRobberHex') }}</p>
+
+          <!--
+            راهِ دوم، برای وقتی که کلیک روی برد سه‌بعدی نگیرد.
+
+            در مرحله‌ی دزد، کلیکِ روی برد **تنها** راهِ ادامه‌ی بازی است؛ اگر به
+            هر دلیلی نگیرد (کارت گرافیک، دستگاه عجیب، صفحه‌ی خیلی کوچک) نوبت تا
+            رسیدنِ بات قفل می‌ماند. یک فهرستِ ساده این بن‌بست را برمی‌دارد.
+          -->
+          <details v-if="!robberHex" class="hx-live__fallback">
+            <summary>{{ t('game.pickRobberFromList') }}</summary>
+            <div class="hx-live__choices">
+              <button
+                v-for="hex in view.legal.robberTargets"
+                :key="`rt-${hex.q},${hex.r}`"
+                type="button"
+                class="hx-btn hx-btn--sm hx-btn--outline"
+                @click="robberHex = hex"
+              >
+                {{ tileLabel(hex) }}
+              </button>
+            </div>
+          </details>
           <template v-else>
             <p>{{ t('game.pickVictim') }}</p>
             <div class="hx-live__choices">
@@ -1298,6 +1328,28 @@ onBeforeUnmount(() => {
 
       <template v-else-if="phase === 'MoveRobber'">
         <p v-if="!robberHex">{{ t('game.pickRobberHex') }}</p>
+
+        <!--
+          راهِ دوم، برای وقتی که کلیک روی برد سه‌بعدی نگیرد.
+
+          در مرحله‌ی دزد، کلیکِ روی برد **تنها** راهِ ادامه‌ی بازی است؛ اگر به
+          هر دلیلی نگیرد (کارت گرافیک، دستگاه عجیب، صفحه‌ی خیلی کوچک) نوبت تا
+          رسیدنِ بات قفل می‌ماند. یک فهرستِ ساده این بن‌بست را برمی‌دارد.
+        -->
+        <details v-if="!robberHex" class="hx-live__fallback">
+          <summary>{{ t('game.pickRobberFromList') }}</summary>
+          <div class="hx-live__choices">
+            <button
+              v-for="hex in view.legal.robberTargets"
+              :key="`rt-${hex.q},${hex.r}`"
+              type="button"
+              class="hx-btn hx-btn--sm hx-btn--outline"
+              @click="robberHex = hex"
+            >
+              {{ tileLabel(hex) }}
+            </button>
+          </div>
+        </details>
         <template v-else>
           <p>{{ t('game.pickVictim') }}</p>
           <div class="hx-live__choices">

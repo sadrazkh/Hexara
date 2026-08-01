@@ -86,6 +86,20 @@ export interface RoomHandlers {
  * است، پس پیامِ از دست رفته اهمیتی ندارد و بعد از وصل شدن دوباره فقط کافی است
  * یک بار دیگر بپیوندیم و وضعیت تازه را بگیریم.
  */
+/**
+ * شنونده‌های «صفحه برگشت» را وصل یا قطع می‌کند.
+ *
+ * وجودِ ‎document‎ سنجیده می‌شود چون این ماژول در آزمون‌ها بیرون از مرورگر هم
+ * ساخته می‌شود؛ بی این، صرفِ ساختنِ یک اتصال آن‌جا می‌ترکید.
+ */
+function onWake(handler: () => void, attach: boolean): void {
+  if (typeof document === 'undefined') return;
+
+  const act = attach ? 'addEventListener' : 'removeEventListener';
+  document[act]('visibilitychange', handler);
+  window[act]('focus', handler);
+}
+
 export class RoomConnection {
   private readonly connection: HubConnection;
 
@@ -106,7 +120,28 @@ export class RoomConnection {
     this.connection.onreconnecting(() => this.handlers.onLink('reconnecting'));
     this.connection.onreconnected(() => void this.join());
     this.connection.onclose(() => this.handlers.onLink('offline'));
+
+    onWake(this.onVisible, true);
   }
+
+  /**
+   * برگشتن به صفحه = گرفتنِ وضعیت تازه.
+   *
+   * اتاق نسخه ندارد و هر پیام کلِ وضعیت است، پس یک ‎Join‎ دوباره کافی است. بی
+   * این، کسی که تب را عوض کرده بود می‌توانست شروعِ بازی را از دست بدهد و در
+   * اتاقی بماند که دیگر وجود ندارد.
+   */
+  private readonly onVisible = (): void => {
+    if (document.hidden) return;
+    if (this.connection.state === HubConnectionState.Disconnected) {
+      void this.start();
+      return;
+    }
+
+    if (this.connection.state === HubConnectionState.Connected) {
+      void this.join().catch(() => undefined);
+    }
+  };
 
   async start(): Promise<void> {
     this.handlers.onLink('connecting');
@@ -121,6 +156,8 @@ export class RoomConnection {
   }
 
   async stop(): Promise<void> {
+    onWake(this.onVisible, false);
+
     if (this.connection.state !== HubConnectionState.Disconnected) {
       await this.connection.stop();
     }

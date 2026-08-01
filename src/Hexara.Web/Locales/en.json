@@ -295,6 +295,7 @@
     "discard": "Discard",
     "discardPrompt": "You must discard {0} cards.",
     "pickRobberHex": "Pick the tile the robber moves to on the board.",
+    "pickRobberFromList": "Or pick from a list",
     "pickVictim": "Who do you rob?",
     "pickFreeRoads": "Pick up to two roads on the board. Picked so far: {0}",
     "pickYearOfPlenty": "Take any two resources from the bank (they may be the same).",

@@ -207,6 +207,20 @@ export interface Handlers {
  * نکته‌ی اصلی این کلاس بازگشت بعد از قطعی است: آخرین نسخه‌ای که دیده‌ایم نگه داشته
  * می‌شود و بعد از وصل شدن دوباره، فقط همان چیزهایی که از دست رفته گرفته می‌شود.
  */
+/**
+ * شنونده‌های «صفحه برگشت» را وصل یا قطع می‌کند.
+ *
+ * وجودِ ‎document‎ سنجیده می‌شود چون این ماژول در آزمون‌ها بیرون از مرورگر هم
+ * ساخته می‌شود؛ بی این، صرفِ ساختنِ یک اتصال آن‌جا می‌ترکید.
+ */
+function onWake(handler: () => void, attach: boolean): void {
+  if (typeof document === 'undefined') return;
+
+  const act = attach ? 'addEventListener' : 'removeEventListener';
+  document[act]('visibilitychange', handler);
+  window[act]('focus', handler);
+}
+
 export class GameConnection {
   private readonly connection: HubConnection;
   private lastVersion = -1;
@@ -237,6 +251,52 @@ export class GameConnection {
     this.connection.onreconnecting(() => this.handlers.onLink('reconnecting'));
     this.connection.onreconnected(() => void this.resume());
     this.connection.onclose(() => this.handlers.onLink('offline'));
+
+    onWake(this.onVisible, true);
+  }
+
+  /**
+   * برگشتن به صفحه = آشتی دادنِ وضعیت.
+   *
+   * پیش از این تنها راهِ همگام‌شدن ‎onreconnected‎ بود. ولی وقتی تب پشتِ سر
+   * می‌رود یا گوشی قفل می‌شود، مرورگر صفحه را می‌خواباند: تایمرها می‌ایستند و
+   * سوکت ممکن است بی‌سروصدا بمیرد بی‌آنکه ‎onclose‎ به‌موقع برسد. کاربر برمی‌گردد
+   * و برد یک نسخه عقب است تا وقتی دستی رفرش کند — همان چیزی که «انگار از کش
+   * لود می‌کند» به نظر می‌رسید.
+   */
+  private readonly onVisible = (): void => {
+    if (document.hidden) return;
+
+    void this.resync();
+  };
+
+  /**
+   * وضعیت را از سرور می‌گیرد؛ اگر اتصال قطع است، از نو وصل می‌شود.
+   *
+   * بی‌صداست: این یک آشتیِ پس‌زمینه است و نباید خطایی جلوی کاربر بگذارد.
+   */
+  async resync(): Promise<void> {
+    if (this.connection.state === HubConnectionState.Disconnected) {
+      await this.start();
+      return;
+    }
+
+    if (this.connection.state !== HubConnectionState.Connected) return;
+
+    try {
+      const caught = await this.connection.invoke<CatchUpResult | null>(
+        'CatchUp',
+        this.gameId,
+        this.lastVersion,
+      );
+
+      if (caught) {
+        this.accept(caught.view);
+        if (caught.events.length > 0) this.handlers.onEvents(caught.events);
+      }
+    } catch {
+      // اگر نشد، همان وضعیت قبلی می‌ماند و دفعه‌ی بعد دوباره تلاش می‌شود.
+    }
   }
 
   async start(): Promise<void> {
@@ -252,6 +312,8 @@ export class GameConnection {
   }
 
   async stop(): Promise<void> {
+    onWake(this.onVisible, false);
+
     if (this.connection.state !== HubConnectionState.Disconnected) {
       await this.connection.stop();
     }
@@ -369,6 +431,12 @@ export class GameConnection {
    * نتیجه‌ی CatchUp برسد و وضعیت را به عقب برگرداند.
    */
   private accept(view: GameView): void {
+    // نمای بازیِ دیگر هرگز پذیرفته نمی‌شود. نباید پیش بیاید، ولی اگر روزی بیاید
+    // نتیجه‌اش بردی است که با وضعیتِ صفحه قاطی شده — و هیچ خطایی هم نمی‌دهد.
+    if (view.gameId !== this.gameId) {
+      return;
+    }
+
     if (view.version < this.lastVersion) {
       return;
     }

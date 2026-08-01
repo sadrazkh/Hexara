@@ -186,6 +186,20 @@ export class BoardScene {
     markVertex: new THREE.CylinderGeometry(0.16, 0.16, 0.06, 16),
     markEdge: new THREE.BoxGeometry(TILE_SIZE * 0.7, 0.06, 0.16),
     markHex: new THREE.CylinderGeometry(TILE_SIZE * 0.5, TILE_SIZE * 0.5, 0.05, 6),
+
+    /*
+     * هدفِ انتخابِ یک خانه — تقریباً به اندازه‌ی خودِ خانه.
+     *
+     * پیش از این همان ‎markHex‎ استفاده می‌شد که نصفِ شعاعِ خانه است، یعنی حدود
+     * یک‌چهارمِ مساحتش. سه‌چهارمِ هر خانه به کلیک جواب نمی‌داد و — چون هیچ خطایی
+     * هم در کار نبود — به نظر می‌رسید دزد اصلاً کار نمی‌کند. آدم روی «خانه»
+     * کلیک می‌کند، نه روی مرکزِ ریاضی‌اش.
+     *
+     * ‎0.85‎ و نه بیشتر: نشانه‌ها ±۱۲٪ نبض می‌زنند و در اوجِ نبض به ‎0.952‎
+     * می‌رسند — درست زیر شعاعِ خودِ خانه (‎0.955‎)، پس هرگز روی خانه‌ی بغلی
+     * نمی‌ریزد.
+     */
+    markTile: new THREE.CylinderGeometry(TILE_SIZE * 0.85, TILE_SIZE * 0.85, 0.05, 6),
   };
 
   /** نشانه‌ی انتخاب یک نشانگرِ رابط است روی برد، پس رنگ accent را می‌گیرد. */
@@ -751,7 +765,7 @@ export class BoardScene {
     for (const hex of highlights.hexes) {
       const { x, z } = axialToWorld(hex.q, hex.r, TILE_SIZE);
 
-      const mesh = new THREE.Mesh(this.geo.markHex, this.highlightMaterial);
+      const mesh = new THREE.Mesh(this.geo.markTile, this.highlightMaterial);
       mesh.position.set(x, 0.2, z);
       mesh.userData.pick = { kind: 'hex', id: hex } satisfies Pick;
       mesh.userData.pulse = true;
