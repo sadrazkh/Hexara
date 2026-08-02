@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { t } from '@/i18n';
 import GameBoard from './GameBoard.vue';
 import Fold from './Fold.vue';
@@ -223,8 +223,18 @@ function openPanel(key: string): void {
   activeTab.value = key;
   sheetState.value = 'half';
 
-  requestAnimationFrame(() => {
+  // ‎nextTick‎ و نه ‎requestAnimationFrame‎: رَف در تبِ پس‌زمینه معلق می‌ماند، و
+  // دقیقاً همان‌جا لازم است — کاربر از تب دیگری برمی‌گردد و پنل باید سرِ جایش
+  // باشد. ‎nextTick‎ میکروتسک است و همیشه اجرا می‌شود.
+  void nextTick(() => {
     document.querySelector<HTMLElement>('.hx-live__rail')?.scrollTo({ top: 0 });
+
+    // پنلِ نوبت خودش را جلوی چشم می‌آورد. باز شدنِ برگه کافی نیست: روی صفحه‌ی
+    // کوتاه، دکمه‌ی «تأیید» زیر لبه‌ی صفحه می‌ماند و کاربر فکر می‌کند هیچ
+    // اتفاقی نیفتاده.
+    document
+      .getElementById(`hx-panel-${key}`)
+      ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   });
 }
 
@@ -558,6 +568,20 @@ const highlights = computed<Highlights>(() => {
   };
 });
 
+/**
+ * خانه‌ی دزد انتخاب شد؛ حالا نوبتِ انتخاب قربانی است.
+ *
+ * **پنلِ نوبت هم باز می‌شود.** قدمِ دوم فقط داخل همان پنل است و روی صفحه‌ی
+ * باریک پنل یک برگه‌ی بسته‌ی پایینِ صفحه است. بی این کار، کاربر روی خانه
+ * می‌زد، نشانه‌های برد خاموش می‌شدند و *هیچ اتفاق دیگری دیده نمی‌شد* — پرسشِ
+ * «از چه کسی بدزدیم؟» جایی بود که اصلاً دیده نمی‌شد و بازی قفل به نظر می‌رسید.
+ */
+function pickRobberHex(hex: Hex): void {
+  robberHex.value = hex;
+
+  if (!wide.value) openPanel('turn');
+}
+
 /** نامِ خواندنیِ یک خانه برای فهرستِ پشتیبان: «۶ — جنگل». */
 function tileLabel(hex: Hex): string {
   const tile = view.value?.tiles.find((t) => t.q === hex.q && t.r === hex.r);
@@ -722,7 +746,7 @@ function onPick(pick: Pick): void {
   // خانه فقط وقتی معنا دارد که دزد در کار باشد — چه از راه تاس ۷ و چه با شوالیه.
   if (pick.kind === 'hex') {
     if (current.phase === 'MoveRobber' || playing.value === 'Knight') {
-      robberHex.value = pick.id;
+      pickRobberHex(pick.id);
     }
 
     return;
@@ -1234,7 +1258,7 @@ onBeforeUnmount(() => {
                 :key="`rt-${hex.q},${hex.r}`"
                 type="button"
                 class="hx-btn hx-btn--sm hx-btn--outline"
-                @click="robberHex = hex"
+                @click="pickRobberHex(hex)"
               >
                 {{ tileLabel(hex) }}
               </button>
@@ -1344,7 +1368,7 @@ onBeforeUnmount(() => {
               :key="`rt-${hex.q},${hex.r}`"
               type="button"
               class="hx-btn hx-btn--sm hx-btn--outline"
-              @click="robberHex = hex"
+              @click="pickRobberHex(hex)"
             >
               {{ tileLabel(hex) }}
             </button>
